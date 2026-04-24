@@ -1,0 +1,30 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .b {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--ink-4); color: var(--fg-2);
+    background: var(--ink-2);
+  }
+  .b.active { border-color: var(--violet-400); color: var(--violet-300); background: rgba(167,139,250,0.08); }
+  .b.hot { border-color: var(--magenta-400); color: var(--magenta-400); }
+  .b.ok { border-color: #7dd3a8; color: #7dd3a8; }
+  .b.warn { border-color: #f0c674; color: #f0c674; }
+  .b.draft { border-style: dashed; color: var(--fg-3); }
+  .b .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+</style></head>
+<body class="card">
+  <div class="label">badges · tags · pills</div>
+  <div class="row">
+    <span class="b"><span class="dot"></span>rust</span>
+    <span class="b active">◆ selected</span>
+    <span class="b hot"><span class="dot"></span>live</span>
+    <span class="b ok">shipped</span>
+    <span class="b warn">in-progress</span>
+    <span class="b draft">◇ draft</span>
+    <span class="b">cli</span>
+    <span class="b">2025</span>
+  </div>
+</body></html>
