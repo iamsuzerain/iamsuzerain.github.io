@@ -152,20 +152,41 @@ def build_nav_series(root: ET.Element) -> list[dict]:
     return sorted(series, key=lambda r: r["d"])
 
 
-def build_pnl(root: ET.Element) -> dict:
-    """Pull from MTMPerformanceSummary / ChangeInNAV. Falls back to zeros."""
+def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
+    """Pull PnL from MTMPerformanceSummary / ChangeInNAV and NAV series."""
     def g(tag, attr):
         el = root.find(f".//{tag}")
         return to_float(el.get(attr)) if el is not None else 0.0
 
+    def series_pnl(series: list[dict], from_date_prefix: str) -> tuple[float, float]:
+        """Return (abs, pct) change from the first entry on/after from_date_prefix."""
+        start = next((p for p in series if p["d"] >= from_date_prefix), None)
+        if not start or nav == 0:
+            return 0.0, 0.0
+        start_v = start["v"]
+        abs_chg = nav - start_v
+        pct_chg = abs_chg / start_v if start_v else 0.0
+        return abs_chg, pct_chg
+
+    day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
+    day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
+    mtd_abs = g("ChangeInNAV", "mtm")
+    mtd_pct = g("ChangeInNAV", "twr") / 100.0
+
+    cur_year = str(datetime.now(timezone.utc).year)
+    cur_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    ytd_abs, ytd_pct = series_pnl(nav_series, f"{cur_year}-01-01")
+    itd_abs, itd_pct = series_pnl(nav_series, "0000-00-00")  # first ever point
+
+    # prefer mtd from ChangeInNAV if available, else derive from series
+    if mtd_abs == 0.0:
+        mtd_abs, mtd_pct = series_pnl(nav_series, cur_month + "-01")
+
     return {
-        "day": {
-            "abs": g("MTMPerformanceSummaryUnderlying", "mtm"),
-            "pct": g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0,
-        },
-        "mtd": {"abs": g("ChangeInNAV", "mtm"), "pct": g("ChangeInNAV", "twr") / 100.0},
-        "ytd": {"abs": g("ChangeInNAVByPeriod[@period='YTD']", "twrInclFees") or 0.0, "pct": 0.0},
-        "itd": {"abs": g("ChangeInNAVByPeriod[@period='ITD']", "twrInclFees") or 0.0, "pct": 0.0},
+        "day": {"abs": day_abs, "pct": day_pct},
+        "mtd": {"abs": mtd_abs, "pct": mtd_pct},
+        "ytd": {"abs": ytd_abs, "pct": ytd_pct},
+        "itd": {"abs": itd_abs, "pct": itd_pct},
     }
 
 
@@ -188,9 +209,10 @@ def transform(root: ET.Element) -> dict:
     stock = to_float(last.get("stock")) if last is not None else 0.0
 
     positions = build_positions(root)
-    # add weight by mkt value / NAV
     for p in positions:
         p["weight"] = (p["mktValue"] / nav) if nav > 0 else 0.0
+
+    nav_series = build_nav_series(root)
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -199,10 +221,10 @@ def transform(root: ET.Element) -> dict:
             "currency": "USD",
             "nav": nav,
             "cash": cash,
-            "buyingPower": nav * 2,   # rough estimate; replace with real field if you enable it
+            "buyingPower": nav * 2,
         },
-        "pnl": build_pnl(root),
-        "navSeries": build_nav_series(root),
+        "pnl": build_pnl(root, nav_series, nav),
+        "navSeries": nav_series,
         "allocation": build_allocation(positions, cash),
         "positions": positions[:12],  # top 12 by value
     }
