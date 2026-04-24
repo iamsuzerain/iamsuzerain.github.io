@@ -1,0 +1,31 @@
+# Netlify config for the suzerain site.
+# The site is pure static HTML/JSX — no build step.
+
+[build]
+  # Publish the site directory as-is.
+  publish = "ui_kits/personal_site"
+  command = ""
+
+# SPA-ish fallback: any unknown path serves index.html (the React view router
+# handles the rest). Remove this if you add real multi-page routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Long-cache static JSX/CSS assets, but let HTML + JSON revalidate every time
+# so the daily portfolio.json + live polymarket render the freshest data.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/data/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.jsx"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

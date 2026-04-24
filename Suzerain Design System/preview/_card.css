@@ -1,0 +1,75 @@
+/* Shared layout for Design System preview cards.
+   Load colors_and_type.css first, then this. */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink-1);
+}
+body.card {
+  padding: 20px 24px;
+  box-sizing: border-box;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: var(--font-sans);
+}
+body.card.tight { padding: 16px 20px; gap: 10px; }
+body.card.center {
+  align-items: center;
+  justify-content: center;
+}
+
+/* Grid / row primitives */
+.row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+.row.nowrap { flex-wrap: nowrap; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.grow { flex: 1; }
+
+/* Swatch primitive */
+.swatch {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
+  min-height: 88px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  position: relative;
+}
+.swatch .sw-name { opacity: 0.85; }
+.swatch .sw-hex { opacity: 0.6; text-transform: uppercase; }
+
+/* Chip for small inline swatches */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-2);
+  letter-spacing: 0.06em;
+}
+.chip .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* Label helpers */
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.divider {
+  height: 1px;
+  background: var(--border-soft);
+  width: 100%;
+}

@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><link rel="stylesheet" href="_card.css">
+<style>
+  .g {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px; min-width: 80px;
+    border: 1px solid var(--ink-4); border-radius: 4px;
+    background: var(--ink-2);
+  }
+  .g .glyph {
+    font-family: var(--font-mono); font-size: 28px;
+    color: var(--violet-300); line-height: 1;
+  }
+  .g .name {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--fg-3);
+  }
+</style></head>
+<body class="card">
+  <div class="label">unicode glyphs · used as typographic marks</div>
+  <div class="row">
+    <div class="g"><span class="glyph">◆</span><span class="name">section</span></div>
+    <div class="g"><span class="glyph">◇</span><span class="name">empty</span></div>
+    <div class="g"><span class="glyph">▸</span><span class="name">prompt</span></div>
+    <div class="g"><span class="glyph">→</span><span class="name">active</span></div>
+    <div class="g"><span class="glyph">↗</span><span class="name">external</span></div>
+    <div class="g" style="background:var(--ink-3)"><span class="glyph" style="color:#ff4fd8">▋</span><span class="name">cursor</span></div>
+    <div class="g"><span class="glyph">·</span><span class="name">sep</span></div>
+    <div class="g"><span class="glyph">§</span><span class="name">footnote</span></div>
+    <div class="g"><span class="glyph">∴</span><span class="name">therefore</span></div>
+  </div>
+  <div style="font-family:var(--font-mono);font-size:11px;color:var(--fg-3);letter-spacing:0.06em">+ lucide icons · 1.5px stroke · inherits currentColor · no emoji ever</div>
+</body></html>
