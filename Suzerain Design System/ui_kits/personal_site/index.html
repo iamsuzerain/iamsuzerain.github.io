@@ -300,6 +300,28 @@
   .sz-post-tags { display: flex; gap: 4px; }
   .sz-tag-quiet { border-color: transparent; color: var(--fg-4); }
   .sz-post-read { color: var(--fg-4); font-size: 11px; }
+  /* ========== Log / Blog ========== */
+  .sz-log {
+    margin-top: 64px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 40px;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .sz-log-entry { display: grid; grid-template-columns: 110px 1fr; gap: 24px; }
+  .sz-log-date {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em; color: var(--fg-4);
+    padding-top: 3px;
+  }
+  .sz-log-body {
+    font-family: var(--font-sans); font-size: 16px;
+    line-height: 1.7; color: var(--fg-2);
+    margin: 0; font-weight: 300;
+  }
+
   .sz-rss {
     margin-top: 32px; padding: 16px 0;
     font-family: var(--font-mono); font-size: 12px;
