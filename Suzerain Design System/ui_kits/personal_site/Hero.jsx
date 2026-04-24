@@ -10,19 +10,19 @@ function Hero({ setView }) {
         <button className="sz-btn sz-btn-primary" onClick={() => setView('portfolio')}>▸ portfolio</button>
         <button className="sz-btn sz-btn-ghost" onClick={() => setView('polymarket')}>polymarket →</button>
       </div>
+      <div className="sz-log">
+        <div className="sz-log-entry">
+          <span className="sz-log-date">2026-04-23</span>
+          <p className="sz-log-body">iran situation isn't resolving. the s&p sure is trading like it's already resolved. still trading through it because sitting out is its own kind of bet, and i don't like those odds. vol is elevated, the thesis holds. staying in.</p>
+        </div>
+      </div>
+
       <div className="sz-hero-footer">
         <span>ibkr </span>
         <span className="sz-sep">·</span>
         <span>polymarket </span>
         <span className="sz-sep">·</span>
         <span>volatility</span>
-      </div>
-
-      <div className="sz-log">
-        <div className="sz-log-entry">
-          <span className="sz-log-date">2026-04-23</span>
-          <p className="sz-log-body">iran situation isn't resolving. the s&p sure is trading like it's already resolved. still trading through it because sitting out is its own kind of bet, and i don't like those odds. vol is elevated, the thesis holds. staying in.</p>
-        </div>
       </div>
     </section>
   );
