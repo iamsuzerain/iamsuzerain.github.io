@@ -12,7 +12,7 @@ function About() {
         <li><span>↗ email — qrasnaia [at] gmail [dot] com</span></li>
       </ul>
       <p className="sz-meta">
-        TZ=America/Los_Angeles · no analytics · no cookies
+        TZ=America/Seattle · no analytics · no cookies
       </p>
     </section>
   );
