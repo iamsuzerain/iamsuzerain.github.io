@@ -245,8 +245,8 @@ function Portfolio() {
       <div className="pf-stats">
         <StatTile label="day"  value={fmtUSD(d.pnl.day.abs)}  change={d.pnl.day.pct}  kicker="since open"/>
         <StatTile label="mtd"  value={fmtUSD(d.pnl.mtd.abs)}  change={d.pnl.mtd.pct}  kicker="month to date"/>
+        <StatTile label="qtd"  value={fmtUSD(d.pnl.qtd.abs)}  change={d.pnl.qtd.pct}  kicker="quarter to date"/>
         <StatTile label="ytd"  value={fmtUSD(d.pnl.ytd.abs)}  change={d.pnl.ytd.pct}  kicker="year to date"/>
-        <StatTile label="itd"  value={fmtUSD(d.pnl.itd.abs)}  change={d.pnl.itd.pct}  kicker="inception"/>
       </div>
 
       <div className="pf-panel">

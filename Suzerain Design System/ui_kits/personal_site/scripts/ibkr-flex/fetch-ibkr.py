@@ -170,23 +170,22 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
 
     day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
     day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
-    mtd_abs = g("ChangeInNAV", "mtm")
-    mtd_pct = g("ChangeInNAV", "twr") / 100.0
 
-    cur_year = str(datetime.now(timezone.utc).year)
-    cur_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    now = datetime.now(timezone.utc)
+    cur_year = str(now.year)
+    cur_month = now.strftime("%Y-%m")
+    quarter_start_month = ((now.month - 1) // 3) * 3 + 1
+    cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
+
+    mtd_abs, mtd_pct = series_pnl(nav_series, cur_month + "-01")
+    qtd_abs, qtd_pct = series_pnl(nav_series, cur_quarter)
     ytd_abs, ytd_pct = series_pnl(nav_series, f"{cur_year}-01-01")
-    itd_abs, itd_pct = series_pnl(nav_series, "0000-00-00")  # first ever point
-
-    # prefer mtd from ChangeInNAV if available, else derive from series
-    if mtd_abs == 0.0:
-        mtd_abs, mtd_pct = series_pnl(nav_series, cur_month + "-01")
 
     return {
         "day": {"abs": day_abs, "pct": day_pct},
         "mtd": {"abs": mtd_abs, "pct": mtd_pct},
+        "qtd": {"abs": qtd_abs, "pct": qtd_pct},
         "ytd": {"abs": ytd_abs, "pct": ytd_pct},
-        "itd": {"abs": itd_abs, "pct": itd_pct},
     }
 
 
