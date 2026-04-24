@@ -17,6 +17,13 @@ function Hero({ setView }) {
         <span className="sz-sep">·</span>
         <span>volatility</span>
       </div>
+
+      <div className="sz-log">
+        <div className="sz-log-entry">
+          <span className="sz-log-date">2026-04-23</span>
+          <p className="sz-log-body">iran situation isn't resolving. the s&p sure is trading like it's already resolved. still trading through it because sitting out is its own kind of bet, and i don't like those odds. vol is elevated, the thesis holds. staying in.</p>
+        </div>
+      </div>
     </section>
   );
 }
