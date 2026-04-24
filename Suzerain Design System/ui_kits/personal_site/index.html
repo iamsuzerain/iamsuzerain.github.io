@@ -490,19 +490,19 @@
   .pf-table .pf-name { color: var(--fg-3); font-family: var(--font-sans); font-size: 13px; }
   .pf-table .pos { color: #7dd3a8; }
   .pf-table .neg { color: #ff6b9d; }
-  .pf-wt {
-    display: flex; align-items: center; gap: 10px; justify-content: flex-end;
-    min-width: 140px;
+  .pf-type-badge {
+    display: inline-block;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    padding: 2px 6px; border-radius: 3px;
+    border: 1px solid rgba(167,139,250,0.35);
+    color: rgba(167,139,250,0.85);
+    white-space: nowrap;
   }
-  .pf-wt-bar {
-    flex: 1; max-width: 90px; height: 4px;
-    background: rgba(167,139,250,0.1); border-radius: 2px; overflow: hidden;
-  }
-  .pf-wt-fill {
-    display: block; height: 100%;
-    background: linear-gradient(90deg, var(--violet-400), var(--magenta-400));
-  }
-  .pf-wt-num { color: var(--fg-3); min-width: 40px; text-align: right; }
+  .pf-type-badge:is([data-type="call"], [data-type="fut·call"]) { border-color: rgba(255,154,232,0.4); color: rgba(255,154,232,0.9); }
+  .pf-type-badge:is([data-type="put"], [data-type="fut·put"])   { border-color: rgba(255,79,216,0.4);  color: rgba(255,79,216,0.9); }
+  .pf-type-badge[data-type="crypto"] { border-color: rgba(255,79,216,0.35); color: rgba(255,154,232,0.85); }
+  .pf-type-badge[data-type="ETF"]    { border-color: rgba(196,181,253,0.4); color: rgba(196,181,253,0.9); }
+  .pf-type-badge[data-type="ADR"]    { border-color: rgba(196,181,253,0.35); color: rgba(196,181,253,0.85); }
 
   .pf-footer {
     font-family: var(--font-mono); font-size: 11px;
