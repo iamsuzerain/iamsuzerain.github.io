@@ -1,7 +1,7 @@
 // Portfolio.jsx — IBKR Flex Query dashboard (reads data/portfolio.json)
 // Globals: React, useDecode
 
-const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo } = React;
+const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo, useRef: usePortRef } = React;
 
 function fmtUSD(n, compact = false) {
   if (n == null || isNaN(n)) return '—';
@@ -22,6 +22,9 @@ function fmtDate(iso) {
 // ---------- NAV chart ----------
 function NavChart({ series }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
+  const svgRef = usePortRef(null);
+  const [hover, setHover] = usePortState(null);
+
   const values = series.map(p => p.v);
   const min = Math.min(...values), max = Math.max(...values);
   const pad = (max - min) * 0.08 || 1;
@@ -32,56 +35,86 @@ function NavChart({ series }) {
   const linePath = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
   const areaPath = linePath + ` L${x(series.length - 1).toFixed(2)},${H - PAD_B} L${x(0).toFixed(2)},${H - PAD_B} Z`;
 
-  // x-axis ticks (every ~3rd point)
   const tickEvery = Math.max(1, Math.floor(series.length / 5));
   const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
-  // y-axis labels (min, mid, max)
   const yLabels = [
     { v: y1, label: fmtUSD(y1, true) },
     { v: (y0 + y1) / 2, label: fmtUSD((y0 + y1) / 2, true) },
     { v: y0, label: fmtUSD(y0, true) },
   ];
 
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1))));
+    setHover(idx);
+  }
+
+  const hovered = hover != null ? series[hover] : null;
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="pf-navchart" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="pf-nav-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
-          <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
-        </linearGradient>
-        <linearGradient id="pf-nav-stroke" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#a78bfa"/>
-          <stop offset="100%" stopColor="#ff4fd8"/>
-        </linearGradient>
-      </defs>
-      {/* grid */}
-      {yLabels.map((yl, i) => (
-        <line key={i}
-          x1={PAD_L} x2={W - PAD_R}
-          y1={y(yl.v)} y2={y(yl.v)}
-          stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
-      ))}
-      {/* area + line */}
-      <path d={areaPath} fill="url(#pf-nav-fill)"/>
-      <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
-      {/* final dot */}
-      <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="3.5" fill="#ff4fd8"/>
-      <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
-      {/* y labels */}
-      {yLabels.map((yl, i) => (
-        <text key={i} x={W - PAD_R - 2} y={y(yl.v) - 4} textAnchor="end"
-          fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">
-          {yl.label}
-        </text>
-      ))}
-      {/* x labels */}
-      {ticks.map((t, i) => (
-        <text key={i} x={x(t.i)} y={H - 8} textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
-          fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.1em">
-          {t.d}
-        </text>
-      ))}
-    </svg>
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="pf-navchart"
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id="pf-nav-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
+          </linearGradient>
+          <linearGradient id="pf-nav-stroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#a78bfa"/>
+            <stop offset="100%" stopColor="#ff4fd8"/>
+          </linearGradient>
+        </defs>
+        {yLabels.map((yl, i) => (
+          <line key={i}
+            x1={PAD_L} x2={W - PAD_R}
+            y1={y(yl.v)} y2={y(yl.v)}
+            stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
+        ))}
+        <path d={areaPath} fill="url(#pf-nav-fill)"/>
+        <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
+        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="3.5" fill="#ff4fd8"/>
+        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
+        {yLabels.map((yl, i) => (
+          <text key={i} x={W - PAD_R - 2} y={y(yl.v) - 4} textAnchor="end"
+            fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">
+            {yl.label}
+          </text>
+        ))}
+        {ticks.map((t, i) => (
+          <text key={i} x={x(t.i)} y={H - 8} textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
+            fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.1em">
+            {t.d}
+          </text>
+        ))}
+        {hovered && (
+          <g>
+            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#a78bfa" stroke="#0a0612" strokeWidth="1.5"/>
+          </g>
+        )}
+      </svg>
+      {hovered && (
+        <div className="pm-tooltip" style={{
+          left: `${(x(hover) / W) * 100}%`,
+          top: `${(y(hovered.v) / H) * 100}%`,
+        }}>
+          <div className="pm-tt-date">{hovered.d}</div>
+          <div className="pm-tt-val pos">{fmtUSD(hovered.v)}</div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -152,6 +185,25 @@ function StatTile({ label, value, change, kicker }) {
 }
 
 // ---------- Positions table ----------
+function posTypeLabel(assetClass, subCategory) {
+  const ac = (assetClass || '').toUpperCase();
+  const sub = (subCategory || '').toUpperCase();
+  if (ac === 'CRYPTO') return 'crypto';
+  if (ac === 'FOP') return sub === 'C' ? 'fut·call' : sub === 'P' ? 'fut·put' : 'fut';
+  if (ac === 'OPT') return sub === 'C' ? 'call' : sub === 'P' ? 'put' : 'opt';
+  if (ac === 'STK') {
+    if (sub === 'ETF') return 'ETF';
+    if (sub === 'ADR') return 'ADR';
+    return 'stock';
+  }
+  return ac.toLowerCase() || '—';
+}
+
+function TypeBadge({ assetClass, subCategory }) {
+  const label = posTypeLabel(assetClass, subCategory);
+  return <span className="pf-type-badge" data-type={label}>{label}</span>;
+}
+
 function PositionsTable({ rows }) {
   return (
     <div className="pf-table-wrap">
@@ -162,13 +214,14 @@ function PositionsTable({ rows }) {
             <th>name</th>
             <th className="pf-num">qty</th>
             <th className="pf-num">mkt value</th>
-            <th className="pf-num">unrealized</th>
-            <th className="pf-num">wt</th>
+            <th className="pf-num">return</th>
+            <th>type</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((p, i) => {
-            const up = p.unrealized >= 0;
+            const retPct = p.costBasis !== 0 ? p.unrealized / Math.abs(p.costBasis) : null;
+            const up = retPct == null ? true : retPct >= 0;
             return (
               <tr key={p.symbol}>
                 <td className="pf-sym">{p.symbol}</td>
@@ -176,14 +229,9 @@ function PositionsTable({ rows }) {
                 <td className="pf-num">{p.qty}</td>
                 <td className="pf-num">{fmtUSD(p.mktValue)}</td>
                 <td className={`pf-num ${up ? 'pos' : 'neg'}`}>
-                  {up ? '+' : ''}{fmtUSD(p.unrealized)}
+                  {retPct != null ? fmtPct(retPct) : '—'}
                 </td>
-                <td className="pf-num pf-wt">
-                  <span className="pf-wt-bar">
-                    <span className="pf-wt-fill" style={{ width: `${(p.weight * 100).toFixed(1)}%` }}/>
-                  </span>
-                  <span className="pf-wt-num">{(p.weight * 100).toFixed(1)}%</span>
-                </td>
+                <td><TypeBadge assetClass={p.assetClass} subCategory={p.subCategory}/></td>
               </tr>
             );
           })}
