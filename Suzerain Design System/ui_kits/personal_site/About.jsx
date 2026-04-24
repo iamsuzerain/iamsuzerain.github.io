@@ -10,6 +10,7 @@ function About() {
       <ul className="sz-links">
         <li><a href="https://github.com/iamsuzerain">↗ github — iamsuzerain</a></li>
         <li><span>↗ email — qrasnaia [at] gmail [dot] com</span></li>
+        <li><span>↗ discord — krasnaya.</span></li>
       </ul>
       <p className="sz-meta">
         TZ=America/Seattle · no analytics · no cookies
