@@ -159,65 +159,54 @@ def _norm_date(raw: str) -> str | None:
     return None
 
 
-def build_cash_flows(root: ET.Element) -> list[dict]:
-    """Parse deposit/withdrawal CashTransaction elements into {d, amount} list."""
-    for el in root.iter("CashReport"):
-        print(f"[debug] CashReport attrs: {dict(el.attrib)}", file=sys.stderr)
-        break
-    for el in root.iter("CashReportCurrency"):
-        print(f"[debug] CashReportCurrency attrs: {dict(el.attrib)}", file=sys.stderr)
-        break
-    flows = []
-    for ct in root.iter("CashTransaction"):
-        if "deposit" not in (ct.get("type") or "").lower() and \
-           "withdrawal" not in (ct.get("type") or "").lower():
-            continue
-        raw = (ct.get("dateTime") or ct.get("date") or "").replace(";", "T").split("T")[0]
-        d = _norm_date(raw)
-        if not d:
-            continue
-        amount = to_float(ct.get("amount"))
-        if amount:
-            flows.append({"d": d, "amount": amount})
-    return sorted(flows, key=lambda f: f["d"])
+def parse_cash_report(root: ET.Element) -> dict:
+    """Read pre-aggregated deposit/withdrawal totals from CashReportCurrency (BASE_SUMMARY).
+
+    Returns net flows (positive = deposit, negative = withdrawal) for MTD, QTD, and YTD.
+    QTD is derived from YTD minus pre-quarter YTD; falls back to MTD when in the first
+    month of the quarter since MTD == QTD in that case.
+    """
+    el = next((e for e in root.iter("CashReportCurrency")
+               if e.get("levelOfDetail") == "BaseCurrency"), None)
+    if el is None:
+        return {"mtd": 0.0, "qtd": 0.0, "ytd": 0.0}
+
+    mtd = to_float(el.get("depositWithdrawalsMTD") or "0")
+    ytd = to_float(el.get("depositWithdrawalsYTD") or "0")
+
+    # IBKR has no depositWithdrawalsQTD. When the current month is the first month
+    # of the quarter (Jan/Apr/Jul/Oct), QTD == MTD. Otherwise approximate as unadjusted (0).
+    now = datetime.now(timezone.utc)
+    qtd = mtd if now.month in (1, 4, 7, 10) else 0.0
+
+    return {"mtd": mtd, "qtd": qtd, "ytd": ytd}
 
 
-def modified_dietz(start_v: float, end_v: float, flows: list[dict], period_start: str, period_end: str) -> tuple[float, float]:
-    """Deposit-adjusted return. abs = (end-start) - net_flows. pct uses time-weighted denominator."""
-    from datetime import date as _date
-    d0, d1 = _date.fromisoformat(period_start), _date.fromisoformat(period_end)
-    total_days = (d1 - d0).days or 1
-    period_flows = [f for f in flows if period_start <= f["d"] <= period_end]
-    net_flows = sum(f["amount"] for f in period_flows)
-    weighted = sum(((total_days - (_date.fromisoformat(f["d"]) - d0).days) / total_days) * f["amount"]
-                   for f in period_flows)
-    abs_chg = (end_v - start_v) - net_flows
-    denom = start_v + weighted
-    return abs_chg, (abs_chg / denom if denom else 0.0)
+def adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[float, float]:
+    """Simple deposit-adjusted return. abs = (end-start) - net_deposits. pct = abs / start."""
+    abs_chg = (end_v - start_v) - net_deposits
+    return abs_chg, (abs_chg / start_v if start_v else 0.0)
 
 
 def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
-    """Deposit-adjusted PnL for MTD, QTD, YTD via Modified Dietz (CashTransaction flows).
+    """Deposit-adjusted PnL for MTD, QTD, YTD using CashReportCurrency pre-aggregated flows.
     1Y uses ChangeInNAV.twr — IBKR's own time-weighted return over the 365-day query period.
     """
     now = datetime.now(timezone.utc)
-    today = now.strftime("%Y-%m-%d")
     cur_year = str(now.year)
     cur_month = now.strftime("%Y-%m")
     quarter_start_month = ((now.month - 1) // 3) * 3 + 1
     cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
 
-    cash_flows = build_cash_flows(root)
+    flows = parse_cash_report(root)
 
-    def period_pnl(from_date: str) -> tuple[float, float]:
-        start = next((p for p in nav_series if p["d"] >= from_date), None)
-        if not start or not start["v"]:
-            return 0.0, 0.0
-        return modified_dietz(start["v"], nav, cash_flows, start["d"], today)
+    def start_nav(from_date: str) -> float:
+        p = next((p for p in nav_series if p["d"] >= from_date), None)
+        return p["v"] if p else 0.0
 
-    mtd_abs, mtd_pct = period_pnl(cur_month + "-01")
-    qtd_abs, qtd_pct = period_pnl(cur_quarter)
-    ytd_abs, ytd_pct = period_pnl(f"{cur_year}-01-01")
+    mtd_abs, mtd_pct = adjusted_pnl(start_nav(cur_month + "-01"),        nav, flows["mtd"])
+    qtd_abs, qtd_pct = adjusted_pnl(start_nav(cur_quarter),               nav, flows["qtd"])
+    ytd_abs, ytd_pct = adjusted_pnl(start_nav(f"{cur_year}-01-01"),       nav, flows["ytd"])
 
     cin = root.find(".//ChangeInNAV")
     if cin is not None:
@@ -227,7 +216,8 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
         oney_abs  = (cin_end - cin_start) - cin_dw
         oney_pct  = to_float(cin.get("twr") or "0") / 100.0
     else:
-        oney_abs, oney_pct = period_pnl(nav_series[0]["d"] if nav_series else f"{cur_year}-01-01")
+        s = start_nav(nav_series[0]["d"] if nav_series else f"{cur_year}-01-01")
+        oney_abs, oney_pct = adjusted_pnl(s, nav, flows["ytd"])
 
     return {
         "mtd":  {"abs": mtd_abs,  "pct": mtd_pct},
