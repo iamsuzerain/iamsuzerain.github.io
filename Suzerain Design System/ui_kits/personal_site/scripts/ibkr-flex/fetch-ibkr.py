@@ -145,41 +145,89 @@ def build_nav_series(root: ET.Element) -> list[dict]:
         d = row.get("reportDate") or row.get("fromDate")
         v = to_float(row.get("total"))
         if d and v:
-            # normalize 20260423 -> 2026-04-23
             if len(d) == 8 and d.isdigit():
                 d = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
             series.append({"d": d, "v": v})
     return sorted(series, key=lambda r: r["d"])
 
 
+def _norm_date(raw: str) -> str | None:
+    """Normalize IBKR date strings (20260423 or 2026-04-23) to YYYY-MM-DD."""
+    raw = raw.replace("-", "")
+    if len(raw) == 8 and raw.isdigit():
+        return f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
+    return None
+
+
+def build_period_flows(root: ET.Element) -> list[dict]:
+    """Read depositsWithdrawals from ChangeInNAVByPeriod — already included in the Flex Query.
+
+    Each element covers a period (fromDate→toDate) and always carries depositsWithdrawals
+    as part of its core NAV breakdown. Returns list of {from_d, to_d, amount}.
+    """
+    flows = []
+    for row in root.iter("ChangeInNAVByPeriod"):
+        from_d = _norm_date(row.get("fromDate") or "")
+        to_d   = _norm_date(row.get("toDate") or "")
+        if not from_d or not to_d:
+            continue
+        amount = to_float(row.get("depositsWithdrawals") or "0")
+        flows.append({"from_d": from_d, "to_d": to_d, "amount": amount})
+    return flows
+
+
+def net_flows_for_period(period_flows: list[dict], period_start: str, period_end: str) -> float:
+    """Sum depositsWithdrawals from ChangeInNAVByPeriod rows that start within the window.
+
+    Using from_d >= period_start (not overlap) prevents a single YTD-spanning row
+    from being double-counted into shorter MTD/QTD windows.
+    """
+    total = 0.0
+    for f in period_flows:
+        if period_start <= f["from_d"] <= period_end:
+            total += f["amount"]
+    return total
+
+
+def deposit_adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[float, float]:
+    """Simple deposit-adjusted return (Simple Dietz — assumes flows at period midpoint).
+
+    abs = (end - start) - net_deposits
+    pct = abs / start
+    """
+    abs_chg = (end_v - start_v) - net_deposits
+    pct_chg = abs_chg / start_v if start_v else 0.0
+    return abs_chg, pct_chg
+
+
 def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
-    """Pull PnL from MTMPerformanceSummary / ChangeInNAV and NAV series."""
+    """PnL stats adjusted for deposits/withdrawals using ChangeInNAVByPeriod data."""
     def g(tag, attr):
         el = root.find(f".//{tag}")
         return to_float(el.get(attr)) if el is not None else 0.0
 
-    def series_pnl(series: list[dict], from_date_prefix: str) -> tuple[float, float]:
-        """Return (abs, pct) change from the first entry on/after from_date_prefix."""
-        start = next((p for p in series if p["d"] >= from_date_prefix), None)
-        if not start or nav == 0:
-            return 0.0, 0.0
-        start_v = start["v"]
-        abs_chg = nav - start_v
-        pct_chg = abs_chg / start_v if start_v else 0.0
-        return abs_chg, pct_chg
-
-    day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
-    day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
+    period_flows = build_period_flows(root)
 
     now = datetime.now(timezone.utc)
     cur_year = str(now.year)
     cur_month = now.strftime("%Y-%m")
     quarter_start_month = ((now.month - 1) // 3) * 3 + 1
     cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
+    today = now.strftime("%Y-%m-%d")
 
-    mtd_abs, mtd_pct = series_pnl(nav_series, cur_month + "-01")
-    qtd_abs, qtd_pct = series_pnl(nav_series, cur_quarter)
-    ytd_abs, ytd_pct = series_pnl(nav_series, f"{cur_year}-01-01")
+    def period_pnl(from_date: str) -> tuple[float, float]:
+        start = next((p for p in nav_series if p["d"] >= from_date), None)
+        if not start or nav == 0:
+            return 0.0, 0.0
+        net_deps = net_flows_for_period(period_flows, start["d"], today)
+        return deposit_adjusted_pnl(start["v"], nav, net_deps)
+
+    day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
+    day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
+
+    mtd_abs, mtd_pct = period_pnl(cur_month + "-01")
+    qtd_abs, qtd_pct = period_pnl(cur_quarter)
+    ytd_abs, ytd_pct = period_pnl(f"{cur_year}-01-01")
 
     return {
         "day": {"abs": day_abs, "pct": day_pct},
