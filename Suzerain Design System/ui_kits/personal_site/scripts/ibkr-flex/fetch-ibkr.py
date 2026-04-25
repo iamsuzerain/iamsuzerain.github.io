@@ -159,54 +159,75 @@ def _norm_date(raw: str) -> str | None:
     return None
 
 
+def build_cash_flows(root: ET.Element) -> list[dict]:
+    """Parse deposit/withdrawal CashTransaction elements into {d, amount} list."""
+    flows = []
+    for ct in root.iter("CashTransaction"):
+        if "deposit" not in (ct.get("type") or "").lower() and \
+           "withdrawal" not in (ct.get("type") or "").lower():
+            continue
+        raw = (ct.get("dateTime") or ct.get("date") or "").replace(";", "T").split("T")[0]
+        d = _norm_date(raw)
+        if not d:
+            continue
+        amount = to_float(ct.get("amount"))
+        if amount:
+            flows.append({"d": d, "amount": amount})
+    return sorted(flows, key=lambda f: f["d"])
+
+
+def modified_dietz(start_v: float, end_v: float, flows: list[dict], period_start: str, period_end: str) -> tuple[float, float]:
+    """Deposit-adjusted return. abs = (end-start) - net_flows. pct uses time-weighted denominator."""
+    from datetime import date as _date
+    d0, d1 = _date.fromisoformat(period_start), _date.fromisoformat(period_end)
+    total_days = (d1 - d0).days or 1
+    period_flows = [f for f in flows if period_start <= f["d"] <= period_end]
+    net_flows = sum(f["amount"] for f in period_flows)
+    weighted = sum(((total_days - (_date.fromisoformat(f["d"]) - d0).days) / total_days) * f["amount"]
+                   for f in period_flows)
+    abs_chg = (end_v - start_v) - net_flows
+    denom = start_v + weighted
+    return abs_chg, (abs_chg / denom if denom else 0.0)
+
+
 def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
-    """PnL stats. YTD uses ChangeInNAV.twr (IBKR's own time-weighted return) and
-    deposit-adjusted abs. MTD/QTD use raw NAV delta — no sub-period deposit data
-    is available in this Flex Query without adding a CashTransactions section.
+    """Deposit-adjusted PnL for MTD, QTD, YTD via Modified Dietz (CashTransaction flows).
+    1Y uses ChangeInNAV.twr — IBKR's own time-weighted return over the 365-day query period.
     """
-    def g(tag, attr):
-        el = root.find(f".//{tag}")
-        return to_float(el.get(attr)) if el is not None else 0.0
-
-    def nav_delta(from_date: str) -> tuple[float, float]:
-        start = next((p for p in nav_series if p["d"] >= from_date), None)
-        if not start or not start["v"]:
-            return 0.0, 0.0
-        abs_chg = nav - start["v"]
-        return abs_chg, abs_chg / start["v"]
-
     now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
     cur_year = str(now.year)
     cur_month = now.strftime("%Y-%m")
     quarter_start_month = ((now.month - 1) // 3) * 3 + 1
     cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
 
-    day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
-    day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
+    cash_flows = build_cash_flows(root)
 
-    mtd_abs, mtd_pct = nav_delta(cur_month + "-01")
-    qtd_abs, qtd_pct = nav_delta(cur_quarter)
+    def period_pnl(from_date: str) -> tuple[float, float]:
+        start = next((p for p in nav_series if p["d"] >= from_date), None)
+        if not start or not start["v"]:
+            return 0.0, 0.0
+        return modified_dietz(start["v"], nav, cash_flows, start["d"], today)
 
-    # YTD: ChangeInNAV covers the full query period and carries both depositsWithdrawals
-    # and IBKR's own time-weighted return (twr), which is more accurate than anything
-    # we could compute from the NAV series alone.
+    mtd_abs, mtd_pct = period_pnl(cur_month + "-01")
+    qtd_abs, qtd_pct = period_pnl(cur_quarter)
+    ytd_abs, ytd_pct = period_pnl(f"{cur_year}-01-01")
+
     cin = root.find(".//ChangeInNAV")
-    cin_from = _norm_date(cin.get("fromDate") or "") if cin is not None else None
-    if cin is not None and cin_from and cin_from.startswith(cur_year):
+    if cin is not None:
         cin_start = to_float(cin.get("startingValue") or "0")
         cin_end   = to_float(cin.get("endingValue")   or "0")
         cin_dw    = to_float(cin.get("depositsWithdrawals") or "0")
-        cin_twr   = to_float(cin.get("twr") or "0")
-        ytd_abs = (cin_end - cin_start) - cin_dw
-        ytd_pct = cin_twr / 100.0
+        oney_abs  = (cin_end - cin_start) - cin_dw
+        oney_pct  = to_float(cin.get("twr") or "0") / 100.0
     else:
-        ytd_abs, ytd_pct = nav_delta(f"{cur_year}-01-01")
+        oney_abs, oney_pct = period_pnl(nav_series[0]["d"] if nav_series else f"{cur_year}-01-01")
 
     return {
-        "day": {"abs": day_abs, "pct": day_pct},
-        "mtd": {"abs": mtd_abs, "pct": mtd_pct},
-        "qtd": {"abs": qtd_abs, "pct": qtd_pct},
-        "ytd": {"abs": ytd_abs, "pct": ytd_pct},
+        "mtd":  {"abs": mtd_abs,  "pct": mtd_pct},
+        "qtd":  {"abs": qtd_abs,  "pct": qtd_pct},
+        "ytd":  {"abs": ytd_abs,  "pct": ytd_pct},
+        "1y":   {"abs": oney_abs, "pct": oney_pct},
     }
 
 
