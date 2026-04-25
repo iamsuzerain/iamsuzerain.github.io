@@ -141,7 +141,12 @@ def build_allocation(positions: list[dict], cash: float) -> list[dict]:
 def build_nav_series(root: ET.Element) -> list[dict]:
     """Prefer <EquitySummaryByReportDateInBase> rows — one per date."""
     series = []
+    logged = False
     for row in root.iter("EquitySummaryByReportDateInBase"):
+        if not logged:
+            for el in root.iter("ChangeInNAV"):
+                print(f"[debug] ChangeInNAV attrs: {dict(el.attrib)}", file=sys.stderr)
+            logged = True
         d = row.get("reportDate") or row.get("fromDate")
         v = to_float(row.get("total"))
         if d and v:
@@ -159,48 +164,78 @@ def _norm_date(raw: str) -> str | None:
     return None
 
 
-def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
-    """PnL stats. YTD uses ChangeInNAV.twr (IBKR's own time-weighted return) and
-    deposit-adjusted abs. MTD/QTD use raw NAV delta — no sub-period deposit data
-    is available in this Flex Query without adding a CashTransactions section.
+def build_period_flows(root: ET.Element) -> list[dict]:
+    """Read depositsWithdrawals from ChangeInNAVByPeriod — already included in the Flex Query.
+
+    Each element covers a period (fromDate→toDate) and always carries depositsWithdrawals
+    as part of its core NAV breakdown. Returns list of {from_d, to_d, amount}.
     """
+    flows = []
+    for row in root.iter("ChangeInNAVByPeriod"):
+        print(f"[debug] ChangeInNAVByPeriod attrs: {dict(row.attrib)}", file=sys.stderr)
+        from_d = _norm_date(row.get("fromDate") or "")
+        to_d   = _norm_date(row.get("toDate") or "")
+        if not from_d or not to_d:
+            continue
+        amount = to_float(row.get("depositsWithdrawals") or "0")
+        flows.append({"from_d": from_d, "to_d": to_d, "amount": amount})
+    if not flows:
+        print("[debug] no ChangeInNAVByPeriod rows found", file=sys.stderr)
+    return flows
+
+
+def net_flows_for_period(period_flows: list[dict], period_start: str, period_end: str) -> float:
+    """Sum depositsWithdrawals from ChangeInNAVByPeriod rows that start within the window.
+
+    Using from_d >= period_start (not overlap) prevents a single YTD-spanning row
+    from being double-counted into shorter MTD/QTD windows.
+    """
+    total = 0.0
+    for f in period_flows:
+        if period_start <= f["from_d"] <= period_end:
+            total += f["amount"]
+    return total
+
+
+def deposit_adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[float, float]:
+    """Simple deposit-adjusted return (Simple Dietz — assumes flows at period midpoint).
+
+    abs = (end - start) - net_deposits
+    pct = abs / start
+    """
+    abs_chg = (end_v - start_v) - net_deposits
+    pct_chg = abs_chg / start_v if start_v else 0.0
+    return abs_chg, pct_chg
+
+
+def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
+    """PnL stats adjusted for deposits/withdrawals using ChangeInNAVByPeriod data."""
     def g(tag, attr):
         el = root.find(f".//{tag}")
         return to_float(el.get(attr)) if el is not None else 0.0
 
-    def nav_delta(from_date: str) -> tuple[float, float]:
-        start = next((p for p in nav_series if p["d"] >= from_date), None)
-        if not start or not start["v"]:
-            return 0.0, 0.0
-        abs_chg = nav - start["v"]
-        return abs_chg, abs_chg / start["v"]
+    period_flows = build_period_flows(root)
 
     now = datetime.now(timezone.utc)
     cur_year = str(now.year)
     cur_month = now.strftime("%Y-%m")
     quarter_start_month = ((now.month - 1) // 3) * 3 + 1
     cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
+    today = now.strftime("%Y-%m-%d")
+
+    def period_pnl(from_date: str) -> tuple[float, float]:
+        start = next((p for p in nav_series if p["d"] >= from_date), None)
+        if not start or nav == 0:
+            return 0.0, 0.0
+        net_deps = net_flows_for_period(period_flows, start["d"], today)
+        return deposit_adjusted_pnl(start["v"], nav, net_deps)
 
     day_abs = g("MTMPerformanceSummaryUnderlying", "mtm")
     day_pct = g("MTMPerformanceSummaryUnderlying", "mtmPct") / 100.0
 
-    mtd_abs, mtd_pct = nav_delta(cur_month + "-01")
-    qtd_abs, qtd_pct = nav_delta(cur_quarter)
-
-    # YTD: ChangeInNAV covers the full query period and carries both depositsWithdrawals
-    # and IBKR's own time-weighted return (twr), which is more accurate than anything
-    # we could compute from the NAV series alone.
-    cin = root.find(".//ChangeInNAV")
-    cin_from = _norm_date(cin.get("fromDate") or "") if cin is not None else None
-    if cin is not None and cin_from and cin_from.startswith(cur_year):
-        cin_start = to_float(cin.get("startingValue") or "0")
-        cin_end   = to_float(cin.get("endingValue")   or "0")
-        cin_dw    = to_float(cin.get("depositsWithdrawals") or "0")
-        cin_twr   = to_float(cin.get("twr") or "0")
-        ytd_abs = (cin_end - cin_start) - cin_dw
-        ytd_pct = cin_twr / 100.0
-    else:
-        ytd_abs, ytd_pct = nav_delta(f"{cur_year}-01-01")
+    mtd_abs, mtd_pct = period_pnl(cur_month + "-01")
+    qtd_abs, qtd_pct = period_pnl(cur_quarter)
+    ytd_abs, ytd_pct = period_pnl(f"{cur_year}-01-01")
 
     return {
         "day": {"abs": day_abs, "pct": day_pct},
