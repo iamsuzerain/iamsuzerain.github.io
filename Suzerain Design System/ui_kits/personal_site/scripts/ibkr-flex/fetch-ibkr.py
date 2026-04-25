@@ -167,12 +167,15 @@ def build_period_flows(root: ET.Element) -> list[dict]:
     """
     flows = []
     for row in root.iter("ChangeInNAVByPeriod"):
+        print(f"[debug] ChangeInNAVByPeriod attrs: {dict(row.attrib)}", file=sys.stderr)
         from_d = _norm_date(row.get("fromDate") or "")
         to_d   = _norm_date(row.get("toDate") or "")
         if not from_d or not to_d:
             continue
         amount = to_float(row.get("depositsWithdrawals") or "0")
         flows.append({"from_d": from_d, "to_d": to_d, "amount": amount})
+    if not flows:
+        print("[debug] no ChangeInNAVByPeriod rows found", file=sys.stderr)
     return flows
 
 
