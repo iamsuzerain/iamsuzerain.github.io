@@ -201,8 +201,11 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
     flows = parse_cash_report(root)
 
     def start_nav(from_date: str) -> float:
-        p = next((p for p in nav_series if p["d"] >= from_date), None)
-        return p["v"] if p else 0.0
+        # Use the closing NAV of the last trading day before the period opens.
+        # Deposits on the first day of a period are already in that day's closing NAV,
+        # so we must start from the prior day to avoid double-counting them.
+        candidates = [p for p in nav_series if p["d"] < from_date]
+        return candidates[-1]["v"] if candidates else 0.0
 
     mtd_abs, mtd_pct = adjusted_pnl(start_nav(cur_month + "-01"),        nav, flows["mtd"])
     qtd_abs, qtd_pct = adjusted_pnl(start_nav(cur_quarter),               nav, flows["qtd"])
