@@ -144,7 +144,8 @@ def build_nav_series(root: ET.Element) -> list[dict]:
     logged = False
     for row in root.iter("EquitySummaryByReportDateInBase"):
         if not logged:
-            print(f"[debug] EquitySummaryByReportDateInBase attrs: {list(row.attrib.keys())}", file=sys.stderr)
+            tags = sorted({el.tag for el in root.iter()})
+            print(f"[debug] all XML tags in response: {tags}", file=sys.stderr)
             logged = True
         d = row.get("reportDate") or row.get("fromDate")
         v = to_float(row.get("total"))
