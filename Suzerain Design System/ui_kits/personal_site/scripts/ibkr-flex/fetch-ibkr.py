@@ -161,6 +161,9 @@ def _norm_date(raw: str) -> str | None:
 
 def build_cash_flows(root: ET.Element) -> list[dict]:
     """Parse deposit/withdrawal CashTransaction elements into {d, amount} list."""
+    for el in root.iter("CashReport"):
+        print(f"[debug] CashReport attrs: {dict(el.attrib)}", file=sys.stderr)
+        break
     for el in root.iter("CashReportCurrency"):
         print(f"[debug] CashReportCurrency attrs: {dict(el.attrib)}", file=sys.stderr)
         break
