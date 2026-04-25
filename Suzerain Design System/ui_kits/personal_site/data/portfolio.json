@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-04-24T23:58:37Z",
+  "generatedAt": "2026-04-25T18:14:20Z",
   "account": {
     "id": "U\u2022\u2022\u2022\u2022003",
     "currency": "USD",
-    "nav": 848516.55096834,
-    "cash": 650215.06096834,
-    "buyingPower": 1697033.10193668
+    "nav": 846176.22351834,
+    "cash": 651192.41351834,
+    "buyingPower": 1692352.44703668
   },
   "pnl": {
     "day": {
@@ -13,16 +13,16 @@
       "pct": 0.0
     },
     "mtd": {
-      "abs": -4658.399684999953,
-      "pct": -0.0054600755465601366
+      "abs": -6998.7271349999355,
+      "pct": -0.00820315590564454
     },
     "qtd": {
-      "abs": -4658.399684999953,
-      "pct": -0.0054600755465601366
+      "abs": -6998.7271349999355,
+      "pct": -0.00820315590564454
     },
     "ytd": {
-      "abs": 136037.53108225705,
-      "pct": 0.19093549042890814
+      "abs": 133697.20363225706,
+      "pct": 0.18765072360114363
     }
   },
   "navSeries": [
@@ -353,22 +353,26 @@
     {
       "d": "2026-04-23",
       "v": 848516.55096834
+    },
+    {
+      "d": "2026-04-24",
+      "v": 846176.22351834
     }
   ],
   "allocation": [
     {
       "label": "us equities",
-      "pct": 0.31315576722591926,
+      "pct": 0.3164846533897595,
       "color": "#a78bfa"
     },
     {
       "label": "crypto",
-      "pct": 0.0035241083655891026,
+      "pct": 0.0035767133651567005,
       "color": "#ff4fd8"
     },
     {
       "label": "cash",
-      "pct": 0.7670694905985623,
+      "pct": 0.7703928186814724,
       "color": "#3d2a5c"
     }
   ],
@@ -377,145 +381,145 @@
       "symbol": "GLD",
       "name": "SPDR GOLD SHARES",
       "qty": 200.0,
-      "mktValue": 86208.0,
+      "mktValue": 86650.0,
       "costBasis": 59983.007,
-      "unrealized": 26224.993,
+      "unrealized": 26666.993,
       "assetClass": "STK",
       "subCategory": "ETF",
       "currency": "USD",
-      "weight": 0.10159848962476703
+      "weight": 0.10240183733799033
     },
     {
       "symbol": "SKM",
       "name": "SK TELECOM CO LTD-SPON ADR",
       "qty": 2000.0,
-      "mktValue": 75920.0,
+      "mktValue": 76080.0,
       "costBasis": 77003.34,
-      "unrealized": -1083.34,
+      "unrealized": -923.34,
       "assetClass": "STK",
       "subCategory": "ADR",
       "currency": "USD",
-      "weight": 0.08947379979018552
+      "weight": 0.08991034950576231
     },
     {
       "symbol": "SPXW  260428C06500000",
       "name": "SPXW 28APR26 6500 C",
       "qty": -1.0,
-      "mktValue": -61215.64,
+      "mktValue": -66733.0,
       "costBasis": -54310.35955,
-      "unrealized": -6905.28045,
+      "unrealized": -12422.64045,
       "assetClass": "OPT",
       "subCategory": "C",
       "currency": "USD",
-      "weight": -0.07214430871164479
+      "weight": -0.07886418708685641
     },
     {
       "symbol": "IBIT",
       "name": "ISHARES BITCOIN TRUST ETF",
       "qty": 1000.0,
-      "mktValue": 44050.0,
+      "mktValue": 44020.0,
       "costBasis": 61717.0344,
-      "unrealized": -17667.0344,
+      "unrealized": -17697.0344,
       "assetClass": "STK",
       "subCategory": "ETF",
       "currency": "USD",
-      "weight": 0.05191413172757735
+      "weight": 0.05202226058417004
     },
     {
       "symbol": "NVDA",
       "name": "NVIDIA CORP",
       "qty": 200.0,
-      "mktValue": 39928.0,
+      "mktValue": 41654.0,
       "costBasis": 26885.572304,
-      "unrealized": 13042.427696,
+      "unrealized": 14768.427696,
       "assetClass": "STK",
       "subCategory": "COMMON",
       "currency": "USD",
-      "weight": 0.047056241807462165
+      "weight": 0.049226152711790525
     },
     {
       "symbol": "MDWD",
       "name": "MEDIWOUND LTD",
       "qty": 800.0,
-      "mktValue": 13320.0,
+      "mktValue": 13376.0,
       "costBasis": 16294.5241,
-      "unrealized": -2974.5241,
+      "unrealized": -2918.5241,
       "assetClass": "STK",
       "subCategory": "COMMON",
       "currency": "USD",
-      "weight": 0.01569798489469535
+      "weight": 0.015807581953063574
     },
     {
       "symbol": "LOM6 P7500",
       "name": "CL JUN26 75 P",
       "qty": -10.0,
-      "mktValue": -6700.0,
+      "mktValue": -7000.0,
       "costBasis": -7396.3,
-      "unrealized": 696.3,
+      "unrealized": 396.3,
       "assetClass": "FOP",
       "subCategory": "P",
       "currency": "USD",
-      "weight": -0.007896133543127543
+      "weight": -0.00827250849816425
     },
     {
       "symbol": "VOYG",
       "name": "VOYAGER TECHNOLOGIES INC-A",
       "qty": 200.0,
-      "mktValue": 6024.0,
+      "mktValue": 5736.0,
       "costBasis": 13044.0081,
-      "unrealized": -7020.0081,
+      "unrealized": -7308.0081,
       "assetClass": "STK",
       "subCategory": "COMMON",
       "currency": "USD",
-      "weight": 0.007099449024447807
+      "weight": 0.006778729820781449
     },
     {
       "symbol": "SOL.USD-PAXOS",
       "name": "Solana cryptocurrency",
       "qty": 35.0,
-      "mktValue": 2987.25,
+      "mktValue": 3023.3,
       "costBasis": 6647.72741,
-      "unrealized": -3660.47741,
+      "unrealized": -3624.42741,
       "assetClass": "CRYPTO",
       "subCategory": "",
       "currency": "USD",
-      "weight": 0.003520555959210112
+      "weight": 0.00357289642035714
     },
     {
       "symbol": "EXPE  260918C00300000",
       "name": "EXPE 18SEP26 300 C",
       "qty": -1.0,
-      "mktValue": -1698.25,
+      "mktValue": -1755.0,
       "costBasis": -1579.54876,
-      "unrealized": -118.70124,
+      "unrealized": -175.45124,
       "assetClass": "OPT",
       "subCategory": "C",
       "currency": "USD",
-      "weight": -0.0020014341477039327
+      "weight": -0.0020740360591826085
     },
     {
-      "symbol": "EWJ   260424C00088000",
-      "name": "EWJ 24APR26 88 C",
-      "qty": -15.0,
-      "mktValue": -504.6,
-      "costBasis": -829.464405,
-      "unrealized": 324.864405,
-      "assetClass": "OPT",
-      "subCategory": "C",
-      "currency": "USD",
-      "weight": -0.0005946849232630086
-    },
-    {
-      "symbol": "SPXW  260424P06945000",
-      "name": "SPXW 24APR26 6945 P",
-      "qty": -5.0,
-      "mktValue": -400.0,
-      "costBasis": -468.99775,
-      "unrealized": 68.99775,
+      "symbol": "INTC  260501P00065000",
+      "name": "INTC 01MAY26 65 P",
+      "qty": -50.0,
+      "mktValue": -770.5,
+      "costBasis": -708.00255,
+      "unrealized": -62.49745,
       "assetClass": "OPT",
       "subCategory": "P",
       "currency": "USD",
-      "weight": -0.0004714109577986592
+      "weight": -0.0009105668282622221
+    },
+    {
+      "symbol": "ML4J6 P8000",
+      "name": "CL 27APR26 80 P",
+      "qty": -2.0,
+      "mktValue": -200.0,
+      "costBasis": -275.26,
+      "unrealized": 75.26,
+      "assetClass": "FOP",
+      "subCategory": "P",
+      "currency": "USD",
+      "weight": -0.00023635738566183572
     }
   ]
 }
