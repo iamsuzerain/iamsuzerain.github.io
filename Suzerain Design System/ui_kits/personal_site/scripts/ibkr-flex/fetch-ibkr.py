@@ -161,8 +161,8 @@ def _norm_date(raw: str) -> str | None:
 
 def build_cash_flows(root: ET.Element) -> list[dict]:
     """Parse deposit/withdrawal CashTransaction elements into {d, amount} list."""
-    all_types = list({ct.get("type") for ct in root.iter("CashTransaction")})
-    print(f"[debug] CashTransaction types found: {all_types}", file=sys.stderr)
+    all_tags = sorted({el.tag for el in root.iter()})
+    print(f"[debug] all tags: {all_tags}", file=sys.stderr)
     flows = []
     for ct in root.iter("CashTransaction"):
         if "deposit" not in (ct.get("type") or "").lower() and \
