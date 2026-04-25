@@ -294,7 +294,7 @@ function Portfolio() {
         <StatTile label="mtd"  value={fmtUSD(d.pnl.mtd.abs)}  change={d.pnl.mtd.pct}  kicker="month to date"/>
         <StatTile label="qtd"  value={fmtUSD(d.pnl.qtd.abs)}  change={d.pnl.qtd.pct}  kicker="quarter to date"/>
         <StatTile label="ytd"  value={fmtUSD(d.pnl.ytd.abs)}  change={d.pnl.ytd.pct}  kicker="year to date"/>
-        <StatTile label="1y"   value={fmtUSD(d.pnl['1y'].abs)} change={d.pnl['1y'].pct} kicker="trailing 12mo · twr"/>
+        {d.pnl['1y'] && <StatTile label="1y" value={fmtUSD(d.pnl['1y'].abs)} change={d.pnl['1y'].pct} kicker="trailing 12mo · twr"/>}
       </div>
 
       <div className="pf-panel">
