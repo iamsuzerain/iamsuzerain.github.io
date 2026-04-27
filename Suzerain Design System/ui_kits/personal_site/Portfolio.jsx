@@ -19,28 +19,34 @@ function fmtDate(iso) {
   try { return new Date(iso).toISOString().slice(0, 10); } catch { return iso; }
 }
 
-// ---------- NAV chart ----------
-function NavChart({ series }) {
+// ---------- Performance chart (deposit-adjusted TWR %) ----------
+function NavChart({ series, perfSeries }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
 
-  const values = series.map(p => p.v);
+  // Use deposit-adjusted TWR series when available, otherwise fall back to raw NAV %
+  const base = series[0].v;
+  const perf = perfSeries && perfSeries.length === series.length
+    ? perfSeries
+    : series.map(p => ({ d: p.d, v: (p.v - base) / base }));
+
+  const values = perf.map(p => p.v);
   const min = Math.min(...values), max = Math.max(...values);
-  const pad = (max - min) * 0.08 || 1;
+  const pad = (max - min) * 0.08 || 0.005;
   const y0 = min - pad, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
+  const x = (i) => PAD_L + (i / (perf.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
-  const linePath = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
-  const areaPath = linePath + ` L${x(series.length - 1).toFixed(2)},${H - PAD_B} L${x(0).toFixed(2)},${H - PAD_B} Z`;
+  const linePath = perf.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const areaPath = linePath + ` L${x(perf.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
 
-  const tickEvery = Math.max(1, Math.floor(series.length / 5));
-  const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const tickEvery = Math.max(1, Math.floor(perf.length / 5));
+  const ticks = perf.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
   const yLabels = [
-    { v: y1, label: fmtUSD(y1, true) },
-    { v: (y0 + y1) / 2, label: fmtUSD((y0 + y1) / 2, true) },
-    { v: y0, label: fmtUSD(y0, true) },
+    { v: y1 },
+    { v: (y0 + y1) / 2 },
+    { v: y0 },
   ];
 
   function onMove(e) {
@@ -49,11 +55,12 @@ function NavChart({ series }) {
     const rect = svg.getBoundingClientRect();
     const px = ((e.clientX - rect.left) / rect.width) * W;
     const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1))));
+    const idx = Math.max(0, Math.min(perf.length - 1, Math.round(t * (perf.length - 1))));
     setHover(idx);
   }
 
-  const hovered = hover != null ? series[hover] : null;
+  const hovered = hover != null ? perf[hover] : null;
+  const zeroY = y(0);
 
   return (
     <div className="pm-chart-wrap">
@@ -81,14 +88,16 @@ function NavChart({ series }) {
             y1={y(yl.v)} y2={y(yl.v)}
             stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
         ))}
+        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
+          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
-        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="3.5" fill="#ff4fd8"/>
-        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
+        <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="3.5" fill="#ff4fd8"/>
+        <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
         {yLabels.map((yl, i) => (
           <text key={i} x={W - PAD_R - 2} y={y(yl.v) - 4} textAnchor="end"
             fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">
-            {yl.label}
+            {fmtPct(yl.v)}
           </text>
         ))}
         {ticks.map((t, i) => (
@@ -111,7 +120,7 @@ function NavChart({ series }) {
           top: `${(y(hovered.v) / H) * 100}%`,
         }}>
           <div className="pm-tt-date">{hovered.d}</div>
-          <div className="pm-tt-val pos">{fmtUSD(hovered.v)}</div>
+          <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtPct(hovered.v)}</div>
         </div>
       )}
     </div>
@@ -299,10 +308,10 @@ function Portfolio() {
 
       <div className="pf-panel">
         <div className="pf-panel-head">
-          <span className="pf-panel-title">NAV · 12mo</span>
-          <span className="pf-panel-meta">daily · log y</span>
+          <span className="pf-panel-title">performance · 12mo</span>
+          <span className="pf-panel-meta">daily · % return</span>
         </div>
-        <NavChart series={d.navSeries}/>
+        <NavChart series={d.navSeries} perfSeries={d.perfSeries}/>
       </div>
 
       <div className="pf-row">

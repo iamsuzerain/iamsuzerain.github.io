@@ -139,7 +139,9 @@ def build_allocation(positions: list[dict], cash: float) -> list[dict]:
 
 
 def build_nav_series(root: ET.Element) -> list[dict]:
-    """Prefer <EquitySummaryByReportDateInBase> rows — one per date."""
+    """Prefer <EquitySummaryByReportDateInBase> rows — one per date.
+    Also captures depositsWithdrawals per day for TWR computation.
+    """
     series = []
     for row in root.iter("EquitySummaryByReportDateInBase"):
         d = row.get("reportDate") or row.get("fromDate")
@@ -147,8 +149,32 @@ def build_nav_series(root: ET.Element) -> list[dict]:
         if d and v:
             if len(d) == 8 and d.isdigit():
                 d = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
-            series.append({"d": d, "v": v})
+            cf = to_float(row.get("depositsWithdrawals") or "0")
+            series.append({"d": d, "v": v, "cf": cf})
     return sorted(series, key=lambda r: r["d"])
+
+
+def build_perf_series(nav_series: list[dict]) -> list[dict]:
+    """Daily-chain TWR. v is cumulative return as a ratio (0.15 = +15%).
+
+    Uses depositsWithdrawals from EquitySummaryByReportDateInBase (already in the
+    query) — no extra Flex section needed.
+
+    HPR_i = (NAV_i - CF_i) / NAV_{i-1} - 1
+    """
+    if len(nav_series) < 2:
+        return [{"d": p["d"], "v": 0.0} for p in nav_series]
+
+    perf = [{"d": nav_series[0]["d"], "v": 0.0}]
+    cumulative = 1.0
+    for i in range(1, len(nav_series)):
+        prev = nav_series[i - 1]["v"]
+        curr = nav_series[i]["v"]
+        cf = nav_series[i].get("cf", 0.0)
+        hpr = ((curr - cf) / prev - 1.0) if prev else 0.0
+        cumulative *= (1.0 + hpr)
+        perf.append({"d": nav_series[i]["d"], "v": round(cumulative - 1.0, 6)})
+    return perf
 
 
 def _norm_date(raw: str) -> str | None:
@@ -253,6 +279,7 @@ def transform(root: ET.Element) -> dict:
         p["weight"] = (p["mktValue"] / nav) if nav > 0 else 0.0
 
     nav_series = build_nav_series(root)
+    perf_series = build_perf_series(nav_series)
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -264,7 +291,8 @@ def transform(root: ET.Element) -> dict:
             "buyingPower": nav * 2,
         },
         "pnl": build_pnl(root, nav_series, nav),
-        "navSeries": nav_series,
+        "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
+        "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),
         "positions": positions[:12],  # top 12 by value
     }
