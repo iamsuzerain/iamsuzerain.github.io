@@ -10,7 +10,7 @@ const {
 
 const PM_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 const PM_HANDLE = 'ameameameameame';
-const PM_CACHE_KEY = 'pm-cache-v2';
+const PM_CACHE_KEY = 'pm-cache-v3';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_PF_URL_BASE = 'https://predictfolio.com/@';
 
@@ -20,6 +20,12 @@ const PM_PNL_URL =
   `https://user-pnl-api.polymarket.com/user-pnl?user_address=${PM_WALLET}&interval=all&fidelity=1d`;
 const PM_ACTIVITY_URL =
   `https://data-api.polymarket.com/activity?user=${PM_WALLET}&limit=20`;
+
+// CLOB rewards API — update if Polymarket restructures the endpoint
+const PM_REWARDS_URL =
+  `https://clob.polymarket.com/rewards/user?user_address=${PM_WALLET}`;
+const PM_REWARDS_HIST_URL =
+  `https://clob.polymarket.com/rewards/user-daily?user_address=${PM_WALLET}&limit=90`;
 
 // ---------- formatting helpers ----------
 function pmUSD(n, compact = false) {
@@ -90,6 +96,9 @@ async function pmFetchAll() {
   const pnlRaw = await pnlRes.json();
   const activityRaw = actRes.ok ? await actRes.json() : [];
 
+  // Rewards fetched separately — failure never blocks the main dashboard
+  const rewards = await pmFetchRewards();
+
   const positions = positionsRaw.map(p => ({
     market: p.title,
     slug: p.slug,
@@ -130,17 +139,85 @@ async function pmFetchAll() {
       realizedPnl: realized,
       unrealizedPnl: unrealized,
       openPositions: positions.length,
-      marketsTradedLifetime: null, // filled below if pnlRaw has distinct days
+      marketsTradedLifetime: null,
     },
     positions,
     pnlSeries,
     activity,
+    rewards,
   };
 
   try {
     localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
   } catch {}
   return data;
+}
+
+// ---------- rewards fetch ----------
+async function pmFetchRewards() {
+  try {
+    const [sumRes, histRes] = await Promise.all([
+      fetch(PM_REWARDS_URL),
+      fetch(PM_REWARDS_HIST_URL),
+    ]);
+
+    // Parse summary — shape may vary; extract totals defensively
+    let total = 0, currentEpoch = null, markets = [];
+    if (sumRes.ok) {
+      const raw = await sumRes.json();
+      // Shape A: { total_earnings, current_epoch: {amount}, markets: [...] }
+      // Shape B: flat array of epoch objects
+      // Shape C: { earnings, data: [...] }
+      const obj = Array.isArray(raw) ? raw[raw.length - 1] : raw;
+      total = +(
+        obj?.total_earnings ??
+        obj?.totalEarnings ??
+        obj?.total ??
+        obj?.earnings ??
+        0
+      );
+      const ep = obj?.current_epoch ?? obj?.currentEpoch ?? obj?.epoch ?? null;
+      if (ep) {
+        currentEpoch = {
+          amount: +(ep.amount ?? ep.earnings ?? ep.total ?? 0),
+          label: ep.epoch ?? ep.id ?? ep.label ?? null,
+        };
+      }
+      const mktArr = obj?.markets ?? obj?.market_breakdown ?? obj?.byMarket ?? [];
+      markets = (Array.isArray(mktArr) ? mktArr : []).map(m => ({
+        title: m.title ?? m.market ?? m.name ?? m.condition_id ?? '—',
+        earned: +(m.amount ?? m.earnings ?? m.total ?? 0),
+        eligible: m.eligible ?? m.is_eligible ?? true,
+      })).filter(m => m.earned > 0).sort((a, b) => b.earned - a.earned).slice(0, 10);
+    }
+
+    // Parse daily history — shape: array of { date/timestamp, amount/earnings }
+    let dailySeries = [];
+    if (histRes.ok) {
+      const histRaw = await histRes.json();
+      const rows = Array.isArray(histRaw) ? histRaw : (histRaw?.data ?? histRaw?.rows ?? []);
+      let cumulative = 0;
+      dailySeries = rows.map(r => {
+        const rawDate = r.date ?? r.reportDate ?? r.timestamp ?? r.t;
+        let d;
+        if (typeof rawDate === 'number') {
+          d = new Date(rawDate * (rawDate > 1e10 ? 1 : 1000)).toISOString().slice(0, 10);
+        } else {
+          d = String(rawDate).slice(0, 10);
+        }
+        const amt = +(r.amount ?? r.earnings ?? r.rewards ?? r.total ?? 0);
+        cumulative += amt;
+        return { d, daily: amt, v: +cumulative.toFixed(4) };
+      }).filter(r => r.d && r.d.length === 10).sort((a, b) => a.d.localeCompare(b.d));
+
+      // If API gives pre-aggregated totals use them; else derive from history
+      if (!total && dailySeries.length) total = dailySeries[dailySeries.length - 1].v;
+    }
+
+    return { total, currentEpoch, markets, dailySeries, available: true };
+  } catch {
+    return { available: false };
+  }
 }
 
 // ---------- PnL sparkline ----------
@@ -348,6 +425,141 @@ function PmStat({ label, value, change, kicker, tone }) {
   );
 }
 
+// ---------- rewards components ----------
+function PmRewardsSpark({ series }) {
+  const W = 920, H = 140, PAD_L = 8, PAD_R = 8, PAD_T = 12, PAD_B = 24;
+  const svgRef = usePmRef(null);
+  const [hover, setHover] = usePmState(null);
+
+  const values = series.map(p => p.v);
+  const min = 0, max = Math.max(...values, 0.001);
+  const x = i => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
+  const y = v => PAD_T + (1 - (v - min) / (max - min)) * (H - PAD_T - PAD_B);
+
+  const line = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const area = line + ` L${x(series.length - 1).toFixed(2)},${H - PAD_B} L${x(0).toFixed(2)},${H - PAD_B} Z`;
+
+  const tickEvery = Math.max(1, Math.floor(series.length / 5));
+  const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    setHover(Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1)))));
+  }
+
+  const hovered = hover != null ? series[hover] : null;
+
+  return (
+    <div className="pm-chart-wrap">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
+        className="pf-navchart pm-chart-svg" preserveAspectRatio="none"
+        onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+        <defs>
+          <linearGradient id="pm-rew-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7c5cf5" stopOpacity="0.3"/>
+            <stop offset="100%" stopColor="#7c5cf5" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#pm-rew-fill)"/>
+        <path d={line} fill="none" stroke="#7c5cf5" strokeWidth="1.75"/>
+        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="3.5" fill="#a78bfa"/>
+        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#a78bfa" opacity="0.2"/>
+        {ticks.map((t, i) => (
+          <text key={i} x={x(t.i)} y={H - 6}
+            textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
+            fontFamily="JetBrains Mono, monospace" fontSize="9"
+            fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">{fmtDateShort(t.d)}</text>
+        ))}
+        {hovered && (
+          <g>
+            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(229,225,241,0.2)" strokeDasharray="2 3"/>
+            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#a78bfa" stroke="#0a0612" strokeWidth="1.5"/>
+          </g>
+        )}
+      </svg>
+      {hovered && (
+        <div className="pm-tooltip" style={{
+          left: `${(x(hover) / W) * 100}%`,
+          top: `${(y(hovered.v) / H) * 100}%`,
+        }}>
+          <div className="pm-tt-date">{fmtDate(hovered.d)}</div>
+          <div className="pm-tt-val pos">+{hovered.daily.toFixed(4)} MATIC</div>
+          <div className="pm-tt-kicker">cumul. {hovered.v.toFixed(4)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PmRewards({ rewards }) {
+  if (!rewards?.available) return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">rewards</span>
+        <span className="pf-panel-meta">LP / market-maker program</span>
+      </div>
+      <p className="sz-dim" style={{padding:'12px 0', fontSize:'0.82rem'}}>
+        Rewards endpoint unavailable — the CLOB API may have restructured.
+        Check <code>clob.polymarket.com/rewards</code> or the #market-makers Discord.
+      </p>
+    </div>
+  );
+
+  const { total, currentEpoch, markets, dailySeries } = rewards;
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">rewards</span>
+        <span className="pf-panel-meta">LP / market-maker program · MATIC</span>
+      </div>
+
+      <div className="pf-stats" style={{marginBottom: '12px'}}>
+        <PmStat label="lifetime earned" value={total ? total.toFixed(4) + ' MATIC' : '—'} tone="pos"/>
+        {currentEpoch && (
+          <PmStat
+            label={currentEpoch.label ? `epoch ${currentEpoch.label}` : 'current epoch'}
+            value={currentEpoch.amount ? currentEpoch.amount.toFixed(4) + ' MATIC' : '—'}
+            tone="pos"
+          />
+        )}
+      </div>
+
+      {dailySeries && dailySeries.length > 1 && (
+        <PmRewardsSpark series={dailySeries}/>
+      )}
+
+      {markets && markets.length > 0 && (
+        <div className="pf-table-wrap" style={{marginTop:'12px'}}>
+          <table className="pf-table pm-pos-table">
+            <thead>
+              <tr>
+                <th>market</th>
+                <th className="pf-num">earned (MATIC)</th>
+                <th className="pf-num">eligible</th>
+              </tr>
+            </thead>
+            <tbody>
+              {markets.map((m, i) => (
+                <tr key={i}>
+                  <td className="pm-market" title={m.title}>{m.title}</td>
+                  <td className="pf-num pos">{m.earned.toFixed(4)}</td>
+                  <td className="pf-num">{m.eligible ? '✓' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------- main view ----------
 function Polymarket() {
   const [data, setData] = usePmState(null);
@@ -376,7 +588,7 @@ function Polymarket() {
     </section>
   );
 
-  const { profile, summary, pnlSeries, positions, activity } = data;
+  const { profile, summary, pnlSeries, positions, activity, rewards } = data;
   const updated = new Date(data.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
@@ -448,6 +660,8 @@ function Polymarket() {
           <PmActivity rows={activity}/>
         </div>
       )}
+
+      <PmRewards rewards={rewards}/>
 
       <div className="pf-footer pm-footer-deep">
         <span>live · data-api.polymarket.com</span>
