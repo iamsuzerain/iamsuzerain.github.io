@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-28T19:21:53Z",
+  "generatedAt": "2026-04-28T19:25:13Z",
   "account": {
     "id": "U\u2022\u2022\u2022\u2022003",
     "currency": "USD",
@@ -2131,82 +2131,166 @@
     "2026-04-09": -21000.0,
     "2026-04-27": -200000.0
   },
-  "_debug_navCf": [
+  "_debug_rawTx": [
     {
       "d": "2026-04-01",
-      "cf": 0.0
+      "type": "Dividends",
+      "amount": 2.0
+    },
+    {
+      "d": "2026-04-01",
+      "type": "Dividends",
+      "amount": 2.0
+    },
+    {
+      "d": "2026-04-01",
+      "type": "Other Fees",
+      "amount": -4.85
     },
     {
       "d": "2026-04-02",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": 1.55
     },
     {
-      "d": "2026-04-03",
-      "cf": 0.0
+      "d": "2026-04-02",
+      "type": "Other Fees",
+      "amount": 1.5
+    },
+    {
+      "d": "2026-04-02",
+      "type": "Other Fees",
+      "amount": -3.47
+    },
+    {
+      "d": "2026-04-02",
+      "type": "Other Fees",
+      "amount": -1.55
+    },
+    {
+      "d": "2026-04-02",
+      "type": "Other Fees",
+      "amount": -1.5
     },
     {
       "d": "2026-04-06",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": -20.44
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Other Fees",
+      "amount": -61.11
     },
     {
       "d": "2026-04-07",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-08",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": -14.21
     },
     {
       "d": "2026-04-09",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-10",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-13",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-14",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-15",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-16",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-17",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-20",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-21",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-22",
-      "cf": 0.0
-    },
-    {
-      "d": "2026-04-23",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": -15.23
     },
     {
       "d": "2026-04-24",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": -5.91
     },
     {
       "d": "2026-04-27",
-      "cf": 0.0
+      "type": "Other Fees",
+      "amount": -1.0
+    },
+    {
+      "d": "2026-04-01",
+      "type": "Other Fees",
+      "amount": -4.85
+    },
+    {
+      "d": "2026-04-02",
+      "type": "Other Fees",
+      "amount": -3.47
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Other Fees",
+      "amount": -81.55
+    },
+    {
+      "d": "2026-04-07",
+      "type": "Other Fees",
+      "amount": -14.21
+    },
+    {
+      "d": "2026-04-09",
+      "type": "Other Fees",
+      "amount": -15.23
+    },
+    {
+      "d": "2026-04-24",
+      "type": "Other Fees",
+      "amount": -5.91
+    },
+    {
+      "d": "2026-04-27",
+      "type": "Other Fees",
+      "amount": -1.0
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Deposits/Withdrawals",
+      "amount": 800.0
+    },
+    {
+      "d": "2026-04-07",
+      "type": "Deposits/Withdrawals",
+      "amount": 900.0
+    },
+    {
+      "d": "2026-04-09",
+      "type": "Deposits/Withdrawals",
+      "amount": -10500.0
+    },
+    {
+      "d": "2026-04-27",
+      "type": "Deposits/Withdrawals",
+      "amount": -100000.0
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Deposits/Withdrawals",
+      "amount": 800.0
+    },
+    {
+      "d": "2026-04-07",
+      "type": "Deposits/Withdrawals",
+      "amount": 900.0
+    },
+    {
+      "d": "2026-04-09",
+      "type": "Deposits/Withdrawals",
+      "amount": -10500.0
+    },
+    {
+      "d": "2026-04-27",
+      "type": "Deposits/Withdrawals",
+      "amount": -100000.0
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Broker Interest Received",
+      "amount": 1534.57
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Broker Interest Received",
+      "amount": 1.48
+    },
+    {
+      "d": "2026-04-06",
+      "type": "Broker Interest Received",
+      "amount": 1536.05
     }
   ],
   "allocation": [
