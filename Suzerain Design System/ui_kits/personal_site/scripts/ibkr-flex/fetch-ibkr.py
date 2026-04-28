@@ -180,21 +180,14 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
     return flows
 
 
-def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float],
-                      twr_anchor: float | None = None) -> list[dict]:
+def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> list[dict]:
     """Daily-chain TWR. v is cumulative return as a ratio (0.15 = +15%).
 
     Prefers CashTransaction-derived flows; falls back to depositsWithdrawals
     from EquitySummaryByReportDateInBase if no CashTransaction data is present.
 
     HPR_i = (NAV_i - CF_i) / NAV_{i-1} - 1
-
-    If twr_anchor is provided (IBKR's own TWR scalar), the series is geometrically
-    rescaled so the endpoint exactly matches it, correcting for any
-    mis-classified cash flows without distorting the shape of the curve.
     """
-    import math
-
     if len(nav_series) < 2:
         return [{"d": p["d"], "v": 0.0} for p in nav_series]
 
@@ -209,16 +202,6 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float],
         hpr = ((curr - cf) / prev - 1.0) if prev else 0.0
         cumulative *= (1.0 + hpr)
         perf.append({"d": d, "v": round(cumulative - 1.0, 6)})
-
-    # Geometrically rescale so endpoint matches IBKR's authoritative TWR.
-    # Guard: skip rescaling if k is extreme — that signals a cash-flow mismatch
-    # severe enough that rescaling would spike or crush the entire curve.
-    if twr_anchor is not None and len(perf) > 1:
-        our_final = perf[-1]["v"]
-        if our_final > -1.0 and our_final != 0.0:
-            k = math.log(1.0 + twr_anchor) / math.log(1.0 + our_final)
-            if 0.5 <= k <= 2.0:
-                perf = [{"d": p["d"], "v": round((1.0 + p["v"]) ** k - 1.0, 6)} for p in perf]
 
     return perf
 
@@ -320,7 +303,7 @@ def transform(root: ET.Element) -> dict:
     cash_flows = build_cash_flows(root)
     cin = root.find(".//ChangeInNAV")
     twr_anchor = to_float(cin.get("twr") or "0") / 100.0 if cin is not None else None
-    perf_series = build_perf_series(nav_series, cash_flows, twr_anchor=twr_anchor)
+    perf_series = build_perf_series(nav_series, cash_flows)
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
