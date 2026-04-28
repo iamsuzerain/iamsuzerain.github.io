@@ -197,13 +197,16 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float],
     if len(nav_series) < 2:
         return [{"d": p["d"], "v": 0.0} for p in nav_series]
 
-    use_cash_flows = bool(cash_flows)
     perf = [{"d": nav_series[0]["d"], "v": 0.0}]
     cumulative = 1.0
     for i in range(1, len(nav_series)):
         prev = nav_series[i - 1]["v"]
         curr = nav_series[i]["v"]
-        cf = cash_flows.get(nav_series[i]["d"], 0.0) if use_cash_flows else nav_series[i].get("cf", 0.0)
+        d = nav_series[i]["d"]
+        # Prefer CashTransaction-derived flow for this day; fall back to the equity
+        # summary's depositsWithdrawals so withdrawals with non-standard type labels
+        # (wire transfers, EFTs, etc.) are never silently dropped.
+        cf = cash_flows[d] if d in cash_flows else nav_series[i].get("cf", 0.0)
         hpr = ((curr - cf) / prev - 1.0) if prev else 0.0
         cumulative *= (1.0 + hpr)
         perf.append({"d": nav_series[i]["d"], "v": round(cumulative - 1.0, 6)})

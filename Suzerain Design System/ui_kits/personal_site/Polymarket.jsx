@@ -19,7 +19,7 @@ const PM_POSITIONS_URL =
 const PM_PNL_URL =
   `https://user-pnl-api.polymarket.com/user-pnl?user_address=${PM_WALLET}&interval=all&fidelity=1d`;
 const PM_ACTIVITY_URL =
-  `https://data-api.polymarket.com/activity?user=${PM_WALLET}&limit=100`;
+  `https://data-api.polymarket.com/activity?user=${PM_WALLET}&limit=20`;
 
 // ---------- formatting helpers ----------
 function pmUSD(n, compact = false) {
@@ -113,23 +113,6 @@ async function pmFetchAll() {
     v: +r.p.toFixed(2),
   }));
 
-  // Polymarket's user-pnl API treats withdrawals as P&L reductions (and deposits as gains).
-  // Offset the series so only trading P&L is reflected.
-  const wOffsets = {};
-  for (const a of activityRaw || []) {
-    const txType = (a.type || '').toUpperCase();
-    const sign = txType === 'WITHDRAWAL' ? 1 : txType === 'DEPOSIT' ? -1 : 0;
-    if (!sign) continue;
-    const d = new Date((a.timestamp || 0) * 1000).toISOString().slice(0, 10);
-    const amt = Math.abs(+(a.cashflow || a.size || a.amount || 0));
-    if (amt > 0) wOffsets[d] = (wOffsets[d] || 0) + sign * amt;
-  }
-  for (const [wDate, offset] of Object.entries(wOffsets)) {
-    for (const pt of pnlSeries) {
-      if (pt.d >= wDate) pt.v = +(pt.v + offset).toFixed(2);
-    }
-  }
-
   const activity = (activityRaw || []).slice(0, 15).map(a => ({
     t: new Date((a.timestamp || 0) * 1000).toISOString(),
     type: (a.type || 'TRADE').toUpperCase(),
@@ -158,30 +141,6 @@ async function pmFetchAll() {
     localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
   } catch {}
   return data;
-}
-
-// ---------- Monotone cubic spline (Fritsch-Carlson) ----------
-function smoothPath(xs, ys) {
-  const n = xs.length;
-  if (n < 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
-  if (n === 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)} L${xs[1].toFixed(2)},${ys[1].toFixed(2)}`;
-  const delta = new Array(n - 1);
-  for (let i = 0; i < n - 1; i++) delta[i] = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]);
-  const m = new Array(n);
-  m[0] = delta[0];
-  for (let i = 1; i < n - 1; i++) m[i] = (delta[i - 1] + delta[i]) / 2;
-  m[n - 1] = delta[n - 2];
-  for (let i = 0; i < n - 1; i++) {
-    if (Math.abs(delta[i]) < 1e-10) { m[i] = 0; m[i + 1] = 0; continue; }
-    const a = m[i] / delta[i], b = m[i + 1] / delta[i], s = a * a + b * b;
-    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] *= t; m[i + 1] *= t; }
-  }
-  let path = `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const dx = (xs[i + 1] - xs[i]) / 3;
-    path += ` C${(xs[i] + dx).toFixed(2)},${(ys[i] + m[i] * dx).toFixed(2)} ${(xs[i + 1] - dx).toFixed(2)},${(ys[i + 1] - m[i + 1] * dx).toFixed(2)} ${xs[i + 1].toFixed(2)},${ys[i + 1].toFixed(2)}`;
-  }
-  return path;
 }
 
 // ---------- PnL sparkline ----------
@@ -215,7 +174,7 @@ function PmSpark({ series }) {
   const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
-  const line = smoothPath(series.map((_, i) => x(i)), series.map(p => y(p.v)));
+  const line = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
   const area = line + ` L${x(series.length - 1).toFixed(2)},${H - PAD_B} L${x(0).toFixed(2)},${H - PAD_B} Z`;
   const zeroY = y(0);
 
