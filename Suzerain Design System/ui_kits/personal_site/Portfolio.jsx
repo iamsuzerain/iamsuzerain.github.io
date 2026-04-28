@@ -19,6 +19,30 @@ function fmtDate(iso) {
   try { return new Date(iso).toISOString().slice(0, 10); } catch { return iso; }
 }
 
+// ---------- Monotone cubic spline (Fritsch-Carlson) ----------
+function smoothPath(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
+  if (n === 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)} L${xs[1].toFixed(2)},${ys[1].toFixed(2)}`;
+  const delta = new Array(n - 1);
+  for (let i = 0; i < n - 1; i++) delta[i] = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]);
+  const m = new Array(n);
+  m[0] = delta[0];
+  for (let i = 1; i < n - 1; i++) m[i] = (delta[i - 1] + delta[i]) / 2;
+  m[n - 1] = delta[n - 2];
+  for (let i = 0; i < n - 1; i++) {
+    if (Math.abs(delta[i]) < 1e-10) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / delta[i], b = m[i + 1] / delta[i], s = a * a + b * b;
+    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] *= t; m[i + 1] *= t; }
+  }
+  let path = `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const dx = (xs[i + 1] - xs[i]) / 3;
+    path += ` C${(xs[i] + dx).toFixed(2)},${(ys[i] + m[i] * dx).toFixed(2)} ${(xs[i + 1] - dx).toFixed(2)},${(ys[i + 1] - m[i + 1] * dx).toFixed(2)} ${xs[i + 1].toFixed(2)},${ys[i + 1].toFixed(2)}`;
+  }
+  return path;
+}
+
 // ---------- Performance chart (deposit-adjusted TWR %) ----------
 function NavChart({ series, perfSeries }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
@@ -38,7 +62,7 @@ function NavChart({ series, perfSeries }) {
   const x = (i) => PAD_L + (i / (perf.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
-  const linePath = perf.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const linePath = smoothPath(perf.map((_, i) => x(i)), perf.map(p => y(p.v)));
   const areaPath = linePath + ` L${x(perf.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
 
   const tickEvery = Math.max(1, Math.floor(perf.length / 5));
