@@ -176,10 +176,10 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
         d = _norm_date(raw.replace("-", ""))
         if not d:
             continue
-        # Deduplicate: Flex Query sometimes returns each transaction twice
-        # (e.g. once per currency section). Use transactionID when present,
-        # otherwise fall back to a composite key.
-        tx_id = tx.get("transactionID") or f"{d}|{tx_type}|{tx.get('amount')}"
+        # Deduplicate: IBKR Flex returns each CashTransaction twice (once per
+        # currency section — BASE and native currency). transactionID differs
+        # between the two copies, so we use only the composite key.
+        tx_id = f"{d}|{tx_type}|{tx.get('amount')}"
         if tx_id in seen:
             continue
         seen.add(tx_id)
