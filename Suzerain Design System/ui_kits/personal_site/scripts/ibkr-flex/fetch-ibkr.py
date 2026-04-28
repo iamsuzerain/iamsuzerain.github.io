@@ -316,6 +316,8 @@ def transform(root: ET.Element) -> dict:
         "pnl": build_pnl(root, nav_series, nav),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
+        "_debug_cashFlows": {d: v for d, v in cash_flows.items() if d >= "2026-04-01"},
+        "_debug_navCf": [{"d": p["d"], "cf": p.get("cf", 0)} for p in nav_series if p["d"] >= "2026-04-01"],
         "allocation": build_allocation(positions, cash),
         "positions": positions[:12],  # top 12 by value
     }
