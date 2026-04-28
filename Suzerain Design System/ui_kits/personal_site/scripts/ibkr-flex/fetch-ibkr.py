@@ -138,6 +138,14 @@ def build_allocation(positions: list[dict], cash: float) -> list[dict]:
     return alloc
 
 
+def _norm_date(raw: str) -> str | None:
+    """Normalize IBKR date strings (20260423 or 2026-04-23) to YYYY-MM-DD."""
+    raw = raw.replace("-", "")
+    if len(raw) == 8 and raw.isdigit():
+        return f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
+    return None
+
+
 def build_nav_series(root: ET.Element) -> list[dict]:
     """Prefer <EquitySummaryByReportDateInBase> rows — one per date.
     Also captures depositsWithdrawals per day for TWR computation.
@@ -154,35 +162,45 @@ def build_nav_series(root: ET.Element) -> list[dict]:
     return sorted(series, key=lambda r: r["d"])
 
 
-def build_perf_series(nav_series: list[dict]) -> list[dict]:
+def build_cash_flows(root: ET.Element) -> dict[str, float]:
+    """Per-day net deposits/withdrawals from CashTransaction nodes.
+    Requires Cash Transactions section enabled in the Flex Query.
+    """
+    flows: dict[str, float] = {}
+    for tx in root.iter("CashTransaction"):
+        tx_type = (tx.get("type") or "").lower()
+        if "deposit" not in tx_type and "withdrawal" not in tx_type:
+            continue
+        raw = (tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0]
+        d = _norm_date(raw.replace("-", ""))
+        if not d:
+            continue
+        flows[d] = flows.get(d, 0.0) + to_float(tx.get("amount"))
+    return flows
+
+
+def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> list[dict]:
     """Daily-chain TWR. v is cumulative return as a ratio (0.15 = +15%).
 
-    Uses depositsWithdrawals from EquitySummaryByReportDateInBase (already in the
-    query) — no extra Flex section needed.
+    Prefers CashTransaction-derived flows; falls back to depositsWithdrawals
+    from EquitySummaryByReportDateInBase if no CashTransaction data is present.
 
     HPR_i = (NAV_i - CF_i) / NAV_{i-1} - 1
     """
     if len(nav_series) < 2:
         return [{"d": p["d"], "v": 0.0} for p in nav_series]
 
+    use_cash_flows = bool(cash_flows)
     perf = [{"d": nav_series[0]["d"], "v": 0.0}]
     cumulative = 1.0
     for i in range(1, len(nav_series)):
         prev = nav_series[i - 1]["v"]
         curr = nav_series[i]["v"]
-        cf = nav_series[i].get("cf", 0.0)
+        cf = cash_flows.get(nav_series[i]["d"], 0.0) if use_cash_flows else nav_series[i].get("cf", 0.0)
         hpr = ((curr - cf) / prev - 1.0) if prev else 0.0
         cumulative *= (1.0 + hpr)
         perf.append({"d": nav_series[i]["d"], "v": round(cumulative - 1.0, 6)})
     return perf
-
-
-def _norm_date(raw: str) -> str | None:
-    """Normalize IBKR date strings (20260423 or 2026-04-23) to YYYY-MM-DD."""
-    raw = raw.replace("-", "")
-    if len(raw) == 8 and raw.isdigit():
-        return f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
-    return None
 
 
 def parse_cash_report(root: ET.Element) -> dict:
@@ -279,7 +297,8 @@ def transform(root: ET.Element) -> dict:
         p["weight"] = (p["mktValue"] / nav) if nav > 0 else 0.0
 
     nav_series = build_nav_series(root)
-    perf_series = build_perf_series(nav_series)
+    cash_flows = build_cash_flows(root)
+    perf_series = build_perf_series(nav_series, cash_flows)
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
