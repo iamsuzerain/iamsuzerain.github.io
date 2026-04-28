@@ -166,11 +166,10 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
     """Per-day net deposits/withdrawals from CashTransaction nodes.
     Requires Cash Transactions section enabled in the Flex Query.
     """
-    FLOW_KEYWORDS = {"deposit", "withdrawal", "wire", "electronic fund", "check", "disbursement"}
     flows: dict[str, float] = {}
     for tx in root.iter("CashTransaction"):
         tx_type = (tx.get("type") or "").lower()
-        if not any(kw in tx_type for kw in FLOW_KEYWORDS):
+        if "deposit" not in tx_type and "withdrawal" not in tx_type:
             continue
         raw = (tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0]
         d = _norm_date(raw.replace("-", ""))
