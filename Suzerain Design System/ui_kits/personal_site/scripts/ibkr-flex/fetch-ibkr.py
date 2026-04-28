@@ -166,6 +166,7 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
     """Per-day net deposits/withdrawals from CashTransaction nodes.
     Requires Cash Transactions section enabled in the Flex Query.
     """
+    seen: set[str] = set()
     flows: dict[str, float] = {}
     for tx in root.iter("CashTransaction"):
         tx_type = (tx.get("type") or "").lower()
@@ -175,6 +176,13 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
         d = _norm_date(raw.replace("-", ""))
         if not d:
             continue
+        # Deduplicate: Flex Query sometimes returns each transaction twice
+        # (e.g. once per currency section). Use transactionID when present,
+        # otherwise fall back to a composite key.
+        tx_id = tx.get("transactionID") or f"{d}|{tx_type}|{tx.get('amount')}"
+        if tx_id in seen:
+            continue
+        seen.add(tx_id)
         flows[d] = flows.get(d, 0.0) + to_float(tx.get("amount"))
     return flows
 
@@ -316,13 +324,6 @@ def transform(root: ET.Element) -> dict:
         "pnl": build_pnl(root, nav_series, nav),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
-        "_debug_cashFlows": {d: v for d, v in cash_flows.items() if d >= "2026-04-01"},
-        "_debug_rawTx": [
-            {"d": _norm_date((tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0].replace("-", "")),
-             "type": tx.get("type"), "amount": to_float(tx.get("amount"))}
-            for tx in root.iter("CashTransaction")
-            if (tx.get("reportDate") or tx.get("dateTime") or "").replace("-","")[:8] >= "20260401"
-        ],
         "allocation": build_allocation(positions, cash),
         "positions": positions[:12],  # top 12 by value
     }
