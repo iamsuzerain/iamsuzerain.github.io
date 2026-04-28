@@ -317,7 +317,12 @@ def transform(root: ET.Element) -> dict:
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "_debug_cashFlows": {d: v for d, v in cash_flows.items() if d >= "2026-04-01"},
-        "_debug_navCf": [{"d": p["d"], "cf": p.get("cf", 0)} for p in nav_series if p["d"] >= "2026-04-01"],
+        "_debug_rawTx": [
+            {"d": _norm_date((tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0].replace("-", "")),
+             "type": tx.get("type"), "amount": to_float(tx.get("amount"))}
+            for tx in root.iter("CashTransaction")
+            if (tx.get("reportDate") or tx.get("dateTime") or "").replace("-","")[:8] >= "20260401"
+        ],
         "allocation": build_allocation(positions, cash),
         "positions": positions[:12],  # top 12 by value
     }
