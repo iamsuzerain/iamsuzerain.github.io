@@ -166,10 +166,11 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
     """Per-day net deposits/withdrawals from CashTransaction nodes.
     Requires Cash Transactions section enabled in the Flex Query.
     """
+    FLOW_KEYWORDS = {"deposit", "withdrawal", "wire", "electronic fund", "check", "disbursement"}
     flows: dict[str, float] = {}
     for tx in root.iter("CashTransaction"):
         tx_type = (tx.get("type") or "").lower()
-        if "deposit" not in tx_type and "withdrawal" not in tx_type:
+        if not any(kw in tx_type for kw in FLOW_KEYWORDS):
             continue
         raw = (tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0]
         d = _norm_date(raw.replace("-", ""))
@@ -197,26 +198,27 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float],
     if len(nav_series) < 2:
         return [{"d": p["d"], "v": 0.0} for p in nav_series]
 
+    use_cash_flows = bool(cash_flows)
     perf = [{"d": nav_series[0]["d"], "v": 0.0}]
     cumulative = 1.0
     for i in range(1, len(nav_series)):
         prev = nav_series[i - 1]["v"]
         curr = nav_series[i]["v"]
         d = nav_series[i]["d"]
-        # Prefer CashTransaction-derived flow for this day; fall back to the equity
-        # summary's depositsWithdrawals so withdrawals with non-standard type labels
-        # (wire transfers, EFTs, etc.) are never silently dropped.
-        cf = cash_flows[d] if d in cash_flows else nav_series[i].get("cf", 0.0)
+        cf = cash_flows.get(d, 0.0) if use_cash_flows else nav_series[i].get("cf", 0.0)
         hpr = ((curr - cf) / prev - 1.0) if prev else 0.0
         cumulative *= (1.0 + hpr)
-        perf.append({"d": nav_series[i]["d"], "v": round(cumulative - 1.0, 6)})
+        perf.append({"d": d, "v": round(cumulative - 1.0, 6)})
 
-    # Geometrically rescale so endpoint matches IBKR's authoritative TWR
+    # Geometrically rescale so endpoint matches IBKR's authoritative TWR.
+    # Guard: skip rescaling if k is extreme — that signals a cash-flow mismatch
+    # severe enough that rescaling would spike or crush the entire curve.
     if twr_anchor is not None and len(perf) > 1:
         our_final = perf[-1]["v"]
         if our_final > -1.0 and our_final != 0.0:
             k = math.log(1.0 + twr_anchor) / math.log(1.0 + our_final)
-            perf = [{"d": p["d"], "v": round((1.0 + p["v"]) ** k - 1.0, 6)} for p in perf]
+            if 0.5 <= k <= 2.0:
+                perf = [{"d": p["d"], "v": round((1.0 + p["v"]) ** k - 1.0, 6)} for p in perf]
 
     return perf
 
