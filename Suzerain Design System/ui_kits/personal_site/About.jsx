@@ -4,7 +4,6 @@ function About() {
     <section className="sz-prose">
       <div className="sz-kicker">◆ about</div>
       <h2 className="sz-h2">the morning will come when the world is mine</h2>
-      <p>i work alone<br/>no god, no country, no king</p>
       <p>may fortune favor me</p>
       <h3 className="sz-h3">elsewhere</h3>
       <ul className="sz-links">
