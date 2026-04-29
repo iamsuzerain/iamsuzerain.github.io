@@ -1,5 +1,6 @@
 // Writing.jsx
 const POSTS = [
+  { date: '2026-04-28', title: 'moving $100k from ibkr to polymarket', tags: ['trading','notes'], read: '3 min' },
   { date: '2026-03-18', title: 'on suzerainty', tags: ['essay'], read: '8 min' },
   { date: '2026-02-04', title: 'the compiler as autobiography', tags: ['compilers','essay'], read: '12 min' },
   { date: '2025-12-30', title: 'notes on kyoto in winter', tags: ['places'], read: '4 min' },
