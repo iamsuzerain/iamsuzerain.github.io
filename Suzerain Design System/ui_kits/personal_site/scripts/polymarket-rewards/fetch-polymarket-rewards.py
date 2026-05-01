@@ -36,7 +36,8 @@ def get_json(url, headers=None):
     if r.status_code in (404, 204):
         return []
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+    return data if isinstance(data, list) else []
 
 def _hmac_sig(secret_b64, timestamp, method, path, body=""):
     message = timestamp + method + path + body
@@ -55,8 +56,11 @@ def auth_headers(path):
     }
 
 def fetch_rebates(d):
-    url = f"{CLOB}/rebates/current?date={d}&maker_address={WALLET}"
-    rows = get_json(url)
+    if not (API_KEY and SECRET and PHRASE):
+        return 0.0
+    path = "/rebates/current"
+    url  = f"{CLOB}{path}?date={d}&maker_address={WALLET}"
+    rows = get_json(url, auth_headers(path))
     return sum(float(r.get("rebated_fees_usdc", 0)) for r in rows)
 
 def fetch_rewards(d):
