@@ -20,6 +20,7 @@ const PM_PNL_URL =
   `https://user-pnl-api.polymarket.com/user-pnl?user_address=${PM_WALLET}&interval=all&fidelity=1d`;
 const PM_ACTIVITY_URL =
   `https://data-api.polymarket.com/activity?user=${PM_WALLET}&limit=20`;
+const PM_REWARDS_URL  = 'data/polymarket-rewards.json';
 
 // ---------- formatting helpers ----------
 function pmUSD(n, compact = false) {
@@ -79,16 +80,18 @@ async function pmFetchAll() {
     }
   } catch {}
 
-  const [posRes, pnlRes, actRes] = await Promise.all([
+  const [posRes, pnlRes, actRes, rwRes] = await Promise.all([
     fetch(PM_POSITIONS_URL),
     fetch(PM_PNL_URL),
     fetch(PM_ACTIVITY_URL),
+    fetch(PM_REWARDS_URL, { cache: 'no-store' }),
   ]);
   if (!posRes.ok) throw new Error('positions ' + posRes.status);
   if (!pnlRes.ok) throw new Error('pnl ' + pnlRes.status);
   const positionsRaw = await posRes.json();
   const pnlRaw = await pnlRes.json();
   const activityRaw = actRes.ok ? await actRes.json() : [];
+  const rewardsRaw  = rwRes.ok  ? await rwRes.json()  : null;
 
   const positions = positionsRaw.map(p => ({
     market: p.title,
@@ -130,11 +133,12 @@ async function pmFetchAll() {
       realizedPnl: realized,
       unrealizedPnl: unrealized,
       openPositions: positions.length,
-      marketsTradedLifetime: null, // filled below if pnlRaw has distinct days
+      marketsTradedLifetime: null,
     },
     positions,
     pnlSeries,
     activity,
+    rewards: rewardsRaw,
   };
 
   try {
@@ -332,6 +336,71 @@ function PmActivity({ rows }) {
   );
 }
 
+function pmUSD6(n) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+function PmRewards({ rewards }) {
+  if (!rewards) return null;
+  const { totals, byDate, hasRewardsData, generatedAt } = rewards;
+  const updStr = generatedAt ? `as of ${generatedAt}` : '';
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">maker rebates{hasRewardsData ? ' + liquidity rewards' : ''}</span>
+        <span className="pf-panel-meta">{updStr}</span>
+      </div>
+
+      <div className="pf-stats" style={{ marginBottom: '1.25rem' }}>
+        <div className="pf-stat">
+          <div className="pf-stat-label">maker rebates</div>
+          <div className="pf-stat-value pos">{pmUSD6(totals.makerRebates)}</div>
+          <div className="pf-stat-kicker">all-time · USDC</div>
+        </div>
+        {hasRewardsData && (
+          <div className="pf-stat">
+            <div className="pf-stat-label">liquidity rewards</div>
+            <div className="pf-stat-value pos">{pmUSD6(totals.liquidityRewards)}</div>
+            <div className="pf-stat-kicker">all-time · USDC</div>
+          </div>
+        )}
+        <div className="pf-stat">
+          <div className="pf-stat-label">combined total</div>
+          <div className="pf-stat-value pos">{pmUSD6(totals.combined)}</div>
+          <div className="pf-stat-kicker">rebates + rewards</div>
+        </div>
+      </div>
+
+      <div className="pf-table-wrap">
+        <table className="pf-table pm-pos-table">
+          <thead>
+            <tr>
+              <th>date</th>
+              <th className="pf-num">maker rebates</th>
+              {hasRewardsData && <th className="pf-num">liquidity rewards</th>}
+              <th className="pf-num">daily total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {byDate.filter(r => r.combined > 0).map((r, i) => (
+              <tr key={i}>
+                <td className="pm-feed-time">{r.date}</td>
+                <td className="pf-num pos">{pmUSD6(r.makerRebates)}</td>
+                {hasRewardsData && (
+                  <td className="pf-num pos">{r.liquidityRewards != null ? pmUSD6(r.liquidityRewards) : '—'}</td>
+                )}
+                <td className="pf-num pos">{pmUSD6(r.combined)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function PmStat({ label, value, change, kicker, tone }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
@@ -376,7 +445,7 @@ function Polymarket() {
     </section>
   );
 
-  const { profile, summary, pnlSeries, positions, activity } = data;
+  const { profile, summary, pnlSeries, positions, activity, rewards } = data;
   const updated = new Date(data.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
@@ -448,6 +517,8 @@ function Polymarket() {
           <PmActivity rows={activity}/>
         </div>
       )}
+
+      <PmRewards rewards={rewards}/>
 
       <div className="pf-footer pm-footer-deep">
         <span>live · data-api.polymarket.com</span>
