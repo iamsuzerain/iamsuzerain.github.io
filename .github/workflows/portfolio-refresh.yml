@@ -32,32 +32,15 @@ jobs:
           echo "first 400 bytes of result:"
           head -c 400 "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
 
-      - name: install Polymarket deps
-        run: pip install curl_cffi --quiet
-
-      - name: fetch Polymarket rebates + rewards
-        env:
-          PM_WALLET:       ${{ secrets.PM_WALLET }}
-          POLY_API_KEY:    ${{ secrets.POLY_API_KEY }}
-          POLY_SECRET:     ${{ secrets.POLY_SECRET }}
-          POLY_PASSPHRASE: ${{ secrets.POLY_PASSPHRASE }}
-        run: |
-          python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-rewards/fetch-polymarket-rewards.py" \
-            > "Suzerain Design System/ui_kits/personal_site/data/polymarket-rewards.json"
-          echo "first 400 bytes of result:"
-          head -c 400 "Suzerain Design System/ui_kits/personal_site/data/polymarket-rewards.json"
-
       - name: commit + push if changed
         run: |
           git config user.name  "portfolio-bot"
           git config user.email "portfolio-bot@users.noreply.github.com"
-          git diff --quiet \
-            "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
-            "Suzerain Design System/ui_kits/personal_site/data/polymarket-rewards.json" \
-            && echo "no changes" && exit 0
-          git add \
-            "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
-            "Suzerain Design System/ui_kits/personal_site/data/polymarket-rewards.json"
+          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"; then
+            echo "no changes"
+            exit 0
+          fi
+          git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
           git commit -m "portfolio: refresh $(date -u +%F)"
           git push
           echo "CHANGED=true" >> "$GITHUB_ENV"
