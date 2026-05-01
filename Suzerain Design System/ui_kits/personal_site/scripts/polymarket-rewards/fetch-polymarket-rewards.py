@@ -30,8 +30,14 @@ EXISTING_PATH = "Suzerain Design System/ui_kits/personal_site/data/polymarket-re
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+}
+
 def get_json(url, headers=None):
-    req = Request(url, headers=headers or {})
+    merged = {**HEADERS, **(headers or {})}
+    req = Request(url, headers=merged)
     try:
         with urlopen(req, timeout=10) as r:
             return json.loads(r.read())
