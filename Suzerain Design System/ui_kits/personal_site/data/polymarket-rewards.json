@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-05-01",
+  "wallet": "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
+  "hasRewardsData": false,
+  "totals": {
+    "makerRebates": 0,
+    "liquidityRewards": 0,
+    "combined": 0
+  },
+  "byDate": []
+}
