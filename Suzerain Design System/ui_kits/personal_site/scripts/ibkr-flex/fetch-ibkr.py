@@ -213,13 +213,34 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> l
     return perf
 
 
-def parse_cash_report(root: ET.Element) -> dict:
-    """Read pre-aggregated deposit/withdrawal totals from CashReportCurrency (BASE_SUMMARY).
+def period_flows(cash_flows: dict[str, float], from_date: str, to_date: str) -> float:
+    """Sum daily cash flows (from build_cash_flows) between [from_date, to_date)."""
+    return sum(v for d, v in cash_flows.items() if from_date <= d < to_date)
 
-    Returns net flows (positive = deposit, negative = withdrawal) for MTD, QTD, and YTD.
-    QTD is derived from YTD minus pre-quarter YTD; falls back to MTD when in the first
-    month of the quarter since MTD == QTD in that case.
+
+def parse_cash_report(root: ET.Element, cash_flows: dict[str, float]) -> dict:
+    """Net deposit/withdrawal flows for MTD, QTD, and YTD.
+
+    Prefers per-day CashTransaction data (cash_flows) so QTD is computed
+    directly from the quarter date range rather than guessed from the month.
+    Falls back to CashReportCurrency pre-aggregated totals when no CashTransaction
+    records are present (e.g. that section isn't enabled in the Flex Query).
     """
+    now = datetime.now(timezone.utc)
+    cur_year = str(now.year)
+    cur_month = now.strftime("%Y-%m")
+    quarter_start_month = ((now.month - 1) // 3) * 3 + 1
+    cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
+    tomorrow = (now.date().isoformat())[:10]
+
+    if cash_flows:
+        return {
+            "mtd": period_flows(cash_flows, cur_month + "-01", tomorrow),
+            "qtd": period_flows(cash_flows, cur_quarter, tomorrow),
+            "ytd": period_flows(cash_flows, f"{cur_year}-01-01", tomorrow),
+        }
+
+    # Fallback: CashReportCurrency pre-aggregated totals (no QTD field in IBKR).
     el = next((e for e in root.iter("CashReportCurrency")
                if e.get("levelOfDetail") == "BaseCurrency"), None)
     if el is None:
@@ -227,12 +248,10 @@ def parse_cash_report(root: ET.Element) -> dict:
 
     mtd = to_float(el.get("depositWithdrawalsMTD") or "0")
     ytd = to_float(el.get("depositWithdrawalsYTD") or "0")
-
-    # IBKR has no depositWithdrawalsQTD. When the current month is the first month
-    # of the quarter (Jan/Apr/Jul/Oct), QTD == MTD. Otherwise approximate as unadjusted (0).
-    now = datetime.now(timezone.utc)
-    qtd = mtd if now.month in (1, 4, 7, 10) else 0.0
-
+    # Best approximation without per-day data: YTD minus prior-quarter portion.
+    # We don't have prior-quarter totals, so use MTD as a lower bound (correct
+    # only in Q1/Q2/Q3/Q4 first month) — flag as approximate.
+    qtd = mtd if now.month in (1, 4, 7, 10) else ytd
     return {"mtd": mtd, "qtd": qtd, "ytd": ytd}
 
 
@@ -242,7 +261,7 @@ def adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[flo
     return abs_chg, (abs_chg / start_v if start_v else 0.0)
 
 
-def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
+def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: dict[str, float]) -> dict:
     """Deposit-adjusted PnL for MTD, QTD, YTD using CashReportCurrency pre-aggregated flows.
     1Y uses ChangeInNAV.twr — IBKR's own time-weighted return over the 365-day query period.
     """
@@ -252,7 +271,7 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float) -> dict:
     quarter_start_month = ((now.month - 1) // 3) * 3 + 1
     cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
 
-    flows = parse_cash_report(root)
+    flows = parse_cash_report(root, cash_flows)
 
     def start_nav(from_date: str) -> float:
         # Use the closing NAV of the last trading day before the period opens.
@@ -321,7 +340,7 @@ def transform(root: ET.Element) -> dict:
             "cash": cash,
             "buyingPower": nav * 2,
         },
-        "pnl": build_pnl(root, nav_series, nav),
+        "pnl": build_pnl(root, nav_series, nav, cash_flows),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),
