@@ -23,7 +23,7 @@ SECRET  = os.environ.get("POLY_SECRET", "")
 PHRASE  = os.environ.get("POLY_PASSPHRASE", "")
 
 # Earliest date to fetch when starting fresh — adjust to when you began market-making
-START_DATE = date(2024, 10, 1)
+START_DATE = date(2026, 1, 1)
 EXISTING_PATH = "Suzerain Design System/ui_kits/personal_site/data/polymarket-rewards.json"
 
 def log(*a):
