@@ -39,11 +39,13 @@ def get_json(url, headers=None):
     data = r.json()
     return data if isinstance(data, list) else []
 
-def _hmac_sig(secret_b64, timestamp, method, path, body=""):
-    message = timestamp + method + path + body
-    key = base64.b64decode(secret_b64)
+def _hmac_sig(secret_b64, timestamp, method, path, body=None):
+    key = base64.urlsafe_b64decode(secret_b64)
+    message = str(timestamp) + str(method) + str(path)
+    if body:
+        message += str(body).replace("'", '"')
     sig = hmac.new(key, message.encode("utf-8"), hashlib.sha256).digest()
-    return base64.b64encode(sig).decode("utf-8")
+    return base64.urlsafe_b64encode(sig).decode("utf-8")
 
 def auth_headers(path):
     ts = str(int(time.time()))
