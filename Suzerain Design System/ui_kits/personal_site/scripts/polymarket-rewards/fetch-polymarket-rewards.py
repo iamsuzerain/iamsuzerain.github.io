@@ -14,7 +14,7 @@ Env vars:
 """
 import json, os, sys, time, hmac, hashlib, base64
 from datetime import date, timedelta
-import requests
+from curl_cffi import requests
 
 CLOB    = "https://clob.polymarket.com"
 WALLET  = os.environ.get("PM_WALLET", "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a")
@@ -29,15 +29,7 @@ EXISTING_PATH = "Suzerain Design System/ui_kits/personal_site/data/polymarket-re
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
-SESSION = requests.Session()
-SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Origin": "https://polymarket.com",
-    "Referer": "https://polymarket.com/",
-})
+SESSION = requests.Session(impersonate="chrome124")
 
 def get_json(url, headers=None):
     r = SESSION.get(url, headers=headers or {}, timeout=10)

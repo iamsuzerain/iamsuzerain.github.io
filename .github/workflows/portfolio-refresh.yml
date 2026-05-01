@@ -33,7 +33,7 @@ jobs:
           head -c 400 "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
 
       - name: install Polymarket deps
-        run: pip install requests --quiet
+        run: pip install curl_cffi --quiet
 
       - name: fetch Polymarket rebates + rewards
         env:
