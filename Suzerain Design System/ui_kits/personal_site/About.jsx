@@ -7,9 +7,9 @@ function About() {
       <p>may fortune favor me</p>
       <h3 className="sz-h3">elsewhere</h3>
       <ul className="sz-links">
-        <li><a href="https://github.com/iamsuzerain">↗ github — iamsuzerain</a></li>
-        <li><span>↗ email — qrasnaia [at] gmail [dot] com</span></li>
         <li><span>↗ discord — krasnaya.</span></li>
+        <li><span>↗ reddit — PM_ME_QT_TRANSGIRLS</span></li>
+        <li><span>↗ twitter — TaleRisk</span></li>
       </ul>
     </section>
   );
