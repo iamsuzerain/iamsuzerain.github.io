@@ -344,7 +344,7 @@ def transform(root: ET.Element) -> dict:
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),
-        "positions": positions[:12],  # top 12 by value
+        "positions": positions[:20],  # top 20 by value
     }
 
 
