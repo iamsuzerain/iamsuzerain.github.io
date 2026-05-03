@@ -817,7 +817,7 @@
 
 <script type="text/babel" src="Chrome.jsx"></script>
 <script type="text/babel" src="Nav.jsx"></script>
-<script type="text/babel" src="Hero.jsx"></script>
+<script type="text/babel" src="Blog.jsx"></script>
 <script type="text/babel" src="About.jsx"></script>
 <script type="text/babel" src="Portfolio.jsx"></script>
 <script type="text/babel" src="Polymarket.jsx"></script>
@@ -826,7 +826,7 @@
 function App() {
   const [view, setView] = React.useState('hero');
   const views = {
-    hero: <Hero setView={setView}/>,
+    hero: <Blog setView={setView}/>,
     portfolio: <Portfolio/>,
     polymarket: <Polymarket/>,
     predictfolio: <Predictfolio/>,
