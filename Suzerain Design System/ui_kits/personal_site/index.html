@@ -87,26 +87,38 @@
     mix-blend-mode: screen;
   }
 
-  /* Trickle streaks — thin vertical lines of brighter glass running down.
-     Silver-cyan only; no magenta. This is water, not neon. */
-  .sz-trickle {
+  /* Trickle streaks — water running down the glass.
+     Silver-cyan only; no magenta. Fades out before the lower portion of the screen. */
+  .sz-trickle-wrap {
     position: fixed; top: 0; pointer-events: none; z-index: 2;
-    width: 2px; height: 40px;
-    background: linear-gradient(180deg,
-      transparent 0%,
-      rgba(220,232,240,0.32) 30%,
-      rgba(170,205,225,0.28) 65%,
-      transparent 100%);
-    border-radius: 4px;
-    filter: blur(0.5px);
-    animation: sz-drip linear infinite;
+    display: flex; flex-direction: column; align-items: center;
+    animation: sz-drip cubic-bezier(0.32, 0, 0.67, 0) infinite;
     opacity: 0;
   }
+  .sz-trickle-streak {
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(220,232,240,0.24) 20%,
+      rgba(190,215,232,0.35) 70%,
+      rgba(210,230,245,0.55) 100%);
+    border-radius: 3px;
+    filter: blur(0.4px);
+  }
+  .sz-trickle-bead {
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+      rgba(255,255,255,0.92) 0%,
+      rgba(210,228,242,0.55) 45%,
+      rgba(150,190,215,0.2) 80%,
+      transparent 100%);
+    filter: blur(0.3px);
+    flex-shrink: 0;
+  }
   @keyframes sz-drip {
-    0%   { transform: translateY(-40px); opacity: 0; }
-    8%   { opacity: 0.8; }
-    92%  { opacity: 0.8; }
-    100% { transform: translateY(100vh); opacity: 0; }
+    0%   { transform: translateY(-100px); opacity: 0; }
+    8%   { opacity: 1; }
+    62%  { opacity: 1; }
+    100% { transform: translateY(65vh); opacity: 0; }
   }
 
   .sz-cursor-glow {
@@ -118,7 +130,7 @@
 
   /* Respect reduced motion — drop the drift + drip animations */
   @media (prefers-reduced-motion: reduce) {
-    .sz-glass-behind, .sz-trickle { animation: none; }
+    .sz-glass-behind, .sz-trickle-wrap { animation: none; }
   }
 
   .sz-stage {
