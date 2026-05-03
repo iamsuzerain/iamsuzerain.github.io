@@ -11,9 +11,6 @@ function About() {
         <li><span>↗ email — qrasnaia [at] gmail [dot] com</span></li>
         <li><span>↗ discord — krasnaya.</span></li>
       </ul>
-      <p className="sz-meta" style={{marginTop:'1.5rem'}}>
-        TZ=America/Seattle · no analytics · no cookies
-      </p>
     </section>
   );
 }
