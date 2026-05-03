@@ -17,7 +17,6 @@ function useCursor() {
 // Scramble text in, resolve over ~duration ms
 const GLYPHS = '◆◇▸→∴§#*/\\|{}[]<>01'.split('');
 function useDecode(target, duration = 400, startDelay = 0) {
-  // Start with randomized glyphs so text is visible immediately
   const initial = target.split('').map(c => c === ' ' ? ' ' : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join('');
   const [text, setText] = useState(initial);
   useEffect(() => {
@@ -60,38 +59,17 @@ function mulberry32(a) {
 }
 
 function Droplets() {
-  // Generate a stable set of droplets with varied sizes
   const drops = useMemo(() => {
     const rand = mulberry32(1337);
     const out = [];
-    // micro dust — very fine, almost a mist
     for (let i = 0; i < 220; i++) {
-      out.push({
-        cx: rand() * 100,
-        cy: rand() * 100,
-        r: 0.4 + rand() * 0.9,
-        op: 0.25 + rand() * 0.35,
-        micro: true,
-      });
+      out.push({ cx: rand()*100, cy: rand()*100, r: 0.4 + rand()*0.9, op: 0.25 + rand()*0.35, micro: true });
     }
-    // many tiny sprinkles
     for (let i = 0; i < 260; i++) {
-      out.push({
-        cx: rand() * 100,
-        cy: rand() * 100,
-        r: 0.8 + rand() * 1.8,
-        op: 0.35 + rand() * 0.4,
-      });
+      out.push({ cx: rand()*100, cy: rand()*100, r: 0.8 + rand()*1.8, op: 0.35 + rand()*0.4 });
     }
-    // fewer larger beads
     for (let i = 0; i < 18; i++) {
-      out.push({
-        cx: rand() * 100,
-        cy: rand() * 100,
-        r: 3.5 + rand() * 6,
-        op: 0.5 + rand() * 0.35,
-        bead: true,
-      });
+      out.push({ cx: rand()*100, cy: rand()*100, r: 3.5 + rand()*6, op: 0.5 + rand()*0.35, bead: true });
     }
     return out;
   }, []);
@@ -99,51 +77,38 @@ function Droplets() {
   return (
     <svg className="sz-droplets" viewBox="0 0 100 100" preserveAspectRatio="none">
       <defs>
-        {/* Refraction filter — turbulence displaces what's behind each droplet,
-            giving a lensing effect. feGaussianBlur softens edges. */}
         <filter id="sz-drop-refract" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
           <feGaussianBlur in="SourceGraphic" stdDeviation="0.15" result="blurred"/>
           <feDisplacementMap in="blurred" in2="noise" scale="0.8"/>
         </filter>
-        {/* Bead gradient — bright rim, dark center, like a real water bead */}
         <radialGradient id="sz-bead" cx="35%" cy="30%" r="70%">
-          <stop offset="0%"  stopColor="rgba(255,255,255,0.9)"/>
-          <stop offset="35%" stopColor="rgba(229,225,241,0.35)"/>
-          <stop offset="75%" stopColor="rgba(167,139,250,0.15)"/>
-          <stop offset="100%" stopColor="rgba(10,6,18,0.6)"/>
+          <stop offset="0%"  stopColor="rgba(255,255,255,0.92)"/>
+          <stop offset="35%" stopColor="rgba(220,232,240,0.38)"/>
+          <stop offset="75%" stopColor="rgba(150,185,210,0.18)"/>
+          <stop offset="100%" stopColor="rgba(8,14,26,0.65)"/>
         </radialGradient>
         <radialGradient id="sz-sprinkle" cx="40%" cy="35%" r="60%">
-          <stop offset="0%"  stopColor="rgba(255,255,255,0.85)"/>
-          <stop offset="60%" stopColor="rgba(229,225,241,0.25)"/>
-          <stop offset="100%" stopColor="rgba(167,139,250,0.0)"/>
+          <stop offset="0%"  stopColor="rgba(255,255,255,0.88)"/>
+          <stop offset="60%" stopColor="rgba(210,225,235,0.28)"/>
+          <stop offset="100%" stopColor="rgba(150,185,210,0.0)"/>
         </radialGradient>
       </defs>
       <g filter="url(#sz-drop-refract)">
         {drops.map((d, i) => (
-          <circle
-            key={i}
-            cx={d.cx} cy={d.cy} r={d.r / 10}
-            fill={`url(#${d.bead ? 'sz-bead' : 'sz-sprinkle'})`}
-            opacity={d.op}
-          />
+          <circle key={i} cx={d.cx} cy={d.cy} r={d.r/10}
+            fill={`url(#${d.bead ? 'sz-bead' : 'sz-sprinkle'})`} opacity={d.op}/>
         ))}
       </g>
-      {/* Specular highlights — tiny bright dots on the upper-left of beads */}
       {drops.filter(d => d.bead).map((d, i) => (
-        <circle
-          key={'h' + i}
-          cx={d.cx - d.r / 30} cy={d.cy - d.r / 25} r={d.r / 45}
-          fill="rgba(255,255,255,0.9)"
-          opacity="0.8"
-        />
+        <circle key={'h'+i} cx={d.cx - d.r/30} cy={d.cy - d.r/25} r={d.r/45}
+          fill="rgba(255,255,255,0.9)" opacity="0.8"/>
       ))}
     </svg>
   );
 }
 
 function Trickles() {
-  // Random vertical streaks that run down the glass
   const streaks = useMemo(() => {
     const rand = mulberry32(42);
     return Array.from({ length: 9 }, (_, i) => ({
@@ -156,27 +121,40 @@ function Trickles() {
   }, []);
 
   return streaks.map((s, i) => (
-    <div
-      key={i}
-      className="sz-trickle"
+    <div key={i} className="sz-trickle"
       style={{
-        left: `${s.left}%`,
-        height: `${s.height}px`,
-        opacity: s.opacity,
-        animationDelay: `${s.delay}s`,
-        animationDuration: `${s.duration}s`,
-      }}
-    />
+        left: `${s.left}%`, height: `${s.height}px`, opacity: s.opacity,
+        animationDelay: `${s.delay}s`, animationDuration: `${s.duration}s`,
+      }}/>
   ));
 }
 
-// Chrome wraps everything — glass scene + stage
-function Chrome({ children, cursorGlow = false }) {
-  const pos = useCursor();
+// City photo behind the glass — subtle parallax driven by cursor.
+function CityPhoto({ parallax }) {
+  // Tiny offset, so it feels like real depth without revealing edges.
+  const tx = parallax.x * 0.012;
+  const ty = parallax.y * 0.008;
   return (
-    <div className="sz-chrome">
-      {/* Layer 0 — ambient color clouds behind the glass */}
-      <div className="sz-glass-behind" />
+    <div className="sz-skyline-photo"
+      style={{ transform: `translate(${tx}px, ${ty}px) scale(1.04)` }}/>
+  );
+}
+
+// Chrome wraps everything — city photo + glass scene + stage
+function Chrome({ children, cursorGlow = false, dim = false }) {
+  const pos = useCursor();
+  const parallax = useMemo(() => {
+    const cx = (typeof window !== 'undefined' ? window.innerWidth : 1200) / 2;
+    const cy = (typeof window !== 'undefined' ? window.innerHeight : 800) / 2;
+    return { x: pos.x - cx, y: pos.y - cy };
+  }, [pos.x, pos.y]);
+
+  return (
+    <div className={`sz-chrome ${dim ? 'sz-dim' : ''}`}>
+      {/* Layer -1 — the city out the window (photo) */}
+      <div className="sz-skyline-wrap">
+        <CityPhoto parallax={parallax} />
+      </div>
       {/* Layer 0 — keep the original dot grid and corner bloom */}
       <div className="sz-grid" />
       <div className="sz-aurora" />
@@ -184,13 +162,10 @@ function Chrome({ children, cursorGlow = false }) {
       <div className="sz-glass" />
       {/* Layer 2 — droplets on the glass */}
       <Droplets />
-      {/* Layer 2 — streaks trickling down */}
       <Trickles />
       {cursorGlow && (
-        <div
-          className="sz-cursor-glow"
-          style={{ transform: `translate(${pos.x - 250}px, ${pos.y - 250}px)` }}
-        />
+        <div className="sz-cursor-glow"
+          style={{ transform: `translate(${pos.x - 250}px, ${pos.y - 250}px)` }}/>
       )}
       <div className="sz-stage">{children}</div>
     </div>

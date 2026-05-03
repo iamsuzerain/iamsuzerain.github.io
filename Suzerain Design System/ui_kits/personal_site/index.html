@@ -14,22 +14,55 @@
     position: fixed; inset: 0; pointer-events: none; z-index: 0;
     background-image: radial-gradient(rgba(167,139,250,0.06) 1px, transparent 1px);
     background-size: 24px 24px;
+    opacity: 0.5;
   }
   .sz-aurora {
     position: fixed; top: -200px; right: -200px; width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(167,139,250,0.18), transparent 60%);
+    background: radial-gradient(circle, rgba(167,139,250,0.12), transparent 60%);
     pointer-events: none; z-index: 0;
   }
 
+  /* ========== City window photo ========== */
+  /* The view out the window — a real photo. Sits behind everything. */
+  .sz-skyline-wrap {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    overflow: hidden;
+  }
+  .sz-skyline-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    background-image: url('../../assets/window-view.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: opacity 600ms ease-out, filter 600ms ease-out, transform 200ms ease-out;
+    will-change: transform;
+  }
+  /* On data-heavy views, recede the photo so tables stay readable */
+  .sz-dim .sz-skyline-photo { opacity: 0.55; filter: blur(2px) saturate(0.85); }
+  .sz-dim .sz-glass {
+    background: linear-gradient(180deg, rgba(8,12,22,0.45) 0%, rgba(6,10,20,0.62) 100%);
+    backdrop-filter: blur(6px) saturate(110%);
+    -webkit-backdrop-filter: blur(6px) saturate(110%);
+  }
+
   /* ========== Rained-on-glass layer ========== */
-  /* Background ambient clouds that drift — what the glass refracts */
+  /* Background ambient clouds — rainy night sky.
+     Cool steel-blue + teal dominant; violet kept to the edges as accent.
+     This is what the wet glass refracts. */
   .sz-glass-behind {
     position: fixed; inset: -10%; pointer-events: none; z-index: 0;
     background:
-      radial-gradient(600px 500px at 20% 10%, rgba(167,139,250,0.35), transparent 60%),
-      radial-gradient(700px 600px at 85% 30%, rgba(255,79,216,0.22), transparent 65%),
-      radial-gradient(500px 500px at 40% 85%, rgba(122,90,248,0.28), transparent 65%),
-      radial-gradient(400px 400px at 95% 95%, rgba(255,79,216,0.18), transparent 60%);
+      /* steel-blue cloud, upper left — main mass */
+      radial-gradient(700px 600px at 18% 12%, rgba(96,140,180,0.32), transparent 62%),
+      /* teal-cyan cool light, upper right */
+      radial-gradient(800px 650px at 88% 28%, rgba(80,150,180,0.28), transparent 65%),
+      /* deep slate-blue lower mid */
+      radial-gradient(600px 550px at 38% 82%, rgba(70,110,160,0.30), transparent 65%),
+      /* violet bleed — pushed all the way to the corner as accent only */
+      radial-gradient(360px 360px at 98% 98%, rgba(167,139,250,0.18), transparent 60%),
+      /* small violet glow upper-left edge */
+      radial-gradient(280px 280px at 2% 4%, rgba(139,92,246,0.14), transparent 60%);
     filter: blur(40px);
     animation: sz-drift 42s ease-in-out infinite alternate;
   }
@@ -39,15 +72,15 @@
     100% { transform: translate3d(-1%, 2%, 0) scale(1.02); }
   }
 
-  /* The glass pane — frosted, refractive via SVG filter */
+  /* The glass pane — light wash on hero so the city photo shows clearly. */
   .sz-glass {
     position: fixed; inset: 0; pointer-events: none; z-index: 1;
     background:
-      linear-gradient(180deg, rgba(10,6,18,0.35) 0%, rgba(10,6,18,0.55) 100%);
-    backdrop-filter: blur(24px) saturate(140%);
-    -webkit-backdrop-filter: blur(24px) saturate(140%);
-    /* subtle fogging on the glass itself */
-    box-shadow: inset 0 0 200px rgba(10,6,18,0.4);
+      linear-gradient(180deg, rgba(8,12,22,0.08) 0%, rgba(6,10,20,0.22) 100%);
+    backdrop-filter: blur(1.5px) saturate(105%);
+    -webkit-backdrop-filter: blur(1.5px) saturate(105%);
+    box-shadow: inset 0 0 200px rgba(8,14,26,0.35);
+    transition: background 600ms ease-out, backdrop-filter 600ms ease-out;
   }
 
   /* Droplet layer sits on top of glass, with its own refraction filter */
@@ -58,14 +91,15 @@
     mix-blend-mode: screen;
   }
 
-  /* Trickle streaks — thin vertical lines of brighter glass, slowly running down */
+  /* Trickle streaks — thin vertical lines of brighter glass running down.
+     Silver-cyan only; no magenta. This is water, not neon. */
   .sz-trickle {
     position: fixed; top: 0; pointer-events: none; z-index: 2;
     width: 2px; height: 40px;
     background: linear-gradient(180deg,
       transparent 0%,
-      rgba(229,225,241,0.28) 30%,
-      rgba(255,79,216,0.25) 65%,
+      rgba(220,232,240,0.32) 30%,
+      rgba(170,205,225,0.28) 65%,
       transparent 100%);
     border-radius: 4px;
     filter: blur(0.5px);
@@ -135,6 +169,9 @@
     display: inline-block;
     margin-left: 2px;
   }
+  /* On hero, the cursor inherits the soft text color so it doesn't
+     fight the muted background photo. */
+  .sz-hero .sz-cursor { color: #ece6f5; }
   @keyframes sz-blink { 50% { opacity: 0; } }
 
   /* ========== Shared primitives ========== */
@@ -156,7 +193,7 @@
   .sz-meta {
     font-family: var(--font-mono); font-size: 11px;
     letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--fg-3); margin-top: 40px;
+    color: var(--fg-3); margin-top: 32px;
   }
 
   /* ========== Buttons ========== */
@@ -174,12 +211,46 @@
   }
   .sz-btn-primary:hover {
     background: var(--magenta-400); border-color: var(--magenta-400);
-    color: var(--ink-0); box-shadow: 0 0 24px rgba(255,79,216,0.4);
+    color: var(--ink-0); box-shadow: 0 0 24px rgba(167,139,250,0.4);
   }
   .sz-btn-ghost { border-color: transparent; color: var(--violet-300); }
   .sz-btn-ghost:hover { color: var(--magenta-400); border-color: transparent; }
 
   /* ========== Hero ========== */
+  /* Hero + About sit directly over the city photo (no panel),
+     so all text shifts to a very light violet for soft clarity. */
+  .sz-hero, .sz-prose {
+    color: #ece6f5;
+  }
+  .sz-hero .sz-hero-meta,
+  .sz-hero .sz-hero-tag,
+  .sz-hero .sz-hero-sub,
+  .sz-hero .sz-hero-footer,
+  .sz-hero .sz-hero-footer .sz-sep,
+  .sz-prose .sz-kicker,
+  .sz-prose p,
+  .sz-prose .sz-h2,
+  .sz-prose .sz-h3,
+  .sz-prose .sz-meta,
+  .sz-prose .sz-links a {
+    color: #ece6f5;
+  }
+  .sz-prose .sz-links a:hover { color: #ece6f5; border-bottom-color: #ece6f5; }
+  .sz-prose code {
+    color: #ece6f5;
+    background: rgba(0,0,0,0.35);
+    border-color: rgba(236,230,245,0.18);
+  }
+  /* Force-kill magenta everywhere by remapping the tokens to violet.
+     This automatically updates every hover, highlight, gradient, and selection. */
+  .sz-chrome {
+    --magenta-400: var(--violet-400);
+    --magenta-300: var(--violet-300);
+    --magenta-500: var(--violet-500);
+    --magenta-600: var(--violet-600);
+    --link-hover: var(--violet-300);
+    --selection-bg: var(--violet-400);
+  }
   .sz-hero { padding: 40px 0 60px; }
   .sz-hero-meta {
     font-family: var(--font-mono); font-size: 11px;
@@ -633,7 +704,7 @@
     padding: 2px 6px; border-radius: 3px;
   }
   .pm-feed-buy  { background: rgba(167,139,250,0.12); color: var(--violet-300); }
-  .pm-feed-sell { background: rgba(255,154,232,0.1);  color: var(--magenta-300, #ff9ae8); }
+  .pm-feed-sell { background: rgba(167,139,250,0.1);  color: var(--violet-300); }
   .pm-feed-size { text-align: right; color: var(--fg-1); font-variant-numeric: tabular-nums; }
   .pm-feed-at   { color: var(--fg-4); text-align: center; }
   .pm-feed-price { color: var(--fg-1); font-variant-numeric: tabular-nums; }
@@ -663,7 +734,7 @@
     background: rgba(255,79,216,0.08);
   }
   .pm-deeplink-cta {
-    color: var(--magenta-400, #ff4fd8);
+    color: var(--violet-300);
     white-space: nowrap;
   }
   .pm-deeplink-arrow { display: inline-block; transition: transform 0.15s; margin-left: 2px; }
@@ -728,8 +799,10 @@ function App() {
     predictfolio: <Predictfolio/>,
     about: <About/>,
   };
+  // Data-heavy views fog the city so tables stay readable.
+  const dim = view === 'portfolio' || view === 'polymarket' || view === 'predictfolio';
   return (
-    <Chrome cursorGlow={view==='hero'}>
+    <Chrome cursorGlow={view==='hero'} dim={dim}>
       <Nav view={view} setView={setView} />
       {views[view]}
     </Chrome>
