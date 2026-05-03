@@ -1,5 +1,5 @@
-// Hero.jsx
-function Hero({ setView }) {
+// Blog.jsx
+function Blog({ setView }) {
   return (
     <section className="sz-hero">
       <div className="sz-hero-meta">▸ status · online · 2026-04-23</div>
@@ -31,4 +31,4 @@ function Hero({ setView }) {
     </section>
   );
 }
-window.Hero = Hero;
+window.Blog = Blog;
