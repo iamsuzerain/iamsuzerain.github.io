@@ -121,14 +121,13 @@ function Trickles() {
       left: 3 + rand() * 94,
       delay: rand() * 16,
       duration: 5 + rand() * 10,
-      opacity: 0.25 + rand() * 0.5,
+      opacity: 0.18 + rand() * 0.38,
       height: 20 + rand() * 65,
       width: 1 + rand() * 2,
     }));
   }, []);
 
   return streaks.map((s, i) => {
-    const beadSize = Math.max(3.5, s.width * 2.8);
     return (
       <div key={i} className="sz-trickle-wrap"
         style={{
@@ -139,8 +138,6 @@ function Trickles() {
         }}>
         <div className="sz-trickle-streak"
           style={{ width: `${s.width}px`, height: `${s.height}px` }}/>
-        <div className="sz-trickle-bead"
-          style={{ width: `${beadSize}px`, height: `${beadSize}px` }}/>
       </div>
     );
   });
