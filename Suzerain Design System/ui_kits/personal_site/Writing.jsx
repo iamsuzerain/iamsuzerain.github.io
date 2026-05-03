@@ -1,11 +1,10 @@
 // Writing.jsx
 const LOG = [
-  { date: '2026-04-28', body: 'moved $100k from ibkr to polymarket. the thesis was always hormuz, straits close, oil spikes, markets reprice. but equities aren\'t trading that. ai sentiment is eating the macro signal; every dip gets bought before the geopolitical risk can land. shorting the s&p into that is fighting two variables at once and losing on both. polymarket isolates the one i actually have a view on: if hormuz escalates, the position pays. the ai multiple doesn\'t get a vote. and even a ceasefire doesn\'t close the position. the physical bottleneck doesn\'t clear overnight. ships reroute, insurance reprices, capacity stays constrained for months.' },
   { date: '2026-04-23', body: "iran situation isn't resolving. the s&p sure is trading like it's already resolved. still trading through it because sitting out is its own kind of bet, and i don't like those odds. vol is elevated, the thesis holds. staying in." },
 ];
 
 const POSTS = [
-  { date: '2026-04-28', title: 'moving $100k from ibkr to polymarket', tags: ['trading','notes'], read: '3 min' },
+  { date: '2026-04-28', title: 'moving $100k from ibkr to polymarket', tags: ['trading','notes'], read: '3 min', body: 'moved $100k from ibkr to polymarket. the thesis was always hormuz, straits close, oil spikes, markets reprice. but equities aren\'t trading that. ai sentiment is eating the macro signal; every dip gets bought before the geopolitical risk can land. shorting the s&p into that is fighting two variables at once and losing on both. polymarket isolates the one i actually have a view on: if hormuz escalates, the position pays. the ai multiple doesn\'t get a vote. and even a ceasefire doesn\'t close the position. the physical bottleneck doesn\'t clear overnight. ships reroute, insurance reprices, capacity stays constrained for months.' },
   { date: '2026-03-18', title: 'on suzerainty', tags: ['essay'], read: '8 min' },
   { date: '2026-02-04', title: 'the compiler as autobiography', tags: ['compilers','essay'], read: '12 min' },
   { date: '2025-12-30', title: 'notes on kyoto in winter', tags: ['places'], read: '4 min' },
@@ -31,6 +30,7 @@ function Writing() {
               {p.tags.map(t => <span key={t} className="sz-tag sz-tag-quiet">{t}</span>)}
             </span>
             <span className="sz-post-read">{p.read}</span>
+            {p.body && <p className="sz-post-body">{p.body}</p>}
           </li>
         ))}
       </ol>
