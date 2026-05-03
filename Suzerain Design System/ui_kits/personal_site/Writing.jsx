@@ -1,4 +1,9 @@
 // Writing.jsx
+const LOG = [
+  { date: '2026-04-28', body: 'moved $100k from ibkr to polymarket. trying to fade this ai bubble has been a losing trade — the market just keeps believing. binary outcomes on a prediction market are a cleaner expression of the thesis anyway. if you think something resolves yes or no, just bet it directly instead of constructing a position that decays while you wait to be right.' },
+  { date: '2026-04-23', body: "iran situation isn't resolving. the s&p sure is trading like it's already resolved. still trading through it because sitting out is its own kind of bet, and i don't like those odds. vol is elevated, the thesis holds. staying in." },
+];
+
 const POSTS = [
   { date: '2026-04-28', title: 'moving $100k from ibkr to polymarket', tags: ['trading','notes'], read: '3 min' },
   { date: '2026-03-18', title: 'on suzerainty', tags: ['essay'], read: '8 min' },
@@ -29,6 +34,14 @@ function Writing() {
           </li>
         ))}
       </ol>
+      <div className="sz-log">
+        {LOG.map((e, i) => (
+          <div key={i} className="sz-log-entry">
+            <div className="sz-log-date">{e.date}</div>
+            <p className="sz-log-body">{e.body}</p>
+          </div>
+        ))}
+      </div>
       <div className="sz-rss">
         <span>▸ subscribe</span>
         <a href="#">↗ rss / atom</a>
