@@ -39,11 +39,11 @@
     will-change: transform;
   }
   /* On data-heavy views, recede the photo so tables stay readable */
-  .sz-dim .sz-skyline-photo { opacity: 0.55; filter: blur(2px) saturate(0.85); }
+  .sz-dim .sz-skyline-photo { opacity: 0.82; filter: saturate(0.92); }
   .sz-dim .sz-glass {
-    background: linear-gradient(180deg, rgba(8,12,22,0.45) 0%, rgba(6,10,20,0.62) 100%);
-    backdrop-filter: blur(6px) saturate(110%);
-    -webkit-backdrop-filter: blur(6px) saturate(110%);
+    background: linear-gradient(180deg, rgba(8,12,22,0.12) 0%, rgba(6,10,20,0.24) 100%);
+    backdrop-filter: blur(2px) saturate(108%);
+    -webkit-backdrop-filter: blur(2px) saturate(108%);
   }
 
   /* ========== Rained-on-glass layer ========== */
@@ -487,7 +487,10 @@
     margin-bottom: 32px;
   }
   .pf-stat {
-    background: var(--ink-3); border: 1px solid var(--ink-4);
+    background: rgba(10,6,18,0.45);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(167,139,250,0.14);
     border-radius: 4px; padding: 16px 18px;
     display: flex; flex-direction: column; gap: 4px;
   }
@@ -511,7 +514,10 @@
   }
 
   .pf-panel {
-    background: var(--ink-3); border: 1px solid var(--ink-4);
+    background: rgba(10,6,18,0.45);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(167,139,250,0.14);
     border-radius: 4px; padding: 20px 22px;
     margin-bottom: 16px;
   }
@@ -607,7 +613,10 @@
   .pm-actions { padding-top: 4px; }
   .pm-frame-wrap {
     position: relative;
-    background: var(--ink-3); border: 1px solid var(--ink-4);
+    background: rgba(10,6,18,0.45);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(167,139,250,0.14);
     border-radius: 4px; overflow: hidden;
     height: 1400px;
   }
@@ -625,7 +634,10 @@
     pointer-events: none;
   }
   .pm-fallback {
-    background: var(--ink-3); border: 1px solid var(--ink-4);
+    background: rgba(10,6,18,0.45);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(167,139,250,0.14);
     border-radius: 4px; padding: 48px 40px; max-width: 720px;
   }
   .pm-fb-head {
