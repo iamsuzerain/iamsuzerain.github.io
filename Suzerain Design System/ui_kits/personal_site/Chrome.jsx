@@ -69,7 +69,7 @@ function Droplets() {
       out.push({ cx: rand()*100, cy: rand()*100, r: 0.8 + rand()*1.8, op: 0.35 + rand()*0.4 });
     }
     for (let i = 0; i < 18; i++) {
-      out.push({ cx: rand()*100, cy: rand()*100, r: 3.5 + rand()*6, op: 0.5 + rand()*0.35, bead: true });
+      out.push({ cx: rand()*100, cy: rand()*100, r: 3.5 + rand()*6, op: 0.5 + rand()*0.35, bead: true, tint: rand() > 0.62 });
     }
     return out;
   }, []);
@@ -80,12 +80,18 @@ function Droplets() {
         <filter id="sz-drop-refract" x="-20%" y="-20%" width="140%" height="140%">
           <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
           <feGaussianBlur in="SourceGraphic" stdDeviation="0.15" result="blurred"/>
-          <feDisplacementMap in="blurred" in2="noise" scale="0.8"/>
+          <feDisplacementMap in="blurred" in2="noise" scale="2.5"/>
         </filter>
         <radialGradient id="sz-bead" cx="35%" cy="30%" r="70%">
-          <stop offset="0%"  stopColor="rgba(255,255,255,0.92)"/>
-          <stop offset="35%" stopColor="rgba(220,232,240,0.38)"/>
-          <stop offset="75%" stopColor="rgba(150,185,210,0.18)"/>
+          <stop offset="0%"  stopColor="rgba(255,255,255,0.95)"/>
+          <stop offset="35%" stopColor="rgba(220,232,240,0.42)"/>
+          <stop offset="75%" stopColor="rgba(150,185,210,0.20)"/>
+          <stop offset="100%" stopColor="rgba(8,14,26,0.68)"/>
+        </radialGradient>
+        <radialGradient id="sz-bead-tint" cx="35%" cy="30%" r="70%">
+          <stop offset="0%"  stopColor="rgba(255,255,255,0.90)"/>
+          <stop offset="35%" stopColor="rgba(167,139,250,0.38)"/>
+          <stop offset="75%" stopColor="rgba(100,160,220,0.20)"/>
           <stop offset="100%" stopColor="rgba(8,14,26,0.65)"/>
         </radialGradient>
         <radialGradient id="sz-sprinkle" cx="40%" cy="35%" r="60%">
@@ -97,7 +103,7 @@ function Droplets() {
       <g filter="url(#sz-drop-refract)">
         {drops.map((d, i) => (
           <circle key={i} cx={d.cx} cy={d.cy} r={d.r/10}
-            fill={`url(#${d.bead ? 'sz-bead' : 'sz-sprinkle'})`} opacity={d.op}/>
+            fill={`url(#${d.bead ? (d.tint ? 'sz-bead-tint' : 'sz-bead') : 'sz-sprinkle'})`} opacity={d.op}/>
         ))}
       </g>
       {drops.filter(d => d.bead).map((d, i) => (
@@ -111,22 +117,33 @@ function Droplets() {
 function Trickles() {
   const streaks = useMemo(() => {
     const rand = mulberry32(42);
-    return Array.from({ length: 9 }, (_, i) => ({
+    return Array.from({ length: 42 }, () => ({
       left: 3 + rand() * 94,
-      delay: rand() * 12,
-      duration: 8 + rand() * 7,
-      opacity: 0.3 + rand() * 0.4,
-      height: 30 + rand() * 40,
+      delay: rand() * 16,
+      duration: 5 + rand() * 10,
+      opacity: 0.25 + rand() * 0.5,
+      height: 20 + rand() * 65,
+      width: 1 + rand() * 2,
     }));
   }, []);
 
-  return streaks.map((s, i) => (
-    <div key={i} className="sz-trickle"
-      style={{
-        left: `${s.left}%`, height: `${s.height}px`, opacity: s.opacity,
-        animationDelay: `${s.delay}s`, animationDuration: `${s.duration}s`,
-      }}/>
-  ));
+  return streaks.map((s, i) => {
+    const beadSize = Math.max(3.5, s.width * 2.8);
+    return (
+      <div key={i} className="sz-trickle-wrap"
+        style={{
+          left: `${s.left}%`,
+          opacity: s.opacity,
+          animationDelay: `${s.delay}s`,
+          animationDuration: `${s.duration}s`,
+        }}>
+        <div className="sz-trickle-streak"
+          style={{ width: `${s.width}px`, height: `${s.height}px` }}/>
+        <div className="sz-trickle-bead"
+          style={{ width: `${beadSize}px`, height: `${beadSize}px` }}/>
+      </div>
+    );
+  });
 }
 
 // City photo behind the glass — subtle parallax driven by cursor.
