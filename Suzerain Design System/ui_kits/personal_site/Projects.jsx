@@ -1,28 +1,12 @@
 // Projects.jsx
 const { useState: useProjState } = React;
 
-const PROJECTS = [
-  { id: 'ginkgo', name: 'ginkgo', version: 'v0.3', date: '2025-11', status: 'active',
-    tags: ['rust','cli','ssg'],
-    desc: "a tiny static site generator. built because hugo's mental model never stuck. v0.3 ships when it ships." },
-  { id: 'lattice', name: 'lattice', version: 'v1.2', date: '2024-09', status: 'shipped',
-    tags: ['typescript','editor','wasm'],
-    desc: 'a visual grid editor for musical polyrhythms. used in two installations.' },
-  { id: 'mora', name: 'mora', version: 'v0.1', date: '2025-06', status: 'draft',
-    tags: ['c','synth','dsp'],
-    desc: 'a wavetable synth in ~800 lines of c. pairs with a small osc controller.' },
-  { id: 'rind', name: 'rind', version: '—', date: '2023-02', status: 'archived',
-    tags: ['python','scraping'],
-    desc: 'a citrus-themed rss reader. replaced by a shell alias.' },
-  { id: 'atlas', name: 'atlas', version: 'v0.7', date: '2026-01', status: 'active',
-    tags: ['rust','compiler','wip'],
-    desc: 'the compiler that currently takes most of my evenings. not ready to talk about.' },
-];
 const FILTERS = ['all','rust','typescript','c','python'];
 
 function Projects() {
   const [filter, setFilter] = useProjState('all');
-  const visible = PROJECTS.filter(p => filter === 'all' || p.tags.includes(filter));
+  const projects = window.CONTENT.projects;
+  const visible = projects.filter(p => filter === 'all' || p.tags.includes(filter));
 
   const statusColor = {
     active: 'var(--violet-300)',

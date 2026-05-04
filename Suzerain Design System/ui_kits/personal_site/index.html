@@ -841,7 +841,12 @@ function App() {
     </Chrome>
   );
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+fetch('data/content.json', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(data => { window.CONTENT = data; })
+  .catch(() => { window.CONTENT = { about: {}, home: { log: [] }, projects: [] }; })
+  .finally(() => ReactDOM.createRoot(document.getElementById('root')).render(<App/>));
 </script>
 </body>
 </html>

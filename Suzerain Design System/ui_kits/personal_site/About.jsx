@@ -1,15 +1,18 @@
 // About.jsx
 function About() {
+  const c = window.CONTENT.about;
   return (
     <section className="sz-prose">
       <div className="sz-kicker">◆ about</div>
-      <h2 className="sz-h2">the morning will come when the world is mine</h2>
-      <p>may fortune favor me</p>
+      <h2 className="sz-h2">{c.headline}</h2>
+      <p>{c.bio}</p>
       <h3 className="sz-h3">elsewhere</h3>
       <ul className="sz-links">
-        <li><span>↗ discord — krasnaya.</span></li>
-        <li><a href="https://reddit.com/user/PM_ME_QT_TRANSGIRLS">↗ reddit — PM_ME_QT_TRANSGIRLS</a></li>
-        <li><a href="https://twitter.com/TaleRisk">↗ twitter — TaleRisk</a></li>
+        {c.links.map((l, i) =>
+          l.href
+            ? <li key={i}><a href={l.href}>↗ {l.label}</a></li>
+            : <li key={i}><span>↗ {l.label}</span></li>
+        )}
       </ul>
     </section>
   );
