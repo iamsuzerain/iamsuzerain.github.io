@@ -12,7 +12,7 @@ const PM_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 const PM_HANDLE = 'ameameameameame';
 const PM_CACHE_KEY = 'pm-cache-v2';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const PM_PF_URL_BASE = 'https://predictfolio.com/@';
+const PM_BM_URL = 'https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 
 const PM_POSITIONS_URL =
   `https://data-api.polymarket.com/positions?user=${PM_WALLET}&limit=100&sortBy=CURRENT&sortDirection=DESC`;
@@ -417,8 +417,8 @@ function Polymarket() {
         <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
       </div>
 
-      <a className="pm-deeplink" href={`${PM_PF_URL_BASE}${profile.handle}`} target="_blank" rel="noreferrer">
-        <span className="pm-deeplink-cta">full dashboard on predictfolio <span className="pm-deeplink-arrow">↗</span></span>
+      <a className="pm-deeplink" href={PM_BM_URL} target="_blank" rel="noreferrer">
+        <span className="pm-deeplink-cta">full dashboard on betmoar <span className="pm-deeplink-arrow">↗</span></span>
       </a>
 
       {pnlSeries && pnlSeries.length > 1 && (
@@ -456,8 +456,8 @@ function Polymarket() {
           wallet ↗ polymarket
         </a>
         <span className="sz-sep">·</span>
-        <a href={`${PM_PF_URL_BASE}${profile.handle}`} target="_blank" rel="noreferrer">
-          analytics ↗ predictfolio
+        <a href={PM_BM_URL} target="_blank" rel="noreferrer">
+          analytics ↗ betmoar
         </a>
       </div>
     </section>
