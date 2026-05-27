@@ -10,7 +10,7 @@ const {
 
 const PM_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 const PM_HANDLE = 'ameameameameame';
-const PM_CACHE_KEY = 'pm-cache-v3';
+const PM_CACHE_KEY = 'pm-cache-v4';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = 'https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 
