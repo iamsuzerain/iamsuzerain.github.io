@@ -412,7 +412,7 @@ function PmStat({ label, value, change, kicker, tone }) {
 // ---------- earnings breakdown row ----------
 function PmBreakdown({ bd, tradingPnl }) {
   const rows = [
-    { key: 'trading',   label: 'trading',   val: bd?.trading   != null ? bd.trading   : Math.round(tradingPnl) },
+    { key: 'trading',   label: 'trading',   val: Math.round(tradingPnl) },
     { key: 'lp',        label: 'lp',        val: bd?.lp        != null ? bd.lp        : null },
     { key: 'maker',     label: 'maker',     val: bd?.maker     != null ? bd.maker     : null },
     { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
