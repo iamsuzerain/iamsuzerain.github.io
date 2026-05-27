@@ -778,6 +778,39 @@
   .pm-headline .pos { color: #7dd3a8; }
   .pm-headline .neg { color: #ff6b9d; }
 
+  /* Profit breakdown panel */
+  .pm-breakdown-panel { margin-bottom: 16px; }
+  .pm-breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: rgba(167,139,250,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  @media (max-width: 760px) {
+    .pm-breakdown-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .pm-breakdown-cell {
+    background: rgba(10,6,18,0.55);
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .pm-breakdown-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--fg-4);
+  }
+  .pm-breakdown-val {
+    font-family: var(--font-display); font-size: 22px; font-weight: 400;
+    color: var(--fg-2); letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .pm-breakdown-val.pos { color: #7dd3a8; }
+  .pm-breakdown-src {
+    color: var(--violet-300); text-decoration: none;
+  }
+  .pm-breakdown-src:hover { color: var(--magenta-400); }
+
   /* Polymarket sparkline tooltip */
   .pm-chart-wrap { position: relative; }
   .pm-chart-svg { display: block; cursor: crosshair; }
