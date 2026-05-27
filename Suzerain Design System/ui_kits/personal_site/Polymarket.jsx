@@ -85,17 +85,26 @@ function pmParseBetmoar(html) {
 }
 
 async function pmFetchBreakdown() {
-  // 1) Try Betmoar profile page (works if they allow CORS)
+  // Primary: polymarket-breakdown.json written by betmoar-refresh workflow
   try {
-    const r = await fetch(PM_BM_URL, { mode: 'cors' });
+    const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
     if (r.ok) {
-      const html = await r.text();
-      const bd = pmParseBetmoar(html);
-      if (bd) return bd;
+      const bd = await r.json();
+      if (bd.totals) {
+        return {
+          trading:   bd.totals.trading,
+          lp:        bd.totals.lp,
+          yield:     bd.totals.yield,
+          maker:     bd.totals.maker,
+          sponsored: bd.totals.sponsored,
+          uma:       bd.totals.uma,
+          source:    'betmoar',
+        };
+      }
     }
   } catch {}
 
-  // 2) Fall back to pre-fetched polymarket-rewards.json
+  // Fallback: polymarket-rewards.json (maker + LP via CLOB script)
   try {
     const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
     if (r.ok) {
