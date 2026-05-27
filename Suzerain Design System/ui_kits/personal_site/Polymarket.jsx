@@ -10,7 +10,7 @@ const {
 
 const PM_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 const PM_HANDLE = 'ameameameameame';
-const PM_CACHE_KEY = 'pm-cache-v2';
+const PM_CACHE_KEY = 'pm-cache-v3';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = 'https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
 
@@ -67,6 +67,56 @@ function pmDownsample(arr, target = 150) {
   return out;
 }
 
+// ---------- earnings breakdown (betmoar → polymarket-rewards.json fallback) ----------
+function pmParseBetmoar(html) {
+  const extract = (label) => {
+    const re = new RegExp(label + '[^<$]{0,60}\\$([\\d,]+)', 'i');
+    const m = html.match(re);
+    return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
+  };
+  const trading  = extract('Trading');
+  const lp       = extract('\\bLP\\b');
+  const yld      = extract('Yield');
+  const maker    = extract('Maker');
+  const sponsored = extract('Sponsored');
+  const uma      = extract('\\bUMA\\b');
+  if (trading == null && lp == null && maker == null) return null;
+  return { trading, lp, yield: yld, maker, sponsored, uma, source: 'betmoar' };
+}
+
+async function pmFetchBreakdown() {
+  // 1) Try Betmoar profile page (works if they allow CORS)
+  try {
+    const r = await fetch(PM_BM_URL, { mode: 'cors' });
+    if (r.ok) {
+      const html = await r.text();
+      const bd = pmParseBetmoar(html);
+      if (bd) return bd;
+    }
+  } catch {}
+
+  // 2) Fall back to pre-fetched polymarket-rewards.json
+  try {
+    const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
+    if (r.ok) {
+      const rw = await r.json();
+      if (rw.totals && (rw.totals.makerRebates || rw.totals.liquidityRewards)) {
+        return {
+          trading:   null,
+          lp:        Math.round(rw.totals.liquidityRewards || 0),
+          yield:     0,
+          maker:     Math.round(rw.totals.makerRebates || 0),
+          sponsored: 0,
+          uma:       0,
+          source:    'json',
+        };
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
 async function pmFetchAll() {
   // Try cache first
   try {
@@ -79,10 +129,11 @@ async function pmFetchAll() {
     }
   } catch {}
 
-  const [posRes, pnlRes, actRes] = await Promise.all([
+  const [posRes, pnlRes, actRes, breakdown] = await Promise.all([
     fetch(PM_POSITIONS_URL),
     fetch(PM_PNL_URL),
     fetch(PM_ACTIVITY_URL),
+    pmFetchBreakdown(),
   ]);
   if (!posRes.ok) throw new Error('positions ' + posRes.status);
   if (!pnlRes.ok) throw new Error('pnl ' + pnlRes.status);
@@ -130,8 +181,9 @@ async function pmFetchAll() {
       realizedPnl: realized,
       unrealizedPnl: unrealized,
       openPositions: positions.length,
-      marketsTradedLifetime: null, // filled below if pnlRaw has distinct days
+      marketsTradedLifetime: null,
     },
+    breakdown,
     positions,
     pnlSeries,
     activity,
@@ -348,6 +400,41 @@ function PmStat({ label, value, change, kicker, tone }) {
   );
 }
 
+// ---------- earnings breakdown row ----------
+function PmBreakdown({ bd, tradingPnl }) {
+  const rows = [
+    { key: 'trading',   label: 'trading',   val: bd?.trading   != null ? bd.trading   : Math.round(tradingPnl) },
+    { key: 'lp',        label: 'lp',        val: bd?.lp        != null ? bd.lp        : null },
+    { key: 'maker',     label: 'maker',     val: bd?.maker     != null ? bd.maker     : null },
+    { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
+    { key: 'sponsored', label: 'sponsored', val: bd?.sponsored != null ? bd.sponsored : null },
+    { key: 'uma',       label: 'uma',       val: bd?.uma       != null ? bd.uma       : null },
+  ];
+  const source = bd?.source || null;
+  return (
+    <div className="pf-panel pm-breakdown-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">profit by source</span>
+        <span className="pf-panel-meta">
+          {source === 'betmoar' ? 'via betmoar' : source === 'json' ? 'maker + lp via clob' : 'trading only'}
+          {' · '}
+          <a className="pm-breakdown-src" href={PM_BM_URL} target="_blank" rel="noreferrer">full dashboard ↗</a>
+        </span>
+      </div>
+      <div className="pm-breakdown-grid">
+        {rows.map(({ key, label, val }) => (
+          <div key={key} className="pm-breakdown-cell">
+            <div className="pm-breakdown-label">{label}</div>
+            <div className={`pm-breakdown-val${val != null && val > 0 ? ' pos' : ''}`}>
+              {val != null ? pmUSD(val) : '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------- main view ----------
 function Polymarket() {
   const [data, setData] = usePmState(null);
@@ -376,7 +463,7 @@ function Polymarket() {
     </section>
   );
 
-  const { profile, summary, pnlSeries, positions, activity } = data;
+  const { profile, summary, pnlSeries, positions, activity, breakdown } = data;
   const updated = new Date(data.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
@@ -417,9 +504,7 @@ function Polymarket() {
         <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
       </div>
 
-      <a className="pm-deeplink" href={PM_BM_URL} target="_blank" rel="noreferrer">
-        <span className="pm-deeplink-cta">full dashboard on betmoar <span className="pm-deeplink-arrow">↗</span></span>
-      </a>
+      <PmBreakdown bd={breakdown} tradingPnl={lifetimePnl} />
 
       {pnlSeries && pnlSeries.length > 1 && (
         <div className="pf-panel">
