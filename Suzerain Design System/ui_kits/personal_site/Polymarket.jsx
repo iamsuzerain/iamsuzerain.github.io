@@ -476,12 +476,18 @@ function Polymarket() {
   const updated = new Date(data.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
-  // Authoritative lifetime P&L = last point of user-pnl series.
+  // Authoritative lifetime P&L = last point of user-pnl series (trading only).
   const lifetimePnl = (pnlSeries && pnlSeries.length)
     ? pnlSeries[pnlSeries.length - 1].v
     : summary.realizedPnl + summary.unrealizedPnl;
   // True realized = lifetime − unrealized (settled P&L across all markets, open + closed).
   const realizedTotal = lifetimePnl - summary.unrealizedPnl;
+  // All-source total = trading + LP + maker + yield + sponsored + UMA
+  const bdExtra = breakdown
+    ? (breakdown.lp || 0) + (breakdown.yield || 0) + (breakdown.maker || 0)
+      + (breakdown.sponsored || 0) + (breakdown.uma || 0)
+    : 0;
+  const totalPnl = lifetimePnl + bdExtra;
 
   return (
     <section className="pf-wrap pm-view">
@@ -489,8 +495,8 @@ function Polymarket() {
         <div>
           <div className="sz-kicker">◆ polymarket · live from data-api</div>
           <h2 className="sz-h2 pm-headline">
-            <span className={lifetimePnl >= 0 ? 'pos' : 'neg'}>
-              {lifetimePnl >= 0 ? '+' : ''}{pmUSD(lifetimePnl)}
+            <span className={totalPnl >= 0 ? 'pos' : 'neg'}>
+              {totalPnl >= 0 ? '+' : ''}{pmUSD(totalPnl)}
             </span>
             <span className="pf-currency">lifetime pnl</span>
           </h2>
