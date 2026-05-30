@@ -1,63 +1,65 @@
 #!/usr/bin/env python3
 """
 fetch-betmoar-breakdown.py
-Scrapes the Betmoar profile page and extracts the profit breakdown
+Calls the Betmoar Next.js server action to get the profit breakdown
 (Trading, LP, Yield, Maker, Sponsored, UMA). Outputs JSON to stdout.
 
 Usage:
   python3 fetch-betmoar-breakdown.py > data/polymarket-breakdown.json
-
-No credentials required — data is public on the Betmoar profile page.
 """
-import json, re, sys
+import json, re, sys, urllib.request
 from datetime import date
-try:
-    from curl_cffi import requests
-    SESSION = requests.Session(impersonate="chrome131")
-    def get(url):
-        r = SESSION.get(url, timeout=15)
-        r.raise_for_status()
-        return r.text
-except ImportError:
-    import urllib.request
-    def get(url):
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=15) as r:
-            return r.read().decode()
 
-WALLET  = "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a"
-BM_URL  = f"https://www.betmoar.fun/profile/{WALLET}"
+WALLET      = "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a"
+BM_URL      = f"https://www.betmoar.fun/profile/{WALLET}"
+ACTION_HASH = "85d5ff77f7cca6369bc174dc6a4c1d46509ca4ab"
 
-def extract(html, label):
-    m = re.search(label + r'[^<$]{0,80}\$([0-9,]+)', html, re.IGNORECASE)
-    if m:
-        return int(m.group(1).replace(',', ''))
-    return None
+def fetch_stats():
+    body = json.dumps([WALLET]).encode()
+    req = urllib.request.Request(
+        BM_URL,
+        data=body,
+        headers={
+            "User-Agent":             "Mozilla/5.0",
+            "Content-Type":           "text/plain;charset=UTF-8",
+            "Next-Action":            ACTION_HASH,
+            "Next-Router-State-Tree": "%5B%22%22%2C%7B%7D%5D",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=15) as r:
+        raw = r.read().decode()
+
+    # response is newline-delimited lines; find the one with the stats object
+    for line in raw.splitlines():
+        m = re.search(r'\{.+tradingProfit.+\}', line)
+        if m:
+            return json.loads(m.group())
+    raise ValueError(f"stats object not found in response: {raw[:200]}")
 
 def main():
     try:
-        html = get(BM_URL)
+        stats = fetch_stats()
     except Exception as e:
-        print(f"error fetching {BM_URL}: {e}", file=sys.stderr)
+        print(f"error fetching stats: {e}", file=sys.stderr)
         sys.exit(1)
+
+    def dollars(val):
+        return round(val) if val else 0
 
     breakdown = {
         "generatedAt": date.today().isoformat(),
         "wallet":      WALLET,
         "source":      BM_URL,
         "totals": {
-            "trading":   extract(html, r'Trading'),
-            "lp":        extract(html, r'\bLP\b'),
-            "yield":     extract(html, r'Yield'),
-            "maker":     extract(html, r'Maker'),
-            "sponsored": extract(html, r'Sponsored'),
-            "uma":       extract(html, r'\bUMA\b'),
+            "trading":   dollars(stats.get("tradingProfit")),
+            "lp":        dollars(stats.get("lpRewards")),
+            "yield":     dollars(stats.get("yieldRewards")),
+            "maker":     dollars(stats.get("makerRebates")),
+            "sponsored": dollars(stats.get("sponsoredRewards")),
+            "uma":       dollars(stats.get("umaPnl")),
         },
     }
-
-    missing = [k for k, v in breakdown["totals"].items() if v is None]
-    if missing:
-        print(f"warning: could not parse {missing} from page", file=sys.stderr)
 
     print(json.dumps(breakdown, indent=2))
 
