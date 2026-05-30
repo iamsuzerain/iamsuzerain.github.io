@@ -13,7 +13,7 @@ import json, re, sys
 from datetime import date
 try:
     from curl_cffi import requests
-    SESSION = requests.Session(impersonate="chrome124")
+    SESSION = requests.Session(impersonate="chrome131")
     def get(url):
         r = SESSION.get(url, timeout=15)
         r.raise_for_status()
