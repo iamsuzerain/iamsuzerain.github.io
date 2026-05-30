@@ -1,4 +1,5 @@
 name: betmoar-breakdown-refresh
+# Fetches Polymarket profit-by-source breakdown daily
 
 on:
   schedule:
