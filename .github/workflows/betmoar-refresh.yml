@@ -1,0 +1,42 @@
+name: betmoar-breakdown-refresh
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install deps
+        run: pip install curl_cffi
+
+      - name: fetch betmoar breakdown
+        run: |
+          mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/betmoar-breakdown/fetch-betmoar-breakdown.py" \
+            > "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+          echo "result:"
+          cat "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+
+      - name: commit + push if changed
+        run: |
+          git config user.name  "betmoar-bot"
+          git config user.email "betmoar-bot@users.noreply.github.com"
+          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"; then
+            echo "no changes"
+            exit 0
+          fi
+          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+          git commit -m "polymarket: refresh betmoar breakdown $(date -u +%F)"
+          git push
