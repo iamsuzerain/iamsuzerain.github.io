@@ -7,30 +7,73 @@ Calls the Betmoar Next.js server action to get the profit breakdown
 Usage:
   python3 fetch-betmoar-breakdown.py > data/polymarket-breakdown.json
 """
-import json, re, sys, urllib.request
+import json, re, sys
 from datetime import date
+from curl_cffi import requests
 
-WALLET      = "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a"
-BM_URL      = f"https://www.betmoar.fun/profile/{WALLET}"
-ACTION_HASH = "85d5ff77f7cca6369bc174dc6a4c1d46509ca4ab"
+WALLET = "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a"
+BM_URL = f"https://www.betmoar.fun/profile/{WALLET}"
 
-def fetch_stats():
+# Fallback hash — used if dynamic discovery fails
+_FALLBACK_HASH = "85d5ff77f7cca6369bc174dc6a4c1d46509ca4ab"
+
+def discover_action_hash():
+    """Scrape the profile page JS bundles to find the current Next-Action hash."""
+    r = requests.get(BM_URL, impersonate="chrome")
+    r.raise_for_status()
+    html = r.text
+
+    # Collect all /_next/static JS chunk URLs
+    chunk_urls = re.findall(r'"(/_next/static/chunks/[^"]+\.js)"', html)
+    base = "https://www.betmoar.fun"
+
+    for path in chunk_urls:
+        try:
+            cr = requests.get(base + path, impersonate="chrome", timeout=10)
+            # Next.js server action hashes appear as 40-char hex strings bound to action exports
+            matches = re.findall(r'["\'`]([0-9a-f]{40})["\' `]', cr.text)
+            for m in matches:
+                # Quick sanity-check: try the hash and see if the response contains tradingProfit
+                if _try_hash(m):
+                    return m
+        except Exception:
+            continue
+
+    return None
+
+def _try_hash(action_hash):
+    try:
+        body = json.dumps([WALLET]).encode()
+        r = requests.post(
+            BM_URL,
+            content=body,
+            headers={
+                "Content-Type":           "text/plain;charset=UTF-8",
+                "Next-Action":            action_hash,
+                "Next-Router-State-Tree": "%5B%22%22%2C%7B%7D%5D",
+            },
+            impersonate="chrome",
+            timeout=15,
+        )
+        return "tradingProfit" in r.text
+    except Exception:
+        return False
+
+def fetch_stats(action_hash):
     body = json.dumps([WALLET]).encode()
-    req = urllib.request.Request(
+    r = requests.post(
         BM_URL,
-        data=body,
+        content=body,
         headers={
-            "User-Agent":             "Mozilla/5.0",
             "Content-Type":           "text/plain;charset=UTF-8",
-            "Next-Action":            ACTION_HASH,
+            "Next-Action":            action_hash,
             "Next-Router-State-Tree": "%5B%22%22%2C%7B%7D%5D",
         },
-        method="POST",
+        impersonate="chrome",
+        timeout=15,
     )
-    with urllib.request.urlopen(req, timeout=15) as r:
-        raw = r.read().decode()
+    raw = r.text
 
-    # response is newline-delimited lines; find the one with the stats object
     for line in raw.splitlines():
         m = re.search(r'\{.+tradingProfit.+\}', line)
         if m:
@@ -39,7 +82,9 @@ def fetch_stats():
 
 def main():
     try:
-        stats = fetch_stats()
+        action_hash = discover_action_hash() or _FALLBACK_HASH
+        print(f"using action hash: {action_hash}", file=sys.stderr)
+        stats = fetch_stats(action_hash)
     except Exception as e:
         print(f"error fetching stats: {e}", file=sys.stderr)
         sys.exit(1)
