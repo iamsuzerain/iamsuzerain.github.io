@@ -46,7 +46,7 @@ def _try_hash(action_hash):
         body = json.dumps([WALLET]).encode()
         r = requests.post(
             BM_URL,
-            content=body,
+            data=body,
             headers={
                 "Content-Type":           "text/plain;charset=UTF-8",
                 "Next-Action":            action_hash,
@@ -63,7 +63,7 @@ def fetch_stats(action_hash):
     body = json.dumps([WALLET]).encode()
     r = requests.post(
         BM_URL,
-        content=body,
+        data=body,
         headers={
             "Content-Type":           "text/plain;charset=UTF-8",
             "Next-Action":            action_hash,
