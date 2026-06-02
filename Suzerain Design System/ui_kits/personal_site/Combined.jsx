@@ -154,6 +154,7 @@ function CmbChart({ series, log }) {
   const [hover, setHover] = useCmbState(null);
   const [annot, setAnnot] = useCmbState(null);
   const markers = cmbMarkers(series, log);
+  const cur = annot || (markers.length ? markers[markers.length - 1] : null);
 
   const all = [];
   for (const p of series) { all.push(p.v, p.ibkr, p.pm); }
@@ -187,6 +188,7 @@ function CmbChart({ series, log }) {
   const lastPt = series[series.length - 1];
 
   return (
+    <>
     <div className="pm-chart-wrap">
       <svg
         ref={svgRef}
@@ -229,17 +231,16 @@ function CmbChart({ series, log }) {
           </g>
         )}
 
-        {/* log annotations pinned to the total line */}
+        {/* log event markers */}
         {markers.map((m, k) => {
-          const active = annot && annot.i === m.i;
+          const active = cur && cur.i === m.i;
           return (
-            <g key={k} className="cmb-annot"
+            <g key={k} className={`cmb-annot${active ? ' active' : ''}`}
               onMouseEnter={() => setAnnot(m)}
-              onMouseLeave={() => setAnnot(null)}
-              onClick={() => setAnnot(a => (a && a.i === m.i) ? null : m)}>
-              <circle cx={x(m.i)} cy={y(m.v)} r="11" fill="transparent"/>
-              <text x={x(m.i)} y={y(m.v)} dy="0.32em" textAnchor="middle"
-                className={`cmb-annot-glyph${active ? ' active' : ''}`}>◆</text>
+              onClick={() => setAnnot(m)}>
+              <rect x={x(m.i) - 7} y={PAD_T} width="14" height={H - PAD_T - PAD_B} fill="transparent"/>
+              <line className="cmb-annot-line" x1={x(m.i)} x2={x(m.i)} y1={PAD_T} y2={H - PAD_B}/>
+              <circle className="cmb-annot-dot" cx={x(m.i)} cy={y(m.v)} r={active ? 4 : 3}/>
             </g>
           );
         })}
@@ -266,16 +267,14 @@ function CmbChart({ series, log }) {
         </div>
       )}
 
-      {annot && (
-        <div className="cmb-annot-tip" style={{
-          left: `${(x(annot.i) / W) * 100}%`,
-          top: `${(y(annot.v) / H) * 100}%`,
-        }}>
-          <div className="cmb-annot-date">▸ {cmbFullDate(annot.date)}</div>
-          <div className="cmb-annot-body">{annot.body}</div>
-        </div>
-      )}
     </div>
+    {cur && (
+      <div className="cmb-annot-cap">
+        <div className="cmb-annot-cap-date">▸ {cmbFullDate(cur.date)}</div>
+        <p className="cmb-annot-cap-body">{cur.body}</p>
+      </div>
+    )}
+    </>
   );
 }
 
