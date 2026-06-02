@@ -231,16 +231,15 @@ function CmbChart({ series, log }) {
           </g>
         )}
 
-        {/* log event markers */}
+        {/* log event markers — click to pin to the caption below */}
         {markers.map((m, k) => {
           const active = cur && cur.i === m.i;
           return (
             <g key={k} className={`cmb-annot${active ? ' active' : ''}`}
-              onMouseEnter={() => setAnnot(m)}
               onClick={() => setAnnot(m)}>
-              <rect x={x(m.i) - 7} y={PAD_T} width="14" height={H - PAD_T - PAD_B} fill="transparent"/>
-              <line className="cmb-annot-line" x1={x(m.i)} x2={x(m.i)} y1={PAD_T} y2={H - PAD_B}/>
-              <circle className="cmb-annot-dot" cx={x(m.i)} cy={y(m.v)} r={active ? 4 : 3}/>
+              <circle cx={x(m.i)} cy={y(m.v)} r="9" fill="transparent"/>
+              {active && <circle className="cmb-annot-halo" cx={x(m.i)} cy={y(m.v)} r="6"/>}
+              <circle className="cmb-annot-dot" cx={x(m.i)} cy={y(m.v)} r={active ? 3 : 2.5}/>
             </g>
           );
         })}
