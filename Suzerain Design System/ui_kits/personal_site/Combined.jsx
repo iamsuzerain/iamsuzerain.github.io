@@ -238,12 +238,14 @@ function CmbChart({ series, log }) {
         {/* log event markers — click to pin to the caption below */}
         {markers.map((m, k) => {
           const active = cur && cur.i === m.i;
-          const s = active ? 9 : 7;
+          const s = active ? 6 : 5;
+          const cx = x(m.i), cy = y(m.v);
           return (
             <g key={k} className={`cmb-annot${active ? ' active' : ''}`}
               onClick={() => setAnnot(m)}>
-              <rect x={x(m.i) - 8} y={y(m.v) - 8} width="16" height="16" fill="transparent"/>
-              <rect className="cmb-annot-sq" x={x(m.i) - s / 2} y={y(m.v) - s / 2} width={s} height={s}/>
+              <rect x={cx - 8} y={cy - 8} width="16" height="16" fill="transparent"/>
+              <rect className="cmb-annot-sq" x={cx - s / 2} y={cy - s / 2} width={s} height={s}
+                transform={`rotate(45 ${cx} ${cy})`}/>
             </g>
           );
         })}
