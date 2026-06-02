@@ -790,18 +790,13 @@
 
   /* log event markers + caption on the overview chart */
   .cmb-annot { cursor: pointer; }
-  .cmb-annot-line {
-    stroke: var(--violet-400); stroke-width: 1; opacity: 0.16;
-    transition: opacity 160ms var(--ease-out);
-  }
   .cmb-annot-dot {
-    fill: var(--violet-400); stroke: #0a0612; stroke-width: 1.5;
-    transition: fill 160ms var(--ease-out);
+    fill: var(--violet-300); opacity: 0.45;
+    transition: opacity 160ms var(--ease-out), fill 160ms var(--ease-out);
   }
-  .cmb-annot:hover .cmb-annot-line,
-  .cmb-annot.active .cmb-annot-line { opacity: 0.5; }
-  .cmb-annot:hover .cmb-annot-dot,
-  .cmb-annot.active .cmb-annot-dot { fill: var(--magenta-400); }
+  .cmb-annot:hover .cmb-annot-dot { opacity: 0.9; }
+  .cmb-annot.active .cmb-annot-dot { fill: var(--magenta-400); opacity: 1; }
+  .cmb-annot-halo { fill: var(--magenta-400); opacity: 0.22; }
   .cmb-annot-cap {
     margin-top: 14px; padding: 12px 14px;
     border: 1px solid var(--ink-4); border-left: 2px solid var(--violet-400);
