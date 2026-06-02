@@ -10,8 +10,7 @@ Interactive recreation of the Suzerain personal site. Open `index.html` to use t
 - `About.jsx` — prose page, max-width reading column
 - `Projects.jsx` — project list with filter tags and inner-glow cards
 - `Writing.jsx` — writing index with mono date column, tag row
-- `Contact.jsx` — terminal-style contact panel + social links
 
 ## Sections
 
-Hero → About → Projects → Writing → Contact. Each is a view switched via nav. No routing library; a single `view` state in the root.
+Hero → About → Projects → Writing. Each is a view switched via nav. No routing library; a single `view` state in the root.
