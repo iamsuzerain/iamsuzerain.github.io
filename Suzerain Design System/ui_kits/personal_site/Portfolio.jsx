@@ -77,7 +77,8 @@ function NavChart({ series, perfSeries }) {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
     const t = (px - PAD_L) / (W - PAD_L - PAD_R);
     const idx = Math.max(0, Math.min(perf.length - 1, Math.round(t * (perf.length - 1))));
     setHover(idx);
@@ -95,6 +96,9 @@ function NavChart({ series, perfSeries }) {
         preserveAspectRatio="none"
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
       >
         <defs>
           <linearGradient id="pf-nav-fill" x1="0" y1="0" x2="0" y2="1">
@@ -118,18 +122,6 @@ function NavChart({ series, perfSeries }) {
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
         <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="3.5" fill="#ff4fd8"/>
         <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
-        {yLabels.map((yl, i) => (
-          <text key={i} x={W - PAD_R - 2} y={y(yl.v) - 4} textAnchor="end"
-            fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">
-            {fmtPct(yl.v)}
-          </text>
-        ))}
-        {ticks.map((t, i) => (
-          <text key={i} x={x(t.i)} y={H - 8} textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
-            fontFamily="JetBrains Mono, monospace" fontSize="9" fill="rgba(229,225,241,0.4)" letterSpacing="0.1em">
-            {t.d}
-          </text>
-        ))}
         {hovered && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -138,6 +130,18 @@ function NavChart({ series, perfSeries }) {
           </g>
         )}
       </svg>
+      <div className="pf-axis-y">
+        {yLabels.map((yl, i) => (
+          <span key={i} style={{ top: `${(y(yl.v) / H) * 100}%` }}>{fmtPct(yl.v)}</span>
+        ))}
+      </div>
+      <div className="pf-axis-x">
+        {ticks.map((t, i) => (
+          <span key={i}
+            className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
+            style={{ left: `${(x(t.i) / W) * 100}%` }}>{t.d}</span>
+        ))}
+      </div>
       {hovered && (
         <div className="pm-tooltip" style={{
           left: `${(x(hover) / W) * 100}%`,
@@ -288,15 +292,15 @@ function Portfolio() {
 
   if (err) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ portfolio</div>
-      <h2 className="sz-h2">couldn't load portfolio feed.</h2>
+      <div className="sz-kicker">◆ ibkr</div>
+      <h2 className="sz-h2">couldn't load ibkr feed.</h2>
       <p><code>{err}</code></p>
       <p className="sz-dim">the daily IBKR flex fetch may not have run yet. see <code>scripts/ibkr-flex/README.md</code>.</p>
     </section>
   );
   if (!data) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ portfolio</div>
+      <div className="sz-kicker">◆ ibkr</div>
       <h2 className="sz-h2">fetching latest positions<Cursor /></h2>
     </section>
   );
@@ -309,7 +313,7 @@ function Portfolio() {
     <section className="pf-wrap">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ portfolio · ibkr flex feed</div>
+          <div className="sz-kicker">◆ ibkr · flex query feed</div>
           <h2 className="sz-h2">${Math.round(d.account.nav).toLocaleString()}<span className="pf-currency">{d.account.currency}</span></h2>
           <div className="pf-sub">
             account {d.account.id} <span className="sz-sep">·</span>

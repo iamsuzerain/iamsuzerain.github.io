@@ -1,0 +1,47 @@
+name: polymarket-pnl-refresh
+# Snapshots the Polymarket cumulative user-pnl series daily so the Total view
+# has a durable fallback when the live data-api is unreachable.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install deps
+        run: pip install curl_cffi
+
+      - name: fetch polymarket pnl snapshot
+        run: |
+          mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-pnl/fetch-polymarket-pnl.py" \
+            > "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
+          echo "first 300 bytes of result:"
+          head -c 300 "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
+
+      - name: commit + push if changed
+        run: |
+          git config user.name  "polymarket-pnl-bot"
+          git config user.email "polymarket-pnl-bot@users.noreply.github.com"
+          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"; then
+            echo "no changes"
+            exit 0
+          fi
+          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
+          git commit -m "polymarket: refresh pnl snapshot $(date -u +%F)"
+          git pull --rebase
+          git push

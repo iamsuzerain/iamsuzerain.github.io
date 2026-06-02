@@ -8,7 +8,8 @@ function Blog({ setView }) {
       <p className="sz-hero-tag">{c.tag}</p>
       <p className="sz-hero-sub">{c.sub}</p>
       <div className="sz-hero-cta">
-        <button className="sz-btn sz-btn-primary" onClick={() => setView('portfolio')}>▸ portfolio</button>
+        <button className="sz-btn" style={{ borderColor: 'transparent' }} onClick={() => setView('combined')}>▸ overview</button>
+        <button className="sz-btn sz-btn-ghost" onClick={() => setView('portfolio')}>ibkr →</button>
         <button className="sz-btn sz-btn-ghost" onClick={() => setView('polymarket')}>polymarket →</button>
       </div>
       <div className="sz-log">

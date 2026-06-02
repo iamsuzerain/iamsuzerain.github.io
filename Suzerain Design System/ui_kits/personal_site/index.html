@@ -257,12 +257,12 @@
     color: var(--fg-3); margin-bottom: 24px;
   }
   .sz-hero-name {
-    font-family: var(--font-display); font-size: 120px; font-weight: 500;
+    font-family: var(--font-display); font-size: clamp(48px, 11vw, 120px); font-weight: 500;
     color: var(--fg-1); letter-spacing: -0.04em; line-height: 0.95;
-    margin: 0; white-space: nowrap;
+    margin: 0; white-space: normal; overflow-wrap: break-word;
   }
   .sz-hero-tag {
-    font-family: var(--font-display); font-size: 32px; font-weight: 300;
+    font-family: var(--font-display); font-size: clamp(22px, 5vw, 32px); font-weight: 300;
     color: var(--fg-2); letter-spacing: -0.02em; line-height: 1.15;
     margin: 28px 0 12px; max-width: 780px; min-height: 40px;
   }
@@ -682,6 +682,17 @@
   @media (max-width: 760px) {
     .pf-stats { grid-template-columns: repeat(2, 1fr); }
     .pf-row { grid-template-columns: 1fr; }
+    .sz-nav {
+      gap: 12px; padding: 12px 14px; margin-bottom: 48px;
+      flex-wrap: wrap; row-gap: 8px;
+    }
+    .sz-nav-items {
+      gap: 14px; margin-left: 0; order: 3; flex-basis: 100%;
+      flex-wrap: wrap;
+    }
+    .sz-nav-meta { display: none; }
+    .pf-table { font-size: 11px; }
+    .pf-table th, .pf-table td { padding: 7px 8px; }
   }
 
   /* ========== Polymarket view overrides ========== */
@@ -814,6 +825,37 @@
   /* Polymarket sparkline tooltip */
   .pm-chart-wrap { position: relative; }
   .pm-chart-svg { display: block; cursor: crosshair; }
+  .pf-navchart { touch-action: pan-y; }
+
+  /* HTML axis overlays — kept out of the SVG so text stays legible on mobile */
+  .pf-axis-x {
+    position: absolute; left: 0; right: 0; bottom: 2px; height: 12px;
+    pointer-events: none;
+  }
+  .pf-axis-x span {
+    position: absolute; transform: translateX(-50%);
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(229,225,241,0.45); letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .pf-axis-x span.start { transform: none; }
+  .pf-axis-x span.end { transform: translateX(-100%); }
+  .pf-axis-zero {
+    position: absolute; transform: translateY(-100%);
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(229,225,241,0.4); pointer-events: none; white-space: nowrap;
+  }
+  .pf-axis-y { position: absolute; inset: 0; pointer-events: none; }
+  .pf-axis-y span {
+    position: absolute; right: 4px; transform: translateY(-100%);
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(229,225,241,0.45); letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .pm-peak, .pm-trough {
+    position: absolute; font-family: var(--font-mono); font-size: 10px;
+    white-space: nowrap; pointer-events: none;
+  }
+  .pm-peak { color: #a78bfa; transform: translate(-50%, -180%); }
+  .pm-trough { color: #ff9ae8; transform: translate(-50%, 80%); }
   .pm-tooltip {
     position: absolute;
     transform: translate(-50%, calc(-100% - 14px));
@@ -839,6 +881,28 @@
   .pm-tt-val  { font-size: 13px; font-weight: 500; margin-top: 2px; }
   .pm-tt-val.pos { color: #7dd3a8; }
   .pm-tt-val.neg { color: #ff6b9d; }
+
+  /* Total view: legend, multi-series tooltip, clickable stat tiles */
+  .cmb-legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    padding: 0 8px 10px; font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--fg-4);
+  }
+  .cmb-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .cmb-legend-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .cmb-tooltip { display: flex; flex-direction: column; gap: 3px; }
+  .cmb-tt-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em;
+  }
+  .cmb-tt-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .cmb-tt-num { margin-left: auto; padding-left: 14px; font-weight: 500; }
+  .cmb-tt-num.pos { color: #7dd3a8; }
+  .cmb-tt-num.neg { color: #ff6b9d; }
+  .cmb-stat-link { cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
+  .cmb-stat-link:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
+  .cmb-stat-arrow { color: var(--violet-300); opacity: 0.7; }
 </style>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
@@ -854,6 +918,7 @@
 <script type="text/babel" src="About.jsx"></script>
 <script type="text/babel" src="Portfolio.jsx"></script>
 <script type="text/babel" src="Polymarket.jsx"></script>
+<script type="text/babel" src="Combined.jsx"></script>
 <script type="text/babel" src="Predictfolio.jsx"></script>
 <script type="text/babel">
 function App() {
@@ -862,11 +927,12 @@ function App() {
     hero: <Blog setView={setView}/>,
     portfolio: <Portfolio/>,
     polymarket: <Polymarket/>,
+    combined: <Combined setView={setView}/>,
     predictfolio: <Predictfolio/>,
     about: <About/>,
   };
   // Data-heavy views fog the city so tables stay readable.
-  const dim = view === 'portfolio' || view === 'polymarket' || view === 'predictfolio';
+  const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined' || view === 'predictfolio';
   return (
     <Chrome cursorGlow={view==='hero'} dim={dim}>
       <Nav view={view} setView={setView} />
