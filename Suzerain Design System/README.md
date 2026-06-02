@@ -217,7 +217,6 @@ These are part of the iconography and appear throughout the system:
         ├── About.jsx
         ├── Projects.jsx
         ├── Writing.jsx
-        ├── Contact.jsx
         └── Chrome.jsx        — shared layout / cursor glow / grid bg
 ```
 
