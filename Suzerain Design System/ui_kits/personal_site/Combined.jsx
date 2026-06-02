@@ -278,7 +278,7 @@ function CmbChart({ series, log }) {
         <div className="cmb-annot-cap-head">
           <button className="cmb-annot-nav" disabled={curIdx <= 0}
             onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
-          <div className="cmb-annot-cap-date">▸ {cmbFullDate(cur.date)}</div>
+          <div className="cmb-annot-cap-date">{cmbFullDate(cur.date)}</div>
           <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
             onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
         </div>
