@@ -790,21 +790,33 @@
 
   /* log event markers + caption on the overview chart */
   .cmb-annot { cursor: pointer; }
-  .cmb-annot-dot {
-    fill: var(--violet-300); opacity: 0.45;
-    transition: opacity 160ms var(--ease-out), fill 160ms var(--ease-out);
+  .cmb-annot-sq {
+    fill: var(--violet-300); opacity: 0.5;
+    stroke: transparent; stroke-width: 1.5;
+    transition: opacity 160ms var(--ease-out), fill 160ms var(--ease-out), stroke 160ms var(--ease-out);
   }
-  .cmb-annot:hover .cmb-annot-dot { opacity: 0.9; }
-  .cmb-annot.active .cmb-annot-dot { fill: var(--magenta-400); opacity: 1; }
-  .cmb-annot-halo { fill: var(--magenta-400); opacity: 0.22; }
+  .cmb-annot:hover .cmb-annot-sq { opacity: 0.9; }
+  .cmb-annot.active .cmb-annot-sq { opacity: 1; stroke: var(--magenta-400); }
   .cmb-annot-cap {
     margin-top: 14px; padding: 12px 14px;
     border: 1px solid var(--ink-4); border-left: 2px solid var(--violet-400);
     border-radius: 3px; background: rgba(167,139,250,0.04);
   }
+  .cmb-annot-cap-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  }
+  .cmb-annot-nav {
+    flex: none; width: 22px; height: 22px; line-height: 1;
+    background: transparent; border: 1px solid var(--ink-4); border-radius: 3px;
+    color: var(--violet-300); font-family: var(--font-mono); font-size: 12px;
+    cursor: pointer;
+    transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+  }
+  .cmb-annot-nav:hover:not(:disabled) { border-color: var(--magenta-400); color: var(--magenta-400); }
+  .cmb-annot-nav:disabled { opacity: 0.3; cursor: default; }
   .cmb-annot-cap-date {
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
-    color: var(--violet-300); margin-bottom: 6px;
+    flex: 1; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+    color: var(--violet-300);
   }
   .cmb-annot-cap-body {
     font-family: var(--font-sans); font-size: 13px; line-height: 1.6;

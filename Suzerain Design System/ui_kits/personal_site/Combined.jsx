@@ -153,8 +153,9 @@ function CmbChart({ series, log }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   const [annot, setAnnot] = useCmbState(null);
-  const markers = cmbMarkers(series, log);
+  const markers = cmbMarkers(series, log).sort((a, b) => a.i - b.i);
   const cur = annot || (markers.length ? markers[markers.length - 1] : null);
+  const curIdx = cur ? markers.findIndex(m => m.i === cur.i) : -1;
 
   const all = [];
   for (const p of series) { all.push(p.v, p.ibkr, p.pm); }
@@ -237,12 +238,12 @@ function CmbChart({ series, log }) {
         {/* log event markers — click to pin to the caption below */}
         {markers.map((m, k) => {
           const active = cur && cur.i === m.i;
+          const s = active ? 9 : 7;
           return (
             <g key={k} className={`cmb-annot${active ? ' active' : ''}`}
               onClick={() => setAnnot(m)}>
-              <circle cx={x(m.i)} cy={y(m.v)} r="9" fill="transparent"/>
-              {active && <circle className="cmb-annot-halo" cx={x(m.i)} cy={y(m.v)} r="6"/>}
-              <circle className="cmb-annot-dot" cx={x(m.i)} cy={y(m.v)} r={active ? 3 : 2.5}/>
+              <rect x={x(m.i) - 8} y={y(m.v) - 8} width="16" height="16" fill="transparent"/>
+              <rect className="cmb-annot-sq" x={x(m.i) - s / 2} y={y(m.v) - s / 2} width={s} height={s}/>
             </g>
           );
         })}
@@ -272,7 +273,13 @@ function CmbChart({ series, log }) {
     </div>
     {cur && (
       <div className="cmb-annot-cap">
-        <div className="cmb-annot-cap-date">▸ {cmbFullDate(cur.date)}</div>
+        <div className="cmb-annot-cap-head">
+          <button className="cmb-annot-nav" disabled={curIdx <= 0}
+            onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
+          <div className="cmb-annot-cap-date">▸ {cmbFullDate(cur.date)}</div>
+          <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
+            onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
+        </div>
         <p className="cmb-annot-cap-body">{cur.body}</p>
       </div>
     )}
