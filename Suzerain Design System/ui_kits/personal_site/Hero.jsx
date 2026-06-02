@@ -1,5 +1,5 @@
-// Blog.jsx
-function Blog({ setView }) {
+// Hero.jsx
+function Hero({ setView }) {
   const c = window.CONTENT.home;
   return (
     <section className="sz-hero">
@@ -31,4 +31,4 @@ function Blog({ setView }) {
     </section>
   );
 }
-window.Blog = Blog;
+window.Hero = Hero;
