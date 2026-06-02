@@ -787,6 +787,31 @@
   .cmb-stat-link { cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
   .cmb-stat-link:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
   .cmb-stat-arrow { color: var(--violet-300); opacity: 0.7; }
+
+  /* log annotations on the overview chart */
+  .cmb-annot { cursor: pointer; }
+  .cmb-annot-glyph {
+    fill: var(--violet-400); font-size: 10px;
+    paint-order: stroke; stroke: #0a0612; stroke-width: 3px;
+    transition: fill 160ms var(--ease-out);
+  }
+  .cmb-annot:hover .cmb-annot-glyph,
+  .cmb-annot-glyph.active { fill: var(--magenta-400); }
+  .cmb-annot-tip {
+    position: absolute; transform: translate(-50%, calc(-100% - 14px));
+    max-width: 280px; z-index: 6; pointer-events: none;
+    background: rgba(10,6,18,0.96);
+    border: 1px solid var(--violet-400); border-radius: 4px;
+    padding: 10px 12px; box-shadow: 0 10px 34px rgba(0,0,0,0.55);
+  }
+  .cmb-annot-date {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    color: var(--violet-300); margin-bottom: 6px;
+  }
+  .cmb-annot-body {
+    font-family: var(--font-sans); font-size: 12px; line-height: 1.5;
+    color: var(--fg-2); font-weight: 300;
+  }
 </style>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>

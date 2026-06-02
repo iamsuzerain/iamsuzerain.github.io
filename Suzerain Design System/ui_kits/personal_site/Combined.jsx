@@ -64,6 +64,25 @@ function cmbDownsample(arr, target = 150) {
   return out;
 }
 
+// Map each dated log entry onto the nearest chart point so it can be pinned to
+// the total line. Entries outside the visible window are dropped.
+function cmbMarkers(series, log) {
+  if (!series.length || !log || !log.length) return [];
+  const days = series.map(p => cmbEpochDay(p.d));
+  const start = days[0], end = days[days.length - 1];
+  return log.map(entry => {
+    if (!entry || !entry.date) return null;
+    const d = cmbEpochDay(entry.date);
+    if (d < start || d > end) return null;
+    let best = 0, bestDiff = Infinity;
+    for (let i = 0; i < days.length; i++) {
+      const diff = Math.abs(days[i] - d);
+      if (diff < bestDiff) { bestDiff = diff; best = i; }
+    }
+    return { i: best, date: entry.date, body: entry.body, v: series[best].v };
+  }).filter(Boolean);
+}
+
 // IBKR cumulative $ P&L. The TWR curve (perfSeries) gives the *shape*; we anchor
 // the endpoint to pnl["1y"].abs — IBKR's authoritative deposit-adjusted dollar P&L
 // (ChangeInNAV) — so this matches the Portfolio tab exactly. Without anchoring,
@@ -129,10 +148,12 @@ function cmbBuild(portfolio, pmRows) {
 }
 
 // ---------- multi-series chart: total (bright) over ibkr + pm components ----------
-function CmbChart({ series }) {
+function CmbChart({ series, log }) {
   const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
+  const [annot, setAnnot] = useCmbState(null);
+  const markers = cmbMarkers(series, log);
 
   const all = [];
   for (const p of series) { all.push(p.v, p.ibkr, p.pm); }
@@ -207,6 +228,21 @@ function CmbChart({ series }) {
             <circle cx={x(hover)} cy={y(hp.v)} r="4" fill={CMB_C_TOTAL} stroke="#0a0612" strokeWidth="1.5"/>
           </g>
         )}
+
+        {/* log annotations pinned to the total line */}
+        {markers.map((m, k) => {
+          const active = annot && annot.i === m.i;
+          return (
+            <g key={k} className="cmb-annot"
+              onMouseEnter={() => setAnnot(m)}
+              onMouseLeave={() => setAnnot(null)}
+              onClick={() => setAnnot(a => (a && a.i === m.i) ? null : m)}>
+              <circle cx={x(m.i)} cy={y(m.v)} r="11" fill="transparent"/>
+              <text x={x(m.i)} y={y(m.v)} dy="0.32em" textAnchor="middle"
+                className={`cmb-annot-glyph${active ? ' active' : ''}`}>◆</text>
+            </g>
+          );
+        })}
       </svg>
 
       <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>$0</div>
@@ -227,6 +263,16 @@ function CmbChart({ series }) {
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_TOTAL }}/>total<span className={`cmb-tt-num ${hp.v >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.v)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.ibkr)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className={`cmb-tt-num ${hp.pm >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.pm)}</span></div>
+        </div>
+      )}
+
+      {annot && (
+        <div className="cmb-annot-tip" style={{
+          left: `${(x(annot.i) / W) * 100}%`,
+          top: `${(y(annot.v) / H) * 100}%`,
+        }}>
+          <div className="cmb-annot-date">▸ {cmbFullDate(annot.date)}</div>
+          <div className="cmb-annot-body">{annot.body}</div>
         </div>
       )}
     </div>
@@ -283,7 +329,17 @@ function Combined({ setView }) {
           if (sRes.ok) { const snap = await sRes.json(); pmRows = snap.rows || []; }
         } catch {}
       }
-      return cmbBuild(portfolio, pmRows);
+
+      // Dated log entries → chart annotations.
+      let log = [];
+      try {
+        const cRes = await fetch('data/content.json', { cache: 'no-store' });
+        if (cRes.ok) { const content = await cRes.json(); log = (content.home && content.home.log) || []; }
+      } catch {}
+
+      const built = cmbBuild(portfolio, pmRows);
+      built.log = log;
+      return built;
     }
     load()
       .then(d => { if (!cancelled) setData(d); })
@@ -338,7 +394,7 @@ function Combined({ setView }) {
             <span className="pf-panel-meta">daily · USD</span>
           </div>
           <CmbLegend/>
-          <CmbChart series={data.series}/>
+          <CmbChart series={data.series} log={data.log}/>
         </div>
       )}
 
