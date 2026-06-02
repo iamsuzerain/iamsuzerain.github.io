@@ -212,12 +212,14 @@ These are part of the iconography and appear throughout the system:
     └── personal_site/
         ├── README.md
         ├── index.html        — interactive click-thru prototype
-        ├── Hero.jsx
+        ├── Chrome.jsx        — shared layout / cursor glow / grid bg
         ├── Nav.jsx
+        ├── Blog.jsx          — landing log/feed
         ├── About.jsx
-        ├── Projects.jsx
-        ├── Writing.jsx
-        └── Chrome.jsx        — shared layout / cursor glow / grid bg
+        ├── Portfolio.jsx     — IBKR portfolio view
+        ├── Polymarket.jsx    — Polymarket P&L view
+        ├── Combined.jsx      — combined IBKR + Polymarket overview
+        └── Predictfolio.jsx  — prediction-market positions view
 ```
 
 ---
