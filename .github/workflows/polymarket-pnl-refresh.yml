@@ -4,7 +4,7 @@ name: polymarket-pnl-refresh
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # daily at 06:00 UTC
+    - cron: '10 6 * * *'   # daily at 06:10 UTC (staggered after betmoar-refresh)
   workflow_dispatch: {}
 
 permissions:
@@ -43,5 +43,12 @@ jobs:
           fi
           git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
           git commit -m "polymarket: refresh pnl snapshot $(date -u +%F)"
-          git pull --rebase
-          git push
+          # Remote main may have advanced since checkout (concurrent runs / other pushes).
+          # Rebase onto it, keeping our freshly generated data on conflict, then retry push.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              break
+            fi
+            echo "push rejected (attempt $attempt) — rebasing onto origin/main"
+            git pull --rebase -X theirs origin main
+          done
