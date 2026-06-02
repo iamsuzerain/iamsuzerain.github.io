@@ -147,7 +147,7 @@ function cmbBuild(portfolio, pmRows) {
   };
 }
 
-// ---------- multi-series chart: total (bright) over ibkr + pm components ----------
+// ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
 function CmbChart({ series, log }) {
   const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = useCmbRef(null);
@@ -157,7 +157,7 @@ function CmbChart({ series, log }) {
   const cur = annot || (markers.length ? markers[markers.length - 1] : null);
 
   const all = [];
-  for (const p of series) { all.push(p.v, p.ibkr, p.pm); }
+  for (const p of series) { all.push(p.v); }
   const min = Math.min(...all, 0), max = Math.max(...all);
   const pad = (max - min) * 0.08 || 1;
   const y0 = min - pad, y1 = max + pad;
@@ -202,32 +202,29 @@ function CmbChart({ series, log }) {
         onTouchEnd={() => setHover(null)}
       >
         <defs>
-          <linearGradient id="cmb-total-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={CMB_C_TOTAL} stopOpacity="0.18"/>
-            <stop offset="100%" stopColor={CMB_C_TOTAL} stopOpacity="0"/>
+          <linearGradient id="cmb-nav-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
+          </linearGradient>
+          <linearGradient id="cmb-nav-stroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#a78bfa"/>
+            <stop offset="100%" stopColor="#ff4fd8"/>
           </linearGradient>
         </defs>
 
         <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
           stroke="rgba(229,225,241,0.2)" strokeDasharray="2 4"/>
 
-        {/* component lines, faint, beneath the aggregate */}
-        <path d={linePath('ibkr')} fill="none" stroke={CMB_C_IBKR} strokeWidth="1.25" opacity="0.5"/>
-        <path d={linePath('pm')} fill="none" stroke={CMB_C_PM} strokeWidth="1.25" opacity="0.5"/>
-
-        {/* total */}
-        <path d={areaPath} fill="url(#cmb-total-fill)"/>
-        <path d={totalPath} fill="none" stroke={CMB_C_TOTAL} strokeWidth="2"/>
-        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="3.5" fill={CMB_C_TOTAL}/>
-        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="7" fill={CMB_C_TOTAL} opacity="0.22"/>
+        <path d={areaPath} fill="url(#cmb-nav-fill)"/>
+        <path d={totalPath} fill="none" stroke="url(#cmb-nav-stroke)" strokeWidth="1.75"/>
+        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="3.5" fill="#ff4fd8"/>
+        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="7" fill="#ff4fd8" opacity="0.25"/>
 
         {hp && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
               stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hp.ibkr)} r="3" fill={CMB_C_IBKR}/>
-            <circle cx={x(hover)} cy={y(hp.pm)} r="3" fill={CMB_C_PM}/>
-            <circle cx={x(hover)} cy={y(hp.v)} r="4" fill={CMB_C_TOTAL} stroke="#0a0612" strokeWidth="1.5"/>
+            <circle cx={x(hover)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#0a0612" strokeWidth="1.5"/>
           </g>
         )}
 
@@ -274,23 +271,6 @@ function CmbChart({ series, log }) {
       </div>
     )}
     </>
-  );
-}
-
-function CmbLegend() {
-  const items = [
-    { c: CMB_C_TOTAL, label: 'total' },
-    { c: CMB_C_IBKR, label: 'ibkr' },
-    { c: CMB_C_PM, label: 'polymarket' },
-  ];
-  return (
-    <div className="cmb-legend">
-      {items.map((it) => (
-        <span key={it.label} className="cmb-legend-item">
-          <span className="cmb-legend-dot" style={{ background: it.c }}/>{it.label}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -391,7 +371,6 @@ function Combined({ setView }) {
             <span className="pf-panel-title">total pnl · 12mo</span>
             <span className="pf-panel-meta">daily · USD</span>
           </div>
-          <CmbLegend/>
           <CmbChart series={data.series} log={data.log}/>
         </div>
       )}
