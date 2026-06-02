@@ -249,7 +249,8 @@ function PmSpark({ series }) {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const px = ((e.clientX - rect.left) / rect.width) * W;
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
     const t = (px - PAD_L) / (W - PAD_L - PAD_R);
     const idx = Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1))));
     setHover(idx);
@@ -266,6 +267,9 @@ function PmSpark({ series }) {
         preserveAspectRatio="none"
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
       >
         <defs>
           <linearGradient id="pm-fill" x1="0" y1="0" x2="0" y2="1">
@@ -287,26 +291,7 @@ function PmSpark({ series }) {
         <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
 
         <circle cx={x(maxIdx)} cy={y(max)} r="2.5" fill="#a78bfa" opacity="0.7"/>
-        <text x={x(maxIdx)} y={y(max) - 8} textAnchor="middle"
-          fontFamily="JetBrains Mono, monospace" fontSize="9" fill="#a78bfa" opacity="0.85">
-          peak {pmUSDCompact(max)}
-        </text>
         <circle cx={x(minIdx)} cy={y(min)} r="2.5" fill="#ff9ae8" opacity="0.7"/>
-        <text x={x(minIdx)} y={y(min) + 14} textAnchor="middle"
-          fontFamily="JetBrains Mono, monospace" fontSize="9" fill="#ff9ae8" opacity="0.85">
-          trough {pmUSDCompact(min)}
-        </text>
-
-        {ticks.map((t, i) => (
-          <text key={i} x={x(t.i)} y={H - 10}
-            textAnchor={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : 'middle'}
-            fontFamily="JetBrains Mono, monospace" fontSize="9"
-            fill="rgba(229,225,241,0.4)" letterSpacing="0.08em">{fmtDateShort(t.d)}</text>
-        ))}
-
-        <text x={PAD_L + 2} y={zeroY - 4}
-          fontFamily="JetBrains Mono, monospace" fontSize="9"
-          fill="rgba(229,225,241,0.35)" letterSpacing="0.08em">$0</text>
 
         {hovered && (
           <g>
@@ -316,6 +301,17 @@ function PmSpark({ series }) {
           </g>
         )}
       </svg>
+
+      <div className="pm-peak" style={{ left: `${(x(maxIdx) / W) * 100}%`, top: `${(y(max) / H) * 100}%` }}>peak {pmUSDCompact(max)}</div>
+      <div className="pm-trough" style={{ left: `${(x(minIdx) / W) * 100}%`, top: `${(y(min) / H) * 100}%` }}>trough {pmUSDCompact(min)}</div>
+      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>$0</div>
+      <div className="pf-axis-x">
+        {ticks.map((t, i) => (
+          <span key={i}
+            className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
+            style={{ left: `${(x(t.i) / W) * 100}%` }}>{fmtDateShort(t.d)}</span>
+        ))}
+      </div>
 
       {hovered && (
         <div className="pm-tooltip" style={{

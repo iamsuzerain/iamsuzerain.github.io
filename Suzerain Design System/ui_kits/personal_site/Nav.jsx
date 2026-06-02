@@ -4,7 +4,8 @@ const { useState: useNavState } = React;
 function Nav({ view, setView }) {
   const items = [
     { id: 'hero', label: 'home' },
-    { id: 'portfolio', label: 'portfolio' },
+    { id: 'combined', label: 'overview' },
+    { id: 'portfolio', label: 'ibkr' },
     { id: 'polymarket', label: 'polymarket' },
     { id: 'about', label: 'about' },
   ];
@@ -42,7 +43,7 @@ function Nav({ view, setView }) {
           </button>
         ))}
       </div>
-      <div className="sz-nav-meta">◆ 2026 · v0.4.1</div>
+      <div className="sz-nav-meta">◆ 2026 · v0.5</div>
     </nav>
   );
 }
