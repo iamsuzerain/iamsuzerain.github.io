@@ -1,9 +1,9 @@
 name: portfolio-refresh
 
-# Runs daily after the US market close (22:00 UTC ≈ 6pm ET), plus manual trigger.
+# Runs daily at 09:00 GMT (UTC), plus manual trigger.
 on:
   schedule:
-    - cron: '0 22 * * 1-6'   # weekdays + Saturday
+    - cron: '0 9 * * 1-6'   # weekdays + Saturday, 09:00 GMT
   workflow_dispatch: {}
 
 # Allow the workflow to push the updated JSON back to the repo.
