@@ -788,29 +788,32 @@
   .cmb-stat-link:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
   .cmb-stat-arrow { color: var(--violet-300); opacity: 0.7; }
 
-  /* log annotations on the overview chart */
+  /* log event markers + caption on the overview chart */
   .cmb-annot { cursor: pointer; }
-  .cmb-annot-glyph {
-    fill: var(--violet-400); font-size: 10px;
-    paint-order: stroke; stroke: #0a0612; stroke-width: 3px;
+  .cmb-annot-line {
+    stroke: var(--violet-400); stroke-width: 1; opacity: 0.16;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .cmb-annot-dot {
+    fill: var(--violet-400); stroke: #0a0612; stroke-width: 1.5;
     transition: fill 160ms var(--ease-out);
   }
-  .cmb-annot:hover .cmb-annot-glyph,
-  .cmb-annot-glyph.active { fill: var(--magenta-400); }
-  .cmb-annot-tip {
-    position: absolute; transform: translate(-50%, calc(-100% - 14px));
-    max-width: 280px; z-index: 6; pointer-events: none;
-    background: rgba(10,6,18,0.96);
-    border: 1px solid var(--violet-400); border-radius: 4px;
-    padding: 10px 12px; box-shadow: 0 10px 34px rgba(0,0,0,0.55);
+  .cmb-annot:hover .cmb-annot-line,
+  .cmb-annot.active .cmb-annot-line { opacity: 0.5; }
+  .cmb-annot:hover .cmb-annot-dot,
+  .cmb-annot.active .cmb-annot-dot { fill: var(--magenta-400); }
+  .cmb-annot-cap {
+    margin-top: 14px; padding: 12px 14px;
+    border: 1px solid var(--ink-4); border-left: 2px solid var(--violet-400);
+    border-radius: 3px; background: rgba(167,139,250,0.04);
   }
-  .cmb-annot-date {
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+  .cmb-annot-cap-date {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
     color: var(--violet-300); margin-bottom: 6px;
   }
-  .cmb-annot-body {
-    font-family: var(--font-sans); font-size: 12px; line-height: 1.5;
-    color: var(--fg-2); font-weight: 300;
+  .cmb-annot-cap-body {
+    font-family: var(--font-sans); font-size: 13px; line-height: 1.6;
+    color: var(--fg-2); font-weight: 300; margin: 0;
   }
 </style>
 
