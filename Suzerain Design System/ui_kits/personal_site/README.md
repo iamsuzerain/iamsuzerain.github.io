@@ -8,7 +8,7 @@ These are the components loaded by `index.html` (via `<script type="text/babel">
 
 - `Chrome.jsx` — page shell: grid background, cursor glow, blinking cursor, decode-in text hook
 - `Nav.jsx` — horizontal mono nav with active `→` indicator
-- `Blog.jsx` — landing log/feed (the default `hero` view)
+- `Hero.jsx` — landing log/feed (the default `hero` view)
 - `About.jsx` — prose page, max-width reading column
 - `Portfolio.jsx` — IBKR portfolio view (chart + holdings)
 - `Polymarket.jsx` — Polymarket P&L view
@@ -17,4 +17,4 @@ These are the components loaded by `index.html` (via `<script type="text/babel">
 
 ## Views
 
-Landing is the log (`Blog`); the nav switches between `about`, `portfolio`, `polymarket`, `combined`, and `predictfolio`. No routing library; a single `view` state in the root.
+Landing is the log (`Hero`); the nav switches between `about`, `portfolio`, `polymarket`, `combined`, and `predictfolio`. No routing library; a single `view` state in the root.
