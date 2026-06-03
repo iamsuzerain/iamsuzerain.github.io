@@ -494,7 +494,7 @@ function Polymarket() {
             <span className={totalPnl >= 0 ? 'pos' : 'neg'}>
               {totalPnl >= 0 ? '+' : ''}{pmUSD(totalPnl)}
             </span>
-            <span className="pf-currency">lifetime pnl</span>
+            <span className="pf-currency">lifetime pnl · all sources</span>
           </h2>
           <div className="pf-sub">
             <span>@{profile.handle}</span>

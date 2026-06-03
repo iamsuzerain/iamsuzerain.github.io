@@ -306,12 +306,13 @@ function CmbLegend() {
   );
 }
 
-function CmbStat({ label, value, tone, onClick }) {
+function CmbStat({ label, value, tone, onClick, note }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
     <div className={`pf-stat${onClick ? ' cmb-stat-link' : ''}`} onClick={onClick}>
       <div className="pf-stat-label">{label}{onClick && <span className="cmb-stat-arrow"> ↗</span>}</div>
       <div className={`pf-stat-value ${cls}`}>{value}</div>
+      {note && <div className="pf-stat-kicker">{note}</div>}
     </div>
   );
 }
@@ -385,16 +386,16 @@ function Combined({ setView }) {
             <span className="pf-currency">trailing 12mo pnl</span>
           </h2>
           <div className="pf-sub">
-            deposit-adjusted brokerage + prediction-market profit
+            deposit-adjusted brokerage + prediction-market trading, trailing 12mo
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
       </div>
 
       <div className="pf-stats">
-        <CmbStat label="total" value={cmbSigned(data.total)} tone={pos ? 'pos' : 'neg'}/>
-        <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')}/>
-        <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')}/>
+        <CmbStat label="total" value={cmbSigned(data.total)} tone={pos ? 'pos' : 'neg'} note="trailing 12mo"/>
+        <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
+        <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note="12mo trading, excl. rewards"/>
       </div>
 
       {data.series.length > 1 && (
@@ -413,7 +414,7 @@ function Combined({ setView }) {
         <span className="sz-sep">·</span>
         <span>not financial advice</span>
         <span className="sz-sep">·</span>
-        <span>twr $ vs. raw $ — summed, not identical methodology</span>
+        <span>polymarket here is 12mo trading only; the polymarket tab shows all-time, all sources</span>
       </div>
     </section>
   );
