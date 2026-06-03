@@ -289,23 +289,6 @@ function CmbChart({ series, log }) {
   );
 }
 
-function CmbLegend() {
-  const items = [
-    { c: CMB_C_TOTAL, label: 'total' },
-    { c: CMB_C_IBKR, label: 'ibkr' },
-    { c: CMB_C_PM, label: 'polymarket' },
-  ];
-  return (
-    <div className="cmb-legend">
-      {items.map((it) => (
-        <span key={it.label} className="cmb-legend-item">
-          <span className="cmb-legend-dot" style={{ background: it.c }}/>{it.label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function CmbStat({ label, value, tone, onClick, note }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
@@ -404,7 +387,6 @@ function Combined({ setView }) {
             <span className="pf-panel-title">total pnl · 12mo</span>
             <span className="pf-panel-meta">daily · USD</span>
           </div>
-          <CmbLegend/>
           <CmbChart series={data.series} log={data.log}/>
         </div>
       )}
