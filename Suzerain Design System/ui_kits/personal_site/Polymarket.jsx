@@ -485,6 +485,16 @@ function Polymarket() {
     : 0;
   const totalPnl = lifetimePnl + bdExtra;
 
+  // Sparkline series: spread all-source income (bdExtra) linearly across the
+  // trading-pnl timeline so the curve ends at totalPnl and matches the headline.
+  // Linear = assumes rewards accrued evenly; intra-period points are estimates.
+  const sparkSeries = (pnlSeries && pnlSeries.length > 1 && bdExtra)
+    ? pnlSeries.map((p, i) => ({
+        ...p,
+        v: +(p.v + bdExtra * (i / (pnlSeries.length - 1))).toFixed(2),
+      }))
+    : pnlSeries;
+
   return (
     <section className="pf-wrap pm-view">
       <div className="pf-head">
@@ -521,9 +531,11 @@ function Polymarket() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">cumulative pnl</span>
-            <span className="pf-panel-meta">all-time · USDC</span>
+            <span className="pf-panel-meta">
+              {bdExtra ? 'all sources · rewards spread linearly' : 'all-time · USDC'}
+            </span>
           </div>
-          <PmSpark series={pnlSeries}/>
+          <PmSpark series={sparkSeries}/>
         </div>
       )}
 
