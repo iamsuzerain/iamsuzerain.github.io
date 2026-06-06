@@ -111,7 +111,30 @@ function cmbPmPoints(rows) {
   return (rows || []).map(r => ({ day: Math.floor(r.t / 86400), v: r.p }));
 }
 
-function cmbBuild(portfolio, pmRows) {
+// All-source polymarket income beyond trading (lp + maker + yield + sponsored +
+// uma). betmoar breakdown is primary; CLOB rewards json is the fallback.
+async function cmbFetchBdExtra() {
+  try {
+    const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
+    if (r.ok) {
+      const bd = await r.json();
+      if (bd.totals) {
+        const t = bd.totals;
+        return (t.lp || 0) + (t.yield || 0) + (t.maker || 0) + (t.sponsored || 0) + (t.uma || 0);
+      }
+    }
+  } catch {}
+  try {
+    const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
+    if (r.ok) {
+      const rw = await r.json();
+      if (rw.totals) return Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0);
+    }
+  } catch {}
+  return 0;
+}
+
+function cmbBuild(portfolio, pmRows, bdExtra) {
   const today = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio);
@@ -126,14 +149,20 @@ function cmbBuild(portfolio, pmRows) {
 
   // Rebase each to its value at the window start so the chart shows P&L over the year.
   const ibkrBase = ibkr[0], pmBase = pm[0];
+  // Spread all-source polymarket income (maker/lp/yield/…) linearly across the
+  // window so the pm + total lines reconcile with the all-sources figure. Only
+  // applied when polymarket has data; intra-window points are estimates.
+  const extra = pmPts.length > 0 ? (bdExtra || 0) : 0;
+  const denom = Math.max(1, ibkr.length - 1);
   const series = [];
   for (let k = 0; k < ibkr.length; k++) {
     const day = start + k;
+    const ramp = extra * (k / denom);
     series.push({
       d: cmbFromEpochDay(day),
-      v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase)).toFixed(2),
+      v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase) + ramp).toFixed(2),
       ibkr: +(ibkr[k] - ibkrBase).toFixed(2),
-      pm: +(pm[k] - pmBase).toFixed(2),
+      pm: +((pm[k] - pmBase) + ramp).toFixed(2),
     });
   }
 
@@ -143,6 +172,7 @@ function cmbBuild(portfolio, pmRows) {
     total: last.v,
     ibkr: last.ibkr,
     pm: last.pm,
+    bdExtra: extra,
     pmAvailable: pmPts.length > 0,
   };
 }
@@ -331,7 +361,8 @@ function Combined({ setView }) {
         if (cRes.ok) { const content = await cRes.json(); log = (content.home && content.home.log) || []; }
       } catch {}
 
-      const built = cmbBuild(portfolio, pmRows);
+      const bdExtra = await cmbFetchBdExtra();
+      const built = cmbBuild(portfolio, pmRows, bdExtra);
       built.log = log;
       return built;
     }
@@ -369,7 +400,7 @@ function Combined({ setView }) {
             <span className="pf-currency">trailing 12mo pnl</span>
           </h2>
           <div className="pf-sub">
-            deposit-adjusted brokerage + prediction-market trading, trailing 12mo
+            deposit-adjusted brokerage + prediction-market trading{data.bdExtra ? ' + rewards' : ''}, trailing 12mo
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
@@ -378,14 +409,14 @@ function Combined({ setView }) {
       <div className="pf-stats">
         <CmbStat label="total" value={cmbSigned(data.total)} tone={pos ? 'pos' : 'neg'} note="trailing 12mo"/>
         <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
-        <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note="12mo trading, excl. rewards"/>
+        <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={data.bdExtra ? '12mo · trading + rewards' : '12mo trading'}/>
       </div>
 
       {data.series.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">total pnl · 12mo</span>
-            <span className="pf-panel-meta">daily · USD</span>
+            <span className="pf-panel-meta">{data.bdExtra ? 'daily · USD · rewards spread linearly' : 'daily · USD'}</span>
           </div>
           <CmbChart series={data.series} log={data.log}/>
         </div>
@@ -396,7 +427,7 @@ function Combined({ setView }) {
         <span className="sz-sep">·</span>
         <span>not financial advice</span>
         <span className="sz-sep">·</span>
-        <span>polymarket here is 12mo trading only; the polymarket tab shows all-time, all sources</span>
+        <span>polymarket here is 12mo, all sources (rewards spread linearly); the polymarket tab shows all-time</span>
       </div>
     </section>
   );
