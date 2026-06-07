@@ -3,6 +3,9 @@ name: deploy-pages
 on:
   push:
     branches: [main]
+  workflow_run:
+    workflows: [betmoar-breakdown-refresh, portfolio-refresh, polymarket-pnl-refresh]
+    types: [completed]
   workflow_dispatch: {}
 
 permissions:
