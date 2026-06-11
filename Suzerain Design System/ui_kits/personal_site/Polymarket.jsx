@@ -8,11 +8,11 @@ const {
   useRef: usePmRef,
 } = React;
 
-const PM_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
-const PM_HANDLE = 'ameameameameame';
+const PM_WALLET = window.SZ_ID.wallet;
+const PM_HANDLE = window.SZ_ID.handle;
 const PM_CACHE_KEY = 'pm-cache-v5';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const PM_BM_URL = 'https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
+const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLET}`;
 
 const PM_POSITIONS_URL =
   `https://data-api.polymarket.com/positions?user=${PM_WALLET}&limit=100&sortBy=CURRENT&sortDirection=DESC`;
@@ -138,10 +138,11 @@ async function pmFetchAll() {
     }
   } catch {}
 
+  const timeout = () => AbortSignal.timeout(10000);
   const [posRes, pnlRes, actRes, breakdown] = await Promise.all([
-    fetch(PM_POSITIONS_URL),
-    fetch(PM_PNL_URL),
-    fetch(PM_ACTIVITY_URL),
+    fetch(PM_POSITIONS_URL, { signal: timeout() }),
+    fetch(PM_PNL_URL, { signal: timeout() }),
+    fetch(PM_ACTIVITY_URL, { signal: timeout() }),
     pmFetchBreakdown(),
   ]);
   if (!posRes.ok) throw new Error('positions ' + posRes.status);
@@ -449,7 +450,15 @@ function Polymarket() {
     let cancelled = false;
     pmFetchAll()
       .then(d => { if (!cancelled) setData(d); })
-      .catch(e => { if (!cancelled) setErr(String(e.message || e)); });
+      .catch(e => {
+        if (cancelled) return;
+        // Live fetch failed — fall back to expired cache rather than a blank error.
+        try {
+          const raw = localStorage.getItem(PM_CACHE_KEY);
+          if (raw) { setData(JSON.parse(raw).data); return; }
+        } catch {}
+        setErr(String(e.message || e));
+      });
     return () => { cancelled = true; };
   }, []);
 
