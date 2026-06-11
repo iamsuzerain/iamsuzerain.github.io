@@ -43,8 +43,34 @@ function smoothPath(xs, ys) {
   return path;
 }
 
+// Align a benchmark's daily closes to the perf series dates (forward-fill) and
+// rebase to the first matched close, yielding cumulative % return per perf date.
+function rebaseBenchmark(benchSeries, perfDates) {
+  if (!benchSeries || benchSeries.length < 2) return null;
+  const out = new Array(perfDates.length);
+  let j = 0, lastClose = null;
+  for (let i = 0; i < perfDates.length; i++) {
+    while (j < benchSeries.length && benchSeries[j].d <= perfDates[i]) {
+      lastClose = benchSeries[j].v;
+      j++;
+    }
+    out[i] = lastClose;
+  }
+  // Dates before the benchmark's first close: backfill with the first close.
+  const firstKnown = out.find(v => v != null);
+  if (firstKnown == null) return null;
+  for (let i = 0; i < out.length && out[i] == null; i++) out[i] = firstKnown;
+  const base = out[0];
+  return out.map(v => v / base - 1);
+}
+
+const BENCH_STYLES = {
+  spx: { color: 'rgba(94,234,212,0.55)', solid: '#5eead4' },
+  vt:  { color: 'rgba(250,204,21,0.5)',  solid: '#facc15' },
+};
+
 // ---------- Performance chart (deposit-adjusted TWR %) ----------
-function NavChart({ series, perfSeries }) {
+function NavChart({ series, perfSeries, benchmarks }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
@@ -55,7 +81,19 @@ function NavChart({ series, perfSeries }) {
     ? perfSeries
     : series.map(p => ({ d: p.d, v: (p.v - base) / base }));
 
+  const overlays = usePortMemo(() => {
+    if (!benchmarks) return [];
+    const dates = perf.map(p => p.d);
+    return Object.entries(benchmarks)
+      .map(([key, b]) => {
+        const vals = rebaseBenchmark(b.series, dates);
+        return vals && { key, label: b.label, vals, style: BENCH_STYLES[key] || BENCH_STYLES.spx };
+      })
+      .filter(Boolean);
+  }, [benchmarks, perfSeries, series]);
+
   const values = perf.map(p => p.v);
+  for (const o of overlays) values.push(...o.vals);
   const min = Math.min(...values), max = Math.max(...values);
   const pad = (max - min) * 0.08 || 0.005;
   const y0 = min - pad, y1 = max + pad;
@@ -119,6 +157,11 @@ function NavChart({ series, perfSeries }) {
         <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
           stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
+        {overlays.map(o => (
+          <path key={o.key}
+            d={smoothPath(o.vals.map((_, i) => x(i)), o.vals.map(v => y(v)))}
+            fill="none" stroke={o.style.color} strokeWidth="1.25"/>
+        ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
         <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="3.5" fill="#ff4fd8"/>
         <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
@@ -149,6 +192,19 @@ function NavChart({ series, perfSeries }) {
         }}>
           <div className="pm-tt-date">{hovered.d}</div>
           <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtPct(hovered.v)}</div>
+          {overlays.map(o => (
+            <div key={o.key} className="pf-tt-bench" style={{ color: o.style.solid }}>
+              {o.label.toLowerCase()} {fmtPct(o.vals[hover])}
+            </div>
+          ))}
+        </div>
+      )}
+      {overlays.length > 0 && (
+        <div className="pf-bench-legend">
+          <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
+          {overlays.map(o => (
+            <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}</span>
+          ))}
         </div>
       )}
     </div>
@@ -282,12 +338,18 @@ function PositionsTable({ rows }) {
 function Portfolio() {
   const [data, setData] = usePortState(null);
   const [err, setErr] = usePortState(null);
+  const [bench, setBench] = usePortState(null);
 
   usePortEffect(() => {
     fetch('data/portfolio.json', { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(setData)
       .catch(e => setErr(String(e)));
+    // Benchmark overlay is best-effort; the chart renders fine without it.
+    fetch('data/benchmarks.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(b => { if (b && b.benchmarks) setBench(b.benchmarks); })
+      .catch(() => {});
   }, []);
 
   if (err) return (
@@ -337,9 +399,9 @@ function Portfolio() {
       <div className="pf-panel">
         <div className="pf-panel-head">
           <span className="pf-panel-title">performance · 12mo</span>
-          <span className="pf-panel-meta">daily · % return</span>
+          <span className="pf-panel-meta">daily · % return{bench ? ' · vs spx + vt' : ''}</span>
         </div>
-        <NavChart series={d.navSeries} perfSeries={d.perfSeries}/>
+        <NavChart series={d.navSeries} perfSeries={d.perfSeries} benchmarks={bench}/>
       </div>
 
       <div className="pf-row">

@@ -819,6 +819,19 @@
   .pm-tt-val  { font-size: 13px; font-weight: 500; margin-top: 2px; }
   .pm-tt-val.pos { color: #7dd3a8; }
   .pm-tt-val.neg { color: #ff6b9d; }
+  .pf-tt-bench { font-size: 10px; margin-top: 2px; letter-spacing: 0.04em; }
+
+  /* Benchmark overlay legend (portfolio chart) */
+  .pf-bench-legend {
+    display: flex; gap: 16px; justify-content: flex-end;
+    margin-top: 6px; padding-right: 4px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(229,225,241,0.55); letter-spacing: 0.08em;
+  }
+  .pf-bench-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .pf-bench-swatch {
+    display: inline-block; width: 14px; height: 2px; border-radius: 1px;
+  }
 
   /* Total view: multi-series tooltip, clickable stat tiles */
   .cmb-tooltip { display: flex; flex-direction: column; gap: 3px; }
