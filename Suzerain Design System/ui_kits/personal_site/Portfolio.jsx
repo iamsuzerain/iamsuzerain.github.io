@@ -105,9 +105,9 @@ function NavChart({ series, perfSeries, benchmarks }) {
 
   const tickEvery = Math.max(1, Math.floor(perf.length / 5));
   const ticks = perf.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const gridLines = [y1, (y0 + y1) / 2, y0];
   const yLabels = [
     { v: y1 },
-    { v: (y0 + y1) / 2 },
     { v: y0 },
   ];
 
@@ -149,10 +149,10 @@ function NavChart({ series, perfSeries, benchmarks }) {
             <stop offset="100%" stopColor="#ff4fd8"/>
           </linearGradient>
         </defs>
-        {yLabels.map((yl, i) => (
+        {gridLines.map((v, i) => (
           <line key={i}
             x1={PAD_L} x2={W - PAD_R}
-            y1={y(yl.v)} y2={y(yl.v)}
+            y1={y(v)} y2={y(v)}
             stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
         ))}
         <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
