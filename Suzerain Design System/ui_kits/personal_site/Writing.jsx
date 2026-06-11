@@ -12,12 +12,12 @@ function wrFmtDate(iso) {
 function WrList({ posts }) {
   return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ writing</div>
+      <div className="sz-kicker">◆ thoughts</div>
       <h2 className="sz-h2">notes from the desk.</h2>
       <ul className="sz-post-list">
         {posts.map(p => (
           <li key={p.slug} className="sz-post-row">
-            <a href={`#/writing/${p.slug}`}>
+            <a href={`#/thoughts/${p.slug}`}>
               <span className="sz-post-date">{p.date}</span>
               <span className="sz-post-title">{p.title}</span>
               <span className="sz-post-summary">{p.summary}</span>
@@ -32,7 +32,7 @@ function WrList({ posts }) {
 function WrPost({ post, body }) {
   return (
     <section className="sz-prose">
-      <a className="sz-post-back" href="#/writing">← writing</a>
+      <a className="sz-post-back" href="#/thoughts">← thoughts</a>
       <div className="sz-kicker">◆ {wrFmtDate(post.date)}</div>
       <h2 className="sz-h2">{post.title}</h2>
       {body == null
@@ -70,22 +70,22 @@ function Writing({ slug }) {
 
   if (err) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ writing</div>
+      <div className="sz-kicker">◆ thoughts</div>
       <h2 className="sz-h2">{err}.</h2>
-      <a className="sz-post-back" href="#/writing">← writing</a>
+      <a className="sz-post-back" href="#/thoughts">← thoughts</a>
     </section>
   );
   if (!posts) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ writing</div>
+      <div className="sz-kicker">◆ thoughts</div>
       <h2 className="sz-h2">loading<Cursor /></h2>
     </section>
   );
   if (slug && !post) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ writing</div>
+      <div className="sz-kicker">◆ thoughts</div>
       <h2 className="sz-h2">no such post.</h2>
-      <a className="sz-post-back" href="#/writing">← writing</a>
+      <a className="sz-post-back" href="#/thoughts">← thoughts</a>
     </section>
   );
   return post ? <WrPost post={post} body={body} /> : <WrList posts={posts} />;
