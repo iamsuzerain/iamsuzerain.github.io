@@ -1,6 +1,18 @@
 // App.jsx — root view switcher + bootstrap
+// Hash routing (#/view or #/writing/slug) so views and posts have shareable URLs.
+function parseRoute() {
+  const parts = window.location.hash.replace(/^#\/?/, '').split('/');
+  return { view: parts[0] || 'hero', param: parts[1] ? decodeURIComponent(parts[1]) : null };
+}
+
 function App() {
-  const [view, setView] = React.useState('hero');
+  const [route, setRoute] = React.useState(parseRoute);
+  React.useEffect(() => {
+    const onHash = () => setRoute(parseRoute());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const setView = (v) => { window.location.hash = v === 'hero' ? '/' : `/${v}`; };
   const views = {
     hero: <Hero setView={setView}/>,
     portfolio: <Portfolio/>,
@@ -8,7 +20,9 @@ function App() {
     combined: <Combined setView={setView}/>,
     predictfolio: <Predictfolio/>,
     about: <About/>,
+    writing: <Writing slug={route.param}/>,
   };
+  const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
   const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined' || view === 'predictfolio';
   return (
