@@ -1,4 +1,19 @@
 // Hero.jsx
+// Log entries may carry a link: {text, href} — the first occurrence of
+// `text` in the body becomes an anchor (used to point at full posts).
+function logBody(entry) {
+  const l = entry.link;
+  if (!l || !l.text || !entry.body.includes(l.text)) return entry.body;
+  const i = entry.body.indexOf(l.text);
+  return (
+    <React.Fragment>
+      {entry.body.slice(0, i)}
+      <a href={l.href}>{l.text}</a>
+      {entry.body.slice(i + l.text.length)}
+    </React.Fragment>
+  );
+}
+
 function Hero({ setView }) {
   const c = window.CONTENT.home;
   return (
@@ -16,7 +31,7 @@ function Hero({ setView }) {
         {c.log.map((entry, i) => (
           <div key={i} className="sz-log-entry">
             <span className="sz-log-date">{entry.date}</span>
-            <p className="sz-log-body">{entry.body}</p>
+            <p className="sz-log-body">{logBody(entry)}</p>
           </div>
         ))}
       </div>
