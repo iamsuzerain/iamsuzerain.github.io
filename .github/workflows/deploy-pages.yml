@@ -17,6 +17,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Pre-compile JSX so the published site doesn't ship Babel standalone
+      # (~2.5MB) or transpile in the browser. Local dev still uses in-browser
+      # Babel via the text/babel tags in index.html.
+      - name: bundle jsx
+        working-directory: Suzerain Design System/ui_kits/personal_site
+        run: |
+          : > app.min.js
+          for f in Chrome Nav Hero About Portfolio Polymarket Combined Predictfolio App; do
+            npx -y esbuild@0.25.0 "$f.jsx" --format=iife --minify >> app.min.js
+          done
+          sed -i '/@babel\/standalone/d' index.html
+          sed -i 's|<script type="text/babel" src="Chrome.jsx"></script>|<script src="app.min.js"></script>|' index.html
+          sed -i '/type="text\/babel"/d' index.html
+          grep -q 'app.min.js' index.html
+          rm -f *.jsx
+
       - name: deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:

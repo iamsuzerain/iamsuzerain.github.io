@@ -3,9 +3,17 @@
     "headline": "the morning will come when the world is mine",
     "bio": "I'm a degenerate (trader) since 2017. My instincts tend to revolve around theta farming but I can take momentum tracks too. Historically I'm most successful in trading the VIX, with a high return in elections, and I've recently branched out to prediction markets with a large % of capital now that Trump has made doing basically anything legal. I dabbled in predictit before from 2017-2024, but the limits were very low so my 1000% return ultimately only produced something like 18k. I might increase my 16.7% of total capital in polymarket if I decide that I have more of an edge there than in traditional markets.",
     "links": [
-      { "label": "discord — krasnaya." },
-      { "label": "reddit — PM_ME_QT_TRANSGIRLS", "href": "https://reddit.com/user/PM_ME_QT_TRANSGIRLS" },
-      { "label": "twitter — TaleRisk", "href": "https://twitter.com/TaleRisk" }
+      {
+        "label": "discord — krasnaya."
+      },
+      {
+        "label": "reddit — PM_ME_QT_TRANSGIRLS",
+        "href": "https://reddit.com/user/PM_ME_QT_TRANSGIRLS"
+      },
+      {
+        "label": "twitter — TaleRisk",
+        "href": "https://twitter.com/TaleRisk"
+      }
     ]
   },
   "home": {
@@ -30,5 +38,6 @@
         "body": "Beginning of my logging. I've had some extremely garbage years from 2024 to 2025 and I've spent the past year trying to recover from that. First goal is 1m net liquidity. Right now I'm short the market, long a bit of AI, and long oil as macro expressions on the Iran war."
       }
     ]
-  }
+  },
+  "version": "v0.5"
 }
