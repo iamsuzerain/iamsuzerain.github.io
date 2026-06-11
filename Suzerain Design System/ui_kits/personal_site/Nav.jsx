@@ -7,6 +7,7 @@ function Nav({ view, setView }) {
     { id: 'combined', label: 'overview' },
     { id: 'portfolio', label: 'ibkr' },
     { id: 'polymarket', label: 'polymarket' },
+    { id: 'writing', label: 'writing' },
     { id: 'about', label: 'about' },
   ];
   return (
