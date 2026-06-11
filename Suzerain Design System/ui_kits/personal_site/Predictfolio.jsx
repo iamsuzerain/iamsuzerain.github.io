@@ -3,7 +3,7 @@
 
 const { useState: usePfState, useEffect: usePfEffect, useRef: usePfRef } = React;
 
-const PF_HANDLE = 'ameameameameame';
+const PF_HANDLE = window.SZ_ID.handle;
 const PF_URL = `https://predictfolio.com/@${PF_HANDLE}`;
 
 function Predictfolio() {

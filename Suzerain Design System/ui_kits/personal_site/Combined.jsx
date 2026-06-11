@@ -7,7 +7,7 @@ const {
   useRef: useCmbRef,
 } = React;
 
-const CMB_WALLET = '0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a';
+const CMB_WALLET = window.SZ_ID.wallet;
 const CMB_PNL_URL =
   `https://user-pnl-api.polymarket.com/user-pnl?user_address=${CMB_WALLET}&interval=all&fidelity=1d`;
 
@@ -344,7 +344,7 @@ function Combined({ setView }) {
       // Polymarket: try live API first; fall back to the daily snapshot cron.
       let pmRows = [];
       try {
-        const pmRes = await fetch(CMB_PNL_URL);
+        const pmRes = await fetch(CMB_PNL_URL, { signal: AbortSignal.timeout(10000) });
         if (pmRes.ok) pmRows = await pmRes.json();
       } catch {}
       if (!pmRows.length) {
