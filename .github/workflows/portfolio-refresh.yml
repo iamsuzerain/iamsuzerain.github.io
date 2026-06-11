@@ -34,15 +34,24 @@ jobs:
           echo "first 400 bytes of result:"
           head -c 400 "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
 
+      - name: fetch benchmark closes (SPX + VT)
+        # Best-effort: a Yahoo hiccup shouldn't block the IBKR refresh.
+        run: |
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/benchmarks/fetch-benchmarks.py" \
+            > /tmp/benchmarks.json \
+            && mv /tmp/benchmarks.json "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json" \
+            || echo "benchmark fetch failed — keeping previous benchmarks.json"
+
       - name: commit + push if changed
         run: |
           git config user.name  "portfolio-bot"
           git config user.email "portfolio-bot@users.noreply.github.com"
-          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"; then
+          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data"; then
             echo "no changes"
             exit 0
           fi
-          git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
+          git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json"
           git commit -m "portfolio: refresh $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
           # Rebase onto it, keeping our freshly generated data on conflict, then retry push.
