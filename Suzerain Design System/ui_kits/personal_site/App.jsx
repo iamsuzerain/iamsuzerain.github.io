@@ -1,5 +1,5 @@
 // App.jsx — root view switcher + bootstrap
-// Hash routing (#/view or #/writing/slug) so views and posts have shareable URLs.
+// Hash routing (#/view or #/thoughts/slug) so views and posts have shareable URLs.
 function parseRoute() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
   return { view: parts[0] || 'hero', param: parts[1] ? decodeURIComponent(parts[1]) : null };
@@ -20,7 +20,7 @@ function App() {
     combined: <Combined setView={setView}/>,
     predictfolio: <Predictfolio/>,
     about: <About/>,
-    writing: <Writing slug={route.param}/>,
+    thoughts: <Writing slug={route.param}/>,
   };
   const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
