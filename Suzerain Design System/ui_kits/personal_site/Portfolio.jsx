@@ -126,6 +126,7 @@ function NavChart({ series, perfSeries, benchmarks }) {
   const zeroY = y(0);
 
   return (
+    <React.Fragment>
     <div className="pm-chart-wrap">
       <svg
         ref={svgRef}
@@ -199,15 +200,16 @@ function NavChart({ series, perfSeries, benchmarks }) {
           ))}
         </div>
       )}
-      {overlays.length > 0 && (
-        <div className="pf-bench-legend">
-          <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
-          {overlays.map(o => (
-            <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}</span>
-          ))}
-        </div>
-      )}
     </div>
+    {overlays.length > 0 && (
+      <div className="pf-bench-legend">
+        <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
+        {overlays.map(o => (
+          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}</span>
+        ))}
+      </div>
+    )}
+    </React.Fragment>
   );
 }
 
