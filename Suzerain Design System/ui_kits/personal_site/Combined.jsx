@@ -15,6 +15,7 @@ const CMB_DAY_MS = 86400000;
 const CMB_C_TOTAL = '#8b5cf6';  // saturated violet (violet-500) — the aggregate line
 const CMB_C_IBKR  = '#a78bfa';  // brand purple — brokerage
 const CMB_C_PM    = '#ff4fd8';  // brand pink — prediction markets
+const CMB_BENCH = { spx: '#5eead4', vt: '#facc15' };  // matches the portfolio tab
 
 function cmbUSD(n) {
   if (n == null || isNaN(n)) return '—';
@@ -134,7 +135,18 @@ async function cmbFetchBdExtra() {
   return 0;
 }
 
-function cmbBuild(portfolio, pmRows, bdExtra) {
+// Benchmark $ line: IBKR starting NAV parked in the index for the window.
+// Approximate by construction — the real capital base moved during the year.
+function cmbBenchDollars(benchSeries, notional, start, end) {
+  const pts = (benchSeries || []).map(p => ({ day: cmbEpochDay(p.d), v: p.v }));
+  const closes = cmbSampleDaily(pts, start, end);
+  const firstIdx = closes.findIndex(v => v !== 0);
+  if (firstIdx === -1) return null;
+  const base = closes[firstIdx];
+  return closes.map((c, i) => notional * ((i < firstIdx ? base : c) / base - 1));
+}
+
+function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
   const today = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio);
@@ -149,6 +161,24 @@ function cmbBuild(portfolio, pmRows, bdExtra) {
 
   // Rebase each to its value at the window start so the chart shows P&L over the year.
   const ibkrBase = ibkr[0], pmBase = pm[0];
+
+  // Benchmark notional = IBKR NAV at window start + IBKR→Polymarket transfers
+  // made *before* the window start (content.json pmTransfers). Transfers inside
+  // the window are already counted in startNAV; once the rolling window passes
+  // a transfer date the money leaves startNAV but is still part of the capital
+  // base, so the ledger adds it back. Only needs editing when money moves.
+  const startNAV = (portfolio.navSeries && portfolio.navSeries.length) ? portfolio.navSeries[0].v : 0;
+  const priorTransfers = (pmTransfers || [])
+    .filter(t => t && t.date && cmbEpochDay(t.date) <= start)
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const notional = startNAV + priorTransfers;
+  const bench = [];
+  if (benchmarks && notional) {
+    for (const [key, b] of Object.entries(benchmarks)) {
+      const vals = cmbBenchDollars(b.series, notional, start, today);
+      if (vals) bench.push({ key, label: b.label, vals });
+    }
+  }
   // Spread all-source polymarket income (maker/lp/yield/…) linearly across the
   // window so the pm + total lines reconcile with the all-sources figure. Only
   // applied when polymarket has data; intra-window points are estimates.
@@ -158,12 +188,14 @@ function cmbBuild(portfolio, pmRows, bdExtra) {
   for (let k = 0; k < ibkr.length; k++) {
     const day = start + k;
     const ramp = extra * (k / denom);
-    series.push({
+    const pt = {
       d: cmbFromEpochDay(day),
       v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase) + ramp).toFixed(2),
       ibkr: +(ibkr[k] - ibkrBase).toFixed(2),
       pm: +((pm[k] - pmBase) + ramp).toFixed(2),
-    });
+    };
+    for (const b of bench) pt[b.key] = +b.vals[k].toFixed(2);
+    series.push(pt);
   }
 
   const last = series[series.length - 1] || { v: 0, ibkr: 0, pm: 0 };
@@ -174,11 +206,14 @@ function cmbBuild(portfolio, pmRows, bdExtra) {
     pm: last.pm,
     bdExtra: extra,
     pmAvailable: pmPts.length > 0,
+    bench: bench.map(b => ({ key: b.key, label: b.label })),
+    benchNotional: notional,
   };
 }
 
 // ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
-function CmbChart({ series, log }) {
+function CmbChart({ series, log, bench, benchNotional }) {
+  const benches = bench || [];
   const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
@@ -188,7 +223,10 @@ function CmbChart({ series, log }) {
   const curIdx = cur ? markers.findIndex(m => m.i === cur.i) : -1;
 
   const all = [];
-  for (const p of series) { all.push(p.v, p.ibkr, p.pm); }
+  for (const p of series) {
+    all.push(p.v, p.ibkr, p.pm);
+    for (const b of benches) if (p[b.key] != null) all.push(p[b.key]);
+  }
   const min = Math.min(...all, 0), max = Math.max(...all);
   const pad = (max - min) * 0.08 || 1;
   const y0 = min - pad, y1 = max + pad;
@@ -249,6 +287,10 @@ function CmbChart({ series, log }) {
         {/* component lines — faint, recessed beneath the aggregate */}
         <path d={linePath('ibkr')} fill="none" stroke={CMB_C_IBKR} strokeWidth="1" opacity="0.3"/>
         <path d={linePath('pm')} fill="none" stroke={CMB_C_PM} strokeWidth="1" opacity="0.3"/>
+        {benches.map(b => (
+          <path key={b.key} d={linePath(b.key)} fill="none"
+            stroke={CMB_BENCH[b.key] || '#5eead4'} strokeWidth="1" opacity="0.45"/>
+        ))}
 
         <path d={areaPath} fill="url(#cmb-nav-fill)"/>
         <path d={totalPath} fill="none" stroke="url(#cmb-nav-stroke)" strokeWidth="1.75"/>
@@ -299,10 +341,21 @@ function CmbChart({ series, log }) {
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_TOTAL }}/>total<span className={`cmb-tt-num ${hp.v >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.v)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.ibkr)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className={`cmb-tt-num ${hp.pm >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.pm)}</span></div>
+          {benches.map(b => hp[b.key] != null && (
+            <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp[b.key])}</span></div>
+          ))}
         </div>
       )}
 
     </div>
+    {benches.length > 0 && (
+      <div className="pf-bench-legend">
+        <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
+        {benches.map(b => (
+          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{benchNotional ? ` · on ${cmbUSDk(benchNotional)}` : ''}</span>
+        ))}
+      </div>
+    )}
     {cur && (
       <div className="cmb-annot-cap">
         <div className="cmb-annot-cap-head">
@@ -354,15 +407,27 @@ function Combined({ setView }) {
         } catch {}
       }
 
-      // Dated log entries → chart annotations.
-      let log = [];
+      // Dated log entries → chart annotations; pmTransfers is the manually
+      // maintained ledger of IBKR→Polymarket moves (used for the benchmark notional).
+      let log = [], pmTransfers = [];
       try {
         const cRes = await fetch('data/content.json', { cache: 'no-store' });
-        if (cRes.ok) { const content = await cRes.json(); log = (content.home && content.home.log) || []; }
+        if (cRes.ok) {
+          const content = await cRes.json();
+          log = (content.home && content.home.log) || [];
+          pmTransfers = content.pmTransfers || [];
+        }
+      } catch {}
+
+      // Benchmark overlay is best-effort; the chart renders fine without it.
+      let benchmarks = null;
+      try {
+        const bRes = await fetch('data/benchmarks.json', { cache: 'no-store' });
+        if (bRes.ok) { const bj = await bRes.json(); benchmarks = bj.benchmarks || null; }
       } catch {}
 
       const bdExtra = await cmbFetchBdExtra();
-      const built = cmbBuild(portfolio, pmRows, bdExtra);
+      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers);
       built.log = log;
       return built;
     }
@@ -416,9 +481,9 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">total pnl · 12mo</span>
-            <span className="pf-panel-meta">{data.bdExtra ? 'daily · USD · rewards spread linearly' : 'daily · USD'}</span>
+            <span className="pf-panel-meta">{data.bdExtra ? 'daily · USD · rewards spread linearly' : 'daily · USD'}{data.bench && data.bench.length ? ' · vs spx + vt' : ''}</span>
           </div>
-          <CmbChart series={data.series} log={data.log}/>
+          <CmbChart series={data.series} log={data.log} bench={data.bench} benchNotional={data.benchNotional}/>
         </div>
       )}
 
