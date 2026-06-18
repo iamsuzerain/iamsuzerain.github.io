@@ -8,18 +8,21 @@ const {
   useRef: usePmRef,
 } = React;
 
-const PM_WALLET = window.SZ_ID.wallet;
+const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
+  ? window.SZ_ID.wallets
+  : [window.SZ_ID.wallet];
+const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = window.SZ_ID.handle;
-const PM_CACHE_KEY = 'pm-cache-v5';
+const PM_CACHE_KEY = 'pm-cache-v6';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLET}`;
+const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_PRIMARY}`;
 
-const PM_POSITIONS_URL =
-  `https://data-api.polymarket.com/positions?user=${PM_WALLET}&limit=100&sortBy=CURRENT&sortDirection=DESC`;
-const PM_PNL_URL =
-  `https://user-pnl-api.polymarket.com/user-pnl?user_address=${PM_WALLET}&interval=all&fidelity=1d`;
-const PM_ACTIVITY_URL =
-  `https://data-api.polymarket.com/activity?user=${PM_WALLET}&limit=20`;
+const pmPositionsUrl = (w) =>
+  `https://data-api.polymarket.com/positions?user=${w}&limit=100&sortBy=CURRENT&sortDirection=DESC`;
+const pmPnlUrl = (w) =>
+  `https://user-pnl-api.polymarket.com/user-pnl?user_address=${w}&interval=all&fidelity=1d`;
+const pmActivityUrl = (w) =>
+  `https://data-api.polymarket.com/activity?user=${w}&limit=20`;
 
 // ---------- formatting helpers ----------
 function pmUSD(n, compact = false) {
@@ -126,6 +129,84 @@ async function pmFetchBreakdown() {
   return null;
 }
 
+// Merge same-market positions across wallets: sum shares/value/pnl, weight-avg
+// the entry price. Key is slug+outcome since the same market+side at different
+// wallets is economically one position.
+function pmMergePositions(lists) {
+  const merged = new Map();
+  for (const list of lists) {
+    for (const p of (list || [])) {
+      const key = (p.slug || p.title || '') + '|' + (p.outcome || '').toUpperCase();
+      const size = p.size || 0;
+      const ex = merged.get(key);
+      if (!ex) {
+        merged.set(key, {
+          title: p.title,
+          slug: p.slug,
+          outcome: p.outcome,
+          size,
+          avgWeighted: (p.avgPrice || 0) * size,
+          curPrice: p.curPrice || 0,
+          currentValue: p.currentValue || 0,
+          cashPnl: p.cashPnl || 0,
+          realizedPnl: p.realizedPnl || 0,
+        });
+      } else {
+        ex.size += size;
+        ex.avgWeighted += (p.avgPrice || 0) * size;
+        ex.currentValue += p.currentValue || 0;
+        ex.cashPnl += p.cashPnl || 0;
+        ex.realizedPnl += p.realizedPnl || 0;
+        if (!ex.curPrice && p.curPrice) ex.curPrice = p.curPrice;
+      }
+    }
+  }
+  return [...merged.values()]
+    .map(m => ({
+      title: m.title,
+      slug: m.slug,
+      outcome: m.outcome,
+      size: m.size,
+      avgPrice: m.size ? m.avgWeighted / m.size : 0,
+      curPrice: m.curPrice,
+      currentValue: m.currentValue,
+      cashPnl: m.cashPnl,
+      realizedPnl: m.realizedPnl,
+    }))
+    .sort((a, b) => (b.currentValue || 0) - (a.currentValue || 0));
+}
+
+// Cumulative-PnL series can start at different times per wallet. Union the
+// timestamps, carry forward each wallet's last known value (0 before its first
+// point), sum at each timestamp.
+function pmSumPnlSeries(seriesList) {
+  const sorted = seriesList.map(s => [...(s || [])].sort((a, b) => a.t - b.t));
+  const tSet = new Set();
+  for (const s of sorted) for (const r of s) tSet.add(r.t);
+  const allTs = [...tSet].sort((a, b) => a - b);
+  const cursors = new Array(sorted.length).fill(0);
+  const last = new Array(sorted.length).fill(0);
+  const out = [];
+  for (const t of allTs) {
+    for (let i = 0; i < sorted.length; i++) {
+      while (cursors[i] < sorted[i].length && sorted[i][cursors[i]].t <= t) {
+        last[i] = sorted[i][cursors[i]].p;
+        cursors[i]++;
+      }
+    }
+    let sum = 0;
+    for (const v of last) sum += v;
+    out.push({ t, p: sum });
+  }
+  return out;
+}
+
+function pmMergeActivity(lists) {
+  const all = [];
+  for (const l of lists) if (l && l.length) for (const a of l) if (a) all.push(a);
+  return all.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+}
+
 async function pmFetchAll() {
   // Try cache first
   try {
@@ -139,19 +220,28 @@ async function pmFetchAll() {
   } catch {}
 
   const timeout = () => AbortSignal.timeout(10000);
-  const [posRes, pnlRes, actRes, breakdown] = await Promise.all([
-    fetch(PM_POSITIONS_URL, { signal: timeout() }),
-    fetch(PM_PNL_URL, { signal: timeout() }),
-    fetch(PM_ACTIVITY_URL, { signal: timeout() }),
-    pmFetchBreakdown(),
-  ]);
-  if (!posRes.ok) throw new Error('positions ' + posRes.status);
-  if (!pnlRes.ok) throw new Error('pnl ' + pnlRes.status);
-  const positionsRaw = await posRes.json();
-  const pnlRaw = await pnlRes.json();
-  const activityRaw = actRes.ok ? await actRes.json() : [];
 
-  const positions = positionsRaw.map(p => ({
+  // Fan out positions/pnl/activity per wallet, then merge.
+  const perWallet = await Promise.all(PM_WALLETS.map(async (w) => {
+    const [posRes, pnlRes, actRes] = await Promise.all([
+      fetch(pmPositionsUrl(w), { signal: timeout() }),
+      fetch(pmPnlUrl(w), { signal: timeout() }),
+      fetch(pmActivityUrl(w), { signal: timeout() }),
+    ]);
+    if (!posRes.ok) throw new Error('positions ' + posRes.status + ' (' + w.slice(0, 6) + ')');
+    if (!pnlRes.ok) throw new Error('pnl ' + pnlRes.status + ' (' + w.slice(0, 6) + ')');
+    const positions = await posRes.json();
+    const pnl = await pnlRes.json();
+    const activity = actRes.ok ? await actRes.json() : [];
+    return { positions, pnl, activity };
+  }));
+  const breakdown = await pmFetchBreakdown();
+
+  const mergedPositionsRaw = pmMergePositions(perWallet.map(x => x.positions));
+  const summedPnl = pmSumPnlSeries(perWallet.map(x => x.pnl));
+  const mergedActivity = pmMergeActivity(perWallet.map(x => x.activity));
+
+  const positions = mergedPositionsRaw.map(p => ({
     market: p.title,
     slug: p.slug,
     side: (p.outcome || '').toUpperCase(),
@@ -167,14 +257,14 @@ async function pmFetchAll() {
   const unrealized = +positions.reduce((a, p) => a + p.unrealized, 0).toFixed(2);
   const realized = +positions.reduce((a, p) => a + p.realized, 0).toFixed(2);
 
-  const trimmed = pmTrimFlat(pnlRaw);
+  const trimmed = pmTrimFlat(summedPnl);
   const sampled = pmDownsample(trimmed, 150);
   const pnlSeries = sampled.map(r => ({
     d: new Date(r.t * 1000).toISOString().slice(0, 10),
     v: +r.p.toFixed(2),
   }));
 
-  const activity = (activityRaw || []).slice(0, 15).map(a => ({
+  const activity = mergedActivity.slice(0, 15).map(a => ({
     t: new Date((a.timestamp || 0) * 1000).toISOString(),
     type: (a.type || 'TRADE').toUpperCase(),
     side: (a.side || '').toUpperCase(),
@@ -185,7 +275,7 @@ async function pmFetchAll() {
 
   const data = {
     generatedAt: new Date().toISOString(),
-    profile: { handle: PM_HANDLE, wallet: PM_WALLET },
+    profile: { handle: PM_HANDLE, wallet: PM_PRIMARY, wallets: PM_WALLETS },
     summary: {
       totalValue,
       realizedPnl: realized,
@@ -569,11 +659,11 @@ function Polymarket() {
       <div className="pf-footer pm-footer-deep">
         <span>live · data-api.polymarket.com</span>
         <span className="sz-sep">·</span>
-        <a href={`https://polymarket.com/profile/${profile.wallet}`} target="_blank" rel="noreferrer">
+        <a href={`https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRIMARY}`} target="_blank" rel="noreferrer">
           wallet ↗ polymarket
         </a>
         <span className="sz-sep">·</span>
-        <a href={PM_BM_URL} target="_blank" rel="noreferrer">
+        <a href={`https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`} target="_blank" rel="noreferrer">
           analytics ↗ betmoar
         </a>
       </div>

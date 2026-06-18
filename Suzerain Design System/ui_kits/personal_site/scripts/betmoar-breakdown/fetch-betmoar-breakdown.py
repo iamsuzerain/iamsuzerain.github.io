@@ -11,15 +11,21 @@ import json, re, sys
 from datetime import date
 from curl_cffi import requests
 
-WALLET = "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a"
-BM_URL = f"https://www.betmoar.fun/profile/{WALLET}"
+WALLETS = [
+    "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
+    "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47",
+]
+
+def bm_url(wallet):
+    return f"https://www.betmoar.fun/profile/{wallet}"
 
 # Fallback hash — used if dynamic discovery fails
 _FALLBACK_HASH = "85d5ff77f7cca6369bc174dc6a4c1d46509ca4ab"
 
 def discover_action_hash():
-    """Scrape the profile page JS bundles to find the current Next-Action hash."""
-    r = requests.get(BM_URL, impersonate="chrome")
+    """Scrape one profile page's JS bundles to find the current Next-Action hash."""
+    probe_wallet = WALLETS[0]
+    r = requests.get(bm_url(probe_wallet), impersonate="chrome")
     r.raise_for_status()
     html = r.text
 
@@ -34,18 +40,18 @@ def discover_action_hash():
             matches = re.findall(r'["\'`]([0-9a-f]{40})["\' `]', cr.text)
             for m in matches:
                 # Quick sanity-check: try the hash and see if the response contains tradingProfit
-                if _try_hash(m):
+                if _try_hash(m, probe_wallet):
                     return m
         except Exception:
             continue
 
     return None
 
-def _try_hash(action_hash):
+def _try_hash(action_hash, wallet):
     try:
-        body = json.dumps([WALLET]).encode()
+        body = json.dumps([wallet]).encode()
         r = requests.post(
-            BM_URL,
+            bm_url(wallet),
             data=body,
             headers={
                 "Content-Type":           "text/plain;charset=UTF-8",
@@ -59,10 +65,10 @@ def _try_hash(action_hash):
     except Exception:
         return False
 
-def fetch_stats(action_hash):
-    body = json.dumps([WALLET]).encode()
+def fetch_stats(action_hash, wallet):
+    body = json.dumps([wallet]).encode()
     r = requests.post(
-        BM_URL,
+        bm_url(wallet),
         data=body,
         headers={
             "Content-Type":           "text/plain;charset=UTF-8",
@@ -84,7 +90,11 @@ def main():
     try:
         action_hash = discover_action_hash() or _FALLBACK_HASH
         print(f"using action hash: {action_hash}", file=sys.stderr)
-        stats = fetch_stats(action_hash)
+        per_wallet = []
+        for w in WALLETS:
+            stats = fetch_stats(action_hash, w)
+            print(f"fetched stats for {w}", file=sys.stderr)
+            per_wallet.append(stats)
     except Exception as e:
         print(f"error fetching stats: {e}", file=sys.stderr)
         sys.exit(1)
@@ -92,17 +102,20 @@ def main():
     def dollars(val):
         return round(val) if val else 0
 
+    def sum_field(key):
+        return dollars(sum((s.get(key) or 0) for s in per_wallet))
+
     breakdown = {
         "generatedAt": date.today().isoformat(),
-        "wallet":      WALLET,
-        "source":      BM_URL,
+        "wallets":     WALLETS,
+        "sources":     [bm_url(w) for w in WALLETS],
         "totals": {
-            "trading":   dollars(stats.get("tradingProfit")),
-            "lp":        dollars(stats.get("lpRewards")),
-            "yield":     dollars(stats.get("yieldRewards")),
-            "maker":     dollars(stats.get("makerRebates")),
-            "sponsored": dollars(stats.get("sponsoredRewards")),
-            "uma":       dollars(stats.get("umaPnl")),
+            "trading":   sum_field("tradingProfit"),
+            "lp":        sum_field("lpRewards"),
+            "yield":     sum_field("yieldRewards"),
+            "maker":     sum_field("makerRebates"),
+            "sponsored": sum_field("sponsoredRewards"),
+            "uma":       sum_field("umaPnl"),
         },
     }
 
