@@ -237,7 +237,11 @@ async function pmFetchAll() {
   }));
   const breakdown = await pmFetchBreakdown();
 
-  const mergedPositionsRaw = pmMergePositions(perWallet.map(x => x.positions));
+  // Drop positions Polymarket has resolved — they still come back from the
+  // positions endpoint with currentValue:0 but cashPnl carrying the loss, so
+  // they'd otherwise appear as "open" with a $0 value.
+  const openOnly = perWallet.map(x => (x.positions || []).filter(p => !p.redeemable));
+  const mergedPositionsRaw = pmMergePositions(openOnly);
   const summedPnl = pmSumPnlSeries(perWallet.map(x => x.pnl));
   const mergedActivity = pmMergeActivity(perWallet.map(x => x.activity));
 
