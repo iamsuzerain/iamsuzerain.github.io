@@ -7,9 +7,35 @@ const {
   useRef: useCmbRef,
 } = React;
 
-const CMB_WALLET = window.SZ_ID.wallet;
-const CMB_PNL_URL =
-  `https://user-pnl-api.polymarket.com/user-pnl?user_address=${CMB_WALLET}&interval=all&fidelity=1d`;
+const CMB_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
+  ? window.SZ_ID.wallets
+  : [window.SZ_ID.wallet];
+const cmbPnlUrl = (w) =>
+  `https://user-pnl-api.polymarket.com/user-pnl?user_address=${w}&interval=all&fidelity=1d`;
+
+// Cumulative-PnL series can start at different times per wallet. Union the
+// timestamps, carry forward each wallet's last known value, sum at each t.
+function cmbSumPnlSeries(seriesList) {
+  const sorted = seriesList.map(s => [...(s || [])].sort((a, b) => a.t - b.t));
+  const tSet = new Set();
+  for (const s of sorted) for (const r of s) tSet.add(r.t);
+  const allTs = [...tSet].sort((a, b) => a - b);
+  const cursors = new Array(sorted.length).fill(0);
+  const last = new Array(sorted.length).fill(0);
+  const out = [];
+  for (const t of allTs) {
+    for (let i = 0; i < sorted.length; i++) {
+      while (cursors[i] < sorted[i].length && sorted[i][cursors[i]].t <= t) {
+        last[i] = sorted[i][cursors[i]].p;
+        cursors[i]++;
+      }
+    }
+    let sum = 0;
+    for (const v of last) sum += v;
+    out.push({ t, p: sum });
+  }
+  return out;
+}
 
 const CMB_DAY_MS = 86400000;
 const CMB_C_TOTAL = '#8b5cf6';  // saturated violet (violet-500) — the aggregate line
@@ -394,11 +420,18 @@ function Combined({ setView }) {
       if (!pRes.ok) throw new Error('portfolio ' + pRes.status);
       const portfolio = await pRes.json();
 
-      // Polymarket: try live API first; fall back to the daily snapshot cron.
+      // Polymarket: try live API per wallet (summed), fall back to the daily snapshot cron.
       let pmRows = [];
       try {
-        const pmRes = await fetch(CMB_PNL_URL, { signal: AbortSignal.timeout(10000) });
-        if (pmRes.ok) pmRows = await pmRes.json();
+        const perWallet = await Promise.all(
+          CMB_WALLETS.map(w =>
+            fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(10000) })
+              .then(r => r.ok ? r.json() : [])
+              .then(j => Array.isArray(j) ? j : [])
+          )
+        );
+        const summed = cmbSumPnlSeries(perWallet);
+        if (summed.length) pmRows = summed;
       } catch {}
       if (!pmRows.length) {
         try {
