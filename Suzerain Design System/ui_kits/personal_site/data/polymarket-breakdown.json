@@ -1,9 +1,15 @@
 {
-  "generatedAt": "2026-06-17",
-  "wallet": "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
-  "source": "https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
+  "generatedAt": "2026-06-18",
+  "wallets": [
+    "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
+    "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
+  ],
+  "sources": [
+    "https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
+    "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
+  ],
   "totals": {
-    "trading": -21985,
+    "trading": -19906,
     "lp": 1300,
     "yield": 2,
     "maker": 649,
