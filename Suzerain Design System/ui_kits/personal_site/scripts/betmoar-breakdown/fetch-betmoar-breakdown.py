@@ -105,6 +105,22 @@ def main():
     def sum_field(key):
         return dollars(sum((s.get(key) or 0) for s in per_wallet))
 
+    # Betmoar's `overallPNL` is the only field that nets out Polymarket trading
+    # fees; the Polymarket user-pnl-api series and `tradingProfit` both ignore
+    # them. Recover per-wallet fees as (sum of components − overallPNL), then
+    # sum across wallets. Stored as a positive dollar amount of fees paid.
+    def implied_fees(s):
+        components = (
+            (s.get("tradingProfit")    or 0)
+            + (s.get("lpRewards")      or 0)
+            + (s.get("makerRebates")   or 0)
+            + (s.get("yieldRewards")   or 0)
+            + (s.get("sponsoredRewards") or 0)
+            + (s.get("umaPnl")         or 0)
+            + (s.get("refunds")        or 0)
+        )
+        return components - (s.get("overallPNL") or 0)
+
     breakdown = {
         "generatedAt": date.today().isoformat(),
         "wallets":     WALLETS,
@@ -116,6 +132,7 @@ def main():
             "maker":     sum_field("makerRebates"),
             "sponsored": sum_field("sponsoredRewards"),
             "uma":       sum_field("umaPnl"),
+            "fees":      dollars(sum(implied_fees(s) for s in per_wallet)),
         },
     }
 

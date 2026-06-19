@@ -9,11 +9,12 @@
     "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "totals": {
-    "trading": -12648,
+    "trading": -12678,
     "lp": 1323,
     "yield": 3,
     "maker": 670,
     "sponsored": 56,
-    "uma": 0
+    "uma": 0,
+    "fees": 1283
   }
 }
