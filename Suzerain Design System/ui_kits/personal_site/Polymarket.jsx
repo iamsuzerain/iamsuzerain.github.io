@@ -509,6 +509,7 @@ function PmBreakdown({ bd, tradingPnl }) {
     { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
     { key: 'sponsored', label: 'sponsored', val: bd?.sponsored != null ? bd.sponsored : null },
     { key: 'uma',       label: 'uma',       val: bd?.uma       != null ? bd.uma       : null },
+    { key: 'fees',      label: 'fees',      val: bd?.fees      != null ? -bd.fees     : null },
   ];
   const source = bd?.source || null;
   return (
@@ -525,7 +526,7 @@ function PmBreakdown({ bd, tradingPnl }) {
         {rows.map(({ key, label, val }) => (
           <div key={key} className="pm-breakdown-cell">
             <div className="pm-breakdown-label">{label}</div>
-            <div className={`pm-breakdown-val${val != null && val > 0 ? ' pos' : ''}`}>
+            <div className={`pm-breakdown-val${val != null && val > 0 ? ' pos' : ''}${val != null && val < 0 ? ' neg' : ''}`}>
               {val != null ? pmUSD(val) : '—'}
             </div>
           </div>
@@ -581,10 +582,11 @@ function Polymarket() {
     : summary.realizedPnl + summary.unrealizedPnl;
   // True realized = lifetime − unrealized (settled P&L across all markets, open + closed).
   const realizedTotal = lifetimePnl - summary.unrealizedPnl;
-  // All-source total = trading + LP + maker + yield + sponsored + UMA
+  // All-source total = trading + LP + maker + yield + sponsored + UMA − fees.
+  // pnlSeries (used as lifetimePnl) is gross of trading fees, so net them here.
   const bdExtra = breakdown
     ? (breakdown.lp || 0) + (breakdown.yield || 0) + (breakdown.maker || 0)
-      + (breakdown.sponsored || 0) + (breakdown.uma || 0)
+      + (breakdown.sponsored || 0) + (breakdown.uma || 0) - (breakdown.fees || 0)
     : 0;
   const totalPnl = lifetimePnl + bdExtra;
 
