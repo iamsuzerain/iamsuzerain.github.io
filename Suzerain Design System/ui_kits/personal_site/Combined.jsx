@@ -147,7 +147,9 @@ async function cmbFetchBdExtra() {
       const bd = await r.json();
       if (bd.totals) {
         const t = bd.totals;
-        return (t.lp || 0) + (t.yield || 0) + (t.maker || 0) + (t.sponsored || 0) + (t.uma || 0);
+        // Polymarket's user-pnl-api series (used as `pm` line) excludes trading
+        // fees, so subtract betmoar's implied `fees` here.
+        return (t.lp || 0) + (t.yield || 0) + (t.maker || 0) + (t.sponsored || 0) + (t.uma || 0) - (t.fees || 0);
       }
     }
   } catch {}
