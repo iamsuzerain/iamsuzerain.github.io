@@ -32,15 +32,34 @@ jobs:
           echo "result:"
           cat "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
 
+      - name: append to history snapshot
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          data_dir = pathlib.Path("Suzerain Design System/ui_kits/personal_site/data")
+          cur = json.loads((data_dir / "polymarket-breakdown.json").read_text())
+          hist_path = data_dir / "polymarket-breakdown-history.json"
+          hist = json.loads(hist_path.read_text()) if hist_path.exists() else {"rows": []}
+          row = {"d": cur["generatedAt"], **cur["totals"]}
+          rows = [r for r in hist.get("rows", []) if r.get("d") != row["d"]]
+          rows.append(row)
+          rows.sort(key=lambda r: r["d"])
+          hist["rows"] = rows
+          hist_path.write_text(json.dumps(hist, indent=2) + "\n")
+          PY
+
       - name: commit + push if changed
         run: |
           git config user.name  "betmoar-bot"
           git config user.email "betmoar-bot@users.noreply.github.com"
-          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"; then
+          if git diff --quiet \
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json"; then
             echo "no changes"
             exit 0
           fi
-          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json"
           git commit -m "polymarket: refresh betmoar breakdown $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
           # Rebase onto it, keeping our freshly generated data on conflict, then retry push.

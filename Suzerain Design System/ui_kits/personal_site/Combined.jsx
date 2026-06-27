@@ -139,28 +139,45 @@ function cmbPmPoints(rows) {
 }
 
 // All-source polymarket income beyond trading (lp + maker + yield + sponsored +
-// uma). betmoar breakdown is primary; CLOB rewards json is the fallback.
+// uma), windowed to ~12mo. betmoar's totals are lifetime, so we diff against the
+// oldest history snapshot that's <= 365d ago. Without a baseline that old, we
+// use lifetime totals (correct as long as no rewards/fees pre-date the window).
+// betmoar breakdown is primary; CLOB rewards json is the fallback.
 async function cmbFetchBdExtra() {
+  let current = null;
   try {
     const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
     if (r.ok) {
       const bd = await r.json();
-      if (bd.totals) {
-        const t = bd.totals;
-        // Polymarket's user-pnl-api series (used as `pm` line) excludes trading
-        // fees, so subtract betmoar's implied `fees` here.
-        return (t.lp || 0) + (t.yield || 0) + (t.maker || 0) + (t.sponsored || 0) + (t.uma || 0) - (t.fees || 0);
+      if (bd.totals) current = bd.totals;
+    }
+  } catch {}
+  if (!current) {
+    try {
+      const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
+      if (r.ok) {
+        const rw = await r.json();
+        if (rw.totals) return Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0);
       }
-    }
-  } catch {}
+    } catch {}
+    return 0;
+  }
+
+  let baseline = null;
   try {
-    const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
+    const r = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
     if (r.ok) {
-      const rw = await r.json();
-      if (rw.totals) return Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0);
+      const hist = await r.json();
+      const cutoff = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+      const rows = (hist.rows || []).filter(x => x.d && x.d <= cutoff);
+      if (rows.length) baseline = rows[rows.length - 1];
     }
   } catch {}
-  return 0;
+
+  // Polymarket's user-pnl-api series (used as `pm` line) excludes trading fees,
+  // so subtract betmoar's implied `fees` here.
+  const delta = (k) => (current[k] || 0) - (baseline ? (baseline[k] || 0) : 0);
+  return delta('lp') + delta('yield') + delta('maker') + delta('sponsored') + delta('uma') - delta('fees');
 }
 
 // Benchmark $ line: IBKR starting NAV parked in the index for the window.
