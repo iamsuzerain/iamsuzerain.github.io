@@ -22,6 +22,14 @@
     "sub": "tracker live since 2026",
     "log": [
       {
+        "date": "2026-06-30",
+        "body": "EOQ Summary - Barely green despite failed oil trade",
+        "link": {
+          "text": "EOQ Summary - Barely green despite failed oil trade",
+          "href": "#/thoughts/eoq-reflections-an-oil-trade-that-failed"
+        }
+      },
+      {
         "date": "2026-06-02",
         "body": "Moved another $100k from IBKR to Polymarket to take advantage of the MSTR market, which is a mess.",
         "link": {
