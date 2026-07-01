@@ -106,8 +106,23 @@ function cmbMarkers(series, log) {
       const diff = Math.abs(days[i] - d);
       if (diff < bestDiff) { bestDiff = diff; best = i; }
     }
-    return { i: best, date: entry.date, body: entry.body, v: series[best].v };
+    return { i: best, date: entry.date, body: entry.body, link: entry.link, v: series[best].v };
   }).filter(Boolean);
+}
+
+// Mirror Hero.jsx: an entry's link {text, href} turns the first occurrence of
+// `text` in the body into an anchor, so a marker caption can point at a post.
+function cmbCaptionBody(entry) {
+  const l = entry && entry.link;
+  if (!l || !l.text || !l.href || !entry.body.includes(l.text)) return entry.body;
+  const i = entry.body.indexOf(l.text);
+  return (
+    <>
+      {entry.body.slice(0, i)}
+      <a className="cmb-annot-cap-link" href={l.href}>{l.text}</a>
+      {entry.body.slice(i + l.text.length)}
+    </>
+  );
 }
 
 // IBKR cumulative $ P&L. The TWR curve (perfSeries) gives the *shape*; we anchor
@@ -410,7 +425,7 @@ function CmbChart({ series, log, bench, benchNotional }) {
           <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
             onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
         </div>
-        <p className="cmb-annot-cap-body">{cur.body}</p>
+        <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>
       </div>
     )}
     </>
