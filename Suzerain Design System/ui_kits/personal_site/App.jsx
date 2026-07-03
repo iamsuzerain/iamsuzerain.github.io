@@ -18,13 +18,12 @@ function App() {
     portfolio: <Portfolio/>,
     polymarket: <Polymarket/>,
     combined: <Combined setView={setView}/>,
-    predictfolio: <Predictfolio/>,
     about: <About/>,
     thoughts: <Writing slug={route.param}/>,
   };
   const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
-  const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined' || view === 'predictfolio';
+  const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined';
   return (
     <Chrome cursorGlow={view==='hero'} dim={dim}>
       <Nav view={view} setView={setView} />

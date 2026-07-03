@@ -12,7 +12,7 @@ const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   ? window.SZ_ID.wallets
   : [window.SZ_ID.wallet];
 const PM_PRIMARY = PM_WALLETS[0];
-const PM_HANDLE = window.SZ_ID.handle;
+const PM_HANDLE = 'Seutervoinen';
 const PM_CACHE_KEY = 'pm-cache-v6';
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
@@ -572,6 +572,8 @@ function Polymarket() {
   );
 
   const { profile, summary, pnlSeries, positions, activity, breakdown } = data;
+  // Show the second wallet in the header pill (matches the profile/betmoar links below).
+  const displayWallet = (profile.wallets && profile.wallets[1]) || profile.wallet;
   const updated = new Date(data.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
@@ -613,7 +615,7 @@ function Polymarket() {
           <div className="pf-sub">
             <span>@{profile.handle}</span>
             <span className="sz-sep">·</span>
-            <span className="pm-wallet">{profile.wallet.slice(0, 6)}…{profile.wallet.slice(-4)}</span>
+            <span className="pm-wallet">{displayWallet.slice(0, 6)}…{displayWallet.slice(-4)}</span>
           </div>
         </div>
         <div className="pf-updated">
@@ -670,6 +672,10 @@ function Polymarket() {
         <span className="sz-sep">·</span>
         <a href={`https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`} target="_blank" rel="noreferrer">
           analytics ↗ betmoar
+        </a>
+        <span className="sz-sep">·</span>
+        <a href={`https://predictfolio.com/@${PM_HANDLE}`} target="_blank" rel="noreferrer">
+          analytics ↗ predictfolio
         </a>
       </div>
     </section>
