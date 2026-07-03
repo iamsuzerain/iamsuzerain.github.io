@@ -549,74 +549,6 @@
     display: flex; flex-wrap: wrap; gap: 2px;
   }
 
-  /* ========== Predictfolio ========== */
-  .pm-wrap { max-width: 1080px; }
-  .pm-head {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 40px; margin-bottom: 28px; flex-wrap: wrap;
-  }
-  .pm-head .sz-h2 { margin-bottom: 16px; }
-  .pm-sub {
-    font-family: var(--font-sans); font-size: 16px; line-height: 1.6;
-    color: var(--fg-2); max-width: 620px; margin: 0;
-  }
-  .pm-actions { padding-top: 4px; }
-  .pm-frame-wrap {
-    position: relative;
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px; overflow: hidden;
-    height: clamp(600px, calc(100vh - 140px), 1400px);
-  }
-  .pm-frame {
-    width: 100%; height: 100%; border: 0;
-    background: var(--ink-1);
-  }
-  .pm-frame-loading {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono); font-size: 12px;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--fg-3);
-    background: var(--ink-3);
-    pointer-events: none;
-  }
-  .pm-fallback {
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px; padding: 48px 40px; max-width: 720px;
-  }
-  .pm-fb-head {
-    display: inline-flex; align-items: center; gap: 10px;
-    font-family: var(--font-mono); font-size: 11px;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--fg-3); margin-bottom: 24px;
-    padding: 6px 12px; border: 1px solid var(--ink-4); border-radius: 999px;
-  }
-  .pm-fb-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #ff6b9d; box-shadow: 0 0 8px rgba(255,107,157,0.6);
-  }
-  .pm-fb-title {
-    font-family: var(--font-display); font-size: 28px; font-weight: 400;
-    color: var(--fg-1); margin: 0 0 16px; letter-spacing: -0.02em;
-  }
-  .pm-fb-body {
-    font-family: var(--font-sans); font-size: 15px; line-height: 1.7;
-    color: var(--fg-2); margin: 0 0 28px; font-weight: 300;
-  }
-  .pm-footer {
-    font-family: var(--font-mono); font-size: 11px;
-    color: var(--fg-4); letter-spacing: 0.06em;
-    margin-top: 24px; padding-top: 20px;
-    border-top: 1px solid var(--border-soft);
-    display: flex; flex-wrap: wrap; gap: 2px;
-  }
-
   @media (max-width: 760px) {
     .pf-stats { grid-template-columns: repeat(2, 1fr); }
     .pf-row { grid-template-columns: 1fr; }
@@ -697,31 +629,6 @@
   }
   .pm-footer-deep a { color: var(--violet-300); text-decoration: none; }
   .pm-footer-deep a:hover { color: var(--magenta-400); }
-
-  /* Predictfolio deep-link banner */
-  .pm-deeplink {
-    display: inline-flex; align-items: center;
-    padding: 6px 12px;
-    margin: 0 0 20px 0;
-    background: rgba(167,139,250,0.06);
-    border: 1px solid rgba(167,139,250,0.18);
-    border-radius: 3px;
-    text-decoration: none;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .pm-deeplink:hover {
-    border-color: rgba(255,79,216,0.4);
-    background: rgba(255,79,216,0.08);
-  }
-  .pm-deeplink-cta {
-    color: var(--violet-300);
-    white-space: nowrap;
-  }
-  .pm-deeplink-arrow { display: inline-block; transition: transform 0.15s; margin-left: 2px; }
-  .pm-deeplink:hover .pm-deeplink-arrow { transform: translate(2px, -2px); }
 
   /* Polymarket headline */
   .pm-headline .pos { color: #7dd3a8; }
@@ -915,7 +822,6 @@
 <script type="text/babel" src="Portfolio.jsx"></script>
 <script type="text/babel" src="Polymarket.jsx"></script>
 <script type="text/babel" src="Combined.jsx"></script>
-<script type="text/babel" src="Predictfolio.jsx"></script>
 <script type="text/babel" src="Writing.jsx"></script>
 <script type="text/babel" src="App.jsx"></script>
 </body>

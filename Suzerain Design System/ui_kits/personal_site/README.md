@@ -13,8 +13,7 @@ These are the components loaded by `index.html` (via `<script type="text/babel">
 - `Portfolio.jsx` — IBKR portfolio view (chart + holdings)
 - `Polymarket.jsx` — Polymarket P&L view
 - `Combined.jsx` — combined IBKR + Polymarket overview
-- `Predictfolio.jsx` — prediction-market positions view
 
 ## Views
 
-Landing is the log (`Hero`); the nav switches between `about`, `portfolio`, `polymarket`, `combined`, and `predictfolio`. No routing library; a single `view` state in the root.
+Landing is the log (`Hero`); the nav switches between `about`, `portfolio`, `polymarket`, and `combined`. No routing library; a single `view` state in the root.
