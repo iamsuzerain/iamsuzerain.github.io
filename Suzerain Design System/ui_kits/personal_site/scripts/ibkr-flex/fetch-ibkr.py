@@ -261,7 +261,8 @@ def adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[flo
     return abs_chg, (abs_chg / start_v if start_v else 0.0)
 
 
-def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: dict[str, float]) -> dict:
+def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: dict[str, float],
+              nav_correction: float = 0.0, perf_series: list[dict] | None = None) -> dict:
     """Deposit-adjusted PnL for MTD, QTD, YTD using CashReportCurrency pre-aggregated flows.
     1Y uses ChangeInNAV.twr — IBKR's own time-weighted return over the 365-day query period.
     """
@@ -287,10 +288,17 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: 
     cin = root.find(".//ChangeInNAV")
     if cin is not None:
         cin_start = to_float(cin.get("startingValue") or "0")
-        cin_end   = to_float(cin.get("endingValue")   or "0")
+        cin_end   = to_float(cin.get("endingValue")   or "0") + nav_correction
         cin_dw    = to_float(cin.get("depositsWithdrawals") or "0")
         oney_abs  = (cin_end - cin_start) - cin_dw
-        oney_pct  = to_float(cin.get("twr") or "0") / 100.0
+        if nav_correction and perf_series:
+            # The bad day is the statement's ending NAV, so it *does* corrupt the
+            # 1Y figure (an intermediate bad day would cancel in TWR chaining).
+            # IBKR's own TWR still embeds it, so use our corrected daily-chained
+            # return over the (≈1-year) query window instead.
+            oney_pct = perf_series[-1]["v"]
+        else:
+            oney_pct = to_float(cin.get("twr") or "0") / 100.0
     else:
         s = start_nav(nav_series[0]["d"] if nav_series else f"{cur_year}-01-01")
         oney_abs, oney_pct = adjusted_pnl(s, nav, flows["ytd"])
@@ -308,27 +316,83 @@ def mask_account(acct_id: str) -> str:
     return "U••••" + acct_id[-3:]
 
 
+# ── Manual corrections for known-bad vendor marks ───────────────────────────
+# IBKR bakes a bad mark into that day's EquitySummary total *and* keeps it in
+# every future statement's history, so corrections must be absolute and applied
+# on every run — not just when the bad day is the statement's as-of date.
+#
+# POSITION_OVERRIDES — corrected total market value for a position leg, keyed by
+#   (date, symbol). Fixes the OpenPosition snapshot (weights/allocation) on the
+#   statement whose as-of date matches; a no-op on later statements, where that
+#   date is no longer the open-position snapshot.
+# NAV_OVERRIDES — corrected end-of-day NAV, keyed by date. Patches that day's
+#   point in the historical equity curve on every run, so the spike never
+#   reappears once the statement rolls forward.
+#
+# Keep both minimal and mutually consistent (Δ position == Δ NAV for the day);
+# remove an entry once IBKR corrects the mark upstream.
+POSITION_OVERRIDES: dict[tuple[str, str], float] = {
+    # 2026-07-02 — IBKR marked MU common at $1,145.28, an ~+11% one-day spike,
+    # while every MU option leg repriced as if MU fell (bad stock mark only).
+    # True close was $975.00 → 300 sh = $292,500.
+    ("2026-07-02", "MU"): 292500.0,
+}
+NAV_OVERRIDES: dict[str, float] = {
+    # 2026-07-02 — reported total 751,181.33 embeds the bad MU mark (+$51,084);
+    # corrected NAV is 700,097.33.
+    "2026-07-02": 700097.33032514,
+}
+
+
+def apply_mark_overrides(positions: list[dict], nav_series: list[dict],
+                         as_of: str | None) -> float:
+    """Patch known-bad vendor marks in place.
+
+    Corrects the OpenPosition snapshot for the statement's as-of date and every
+    overridden day in the historical equity curve. Returns the net NAV
+    correction applied *on the as-of date* (0 unless the bad day is the current
+    snapshot), so the caller can propagate it into IBKR's pre-aggregated
+    ChangeInNAV endpoints for that statement.
+    """
+    for p in positions:
+        if as_of and (as_of, p["symbol"]) in POSITION_OVERRIDES:
+            corrected = POSITION_OVERRIDES[(as_of, p["symbol"])]
+            p["unrealized"] = corrected - p["costBasis"]
+            p["mktValue"] = corrected
+    nav_correction = 0.0
+    for row in nav_series:
+        if row["d"] in NAV_OVERRIDES:
+            corrected = NAV_OVERRIDES[row["d"]]
+            if row["d"] == as_of:
+                nav_correction += corrected - row["v"]
+            row["v"] = corrected
+    return nav_correction
+
+
 def transform(root: ET.Element) -> dict:
     stmt = root.find(".//FlexStatement")
     if stmt is None:
         raise SystemExit("no FlexStatement in response")
     acct_id = stmt.get("accountId") or ""
 
-    # latest equity row = current NAV + cash
+    # latest equity row = current cash (NAV comes from the corrected nav_series)
     rows = list(root.iter("EquitySummaryByReportDateInBase"))
     last = rows[-1] if rows else None
-    nav = to_float(last.get("total")) if last is not None else 0.0
     cash = to_float(last.get("cash")) if last is not None else 0.0
-    stock = to_float(last.get("stock")) if last is not None else 0.0
 
     positions = build_positions(root)
+    nav_series = build_nav_series(root)
+    cash_flows = build_cash_flows(root)
+
+    # Patch known-bad vendor marks before deriving NAV, weights, allocation, PnL.
+    as_of = nav_series[-1]["d"] if nav_series else None
+    nav_correction = apply_mark_overrides(positions, nav_series, as_of)
+    positions.sort(key=lambda r: -abs(r["mktValue"]))
+
+    nav = nav_series[-1]["v"] if nav_series else 0.0
     for p in positions:
         p["weight"] = (p["mktValue"] / nav) if nav > 0 else 0.0
 
-    nav_series = build_nav_series(root)
-    cash_flows = build_cash_flows(root)
-    cin = root.find(".//ChangeInNAV")
-    twr_anchor = to_float(cin.get("twr") or "0") / 100.0 if cin is not None else None
     perf_series = build_perf_series(nav_series, cash_flows)
 
     return {
@@ -340,7 +404,7 @@ def transform(root: ET.Element) -> dict:
             "cash": cash,
             "buyingPower": nav * 2,
         },
-        "pnl": build_pnl(root, nav_series, nav, cash_flows),
+        "pnl": build_pnl(root, nav_series, nav, cash_flows, nav_correction, perf_series),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),
