@@ -331,13 +331,17 @@ def mask_account(acct_id: str) -> str:
 #
 # Keep both minimal and mutually consistent (Δ position == Δ NAV for the day);
 # remove an entry once IBKR corrects the mark upstream.
-# Emptied 2026-07-06: IBKR corrected the 2026-07-02 MU mark upstream, so the
-# overrides below are no longer needed (and, being absolute + applied every run,
-# would clobber IBKR's now-correct data). Retired values, for reference:
-#   POSITION_OVERRIDES ("2026-07-02", "MU"): 292500.0   # 300 sh × $975.00
-#   NAV_OVERRIDES      "2026-07-02":          700097.33032514  # was 751,181.33
-POSITION_OVERRIDES: dict[tuple[str, str], float] = {}
-NAV_OVERRIDES: dict[str, float] = {}
+POSITION_OVERRIDES: dict[tuple[str, str], float] = {
+    # 2026-07-02 — IBKR marked MU common at $1,145.28, an ~+11% one-day spike,
+    # while every MU option leg repriced as if MU fell (bad stock mark only).
+    # True close was $975.00 → 300 sh = $292,500.
+    ("2026-07-02", "MU"): 292500.0,
+}
+NAV_OVERRIDES: dict[str, float] = {
+    # 2026-07-02 — reported total 751,181.33 embeds the bad MU mark (+$51,084);
+    # corrected NAV is 700,097.33.
+    "2026-07-02": 700097.33032514,
+}
 
 
 def apply_mark_overrides(positions: list[dict], nav_series: list[dict],
