@@ -10,12 +10,12 @@ Suzerain is a personal site brand — minimalist cyberpunk with violet ink, mage
 
 Key files:
 - `README.md` — brand voice, visual foundations, iconography
-- `colors_and_type.css` — design tokens and semantic element styles (import first)
+- `ui_kits/personal_site/colors_and_type.css` — design tokens and semantic element styles (import first; this is the single canonical copy)
 - `preview/` — small card examples of every token and component
 - `assets/` — logo (sigil, wordmark, mono variant)
 - `ui_kits/personal_site/` — click-through React recreation of the site
 
-If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy assets out and create static HTML files for the user to view. Import `colors_and_type.css` to inherit the full token system.
+If creating visual artifacts (slides, mocks, throwaway prototypes, etc), copy assets out and create static HTML files for the user to view. Import `ui_kits/personal_site/colors_and_type.css` to inherit the full token system.
 
 If working on production code, you can copy assets and read the rules here to become an expert in designing with this brand.
 

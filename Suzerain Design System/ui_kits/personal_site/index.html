@@ -127,9 +127,12 @@
     mix-blend-mode: screen;
   }
 
-  /* Respect reduced motion — drop the drift + drip animations */
+  /* Respect reduced motion — drop ambient + looping animations and the
+     cursor-tracking glow. Hover transitions (user-initiated) are kept. */
   @media (prefers-reduced-motion: reduce) {
     .sz-glass-behind, .sz-trickle-wrap { animation: none; }
+    .sz-cursor, .pf-dot { animation: none; }
+    .sz-cursor-glow { display: none; }
   }
 
   .sz-stage {
@@ -178,7 +181,7 @@
   }
   /* On hero, the cursor inherits the soft text color so it doesn't
      fight the muted background photo. */
-  .sz-hero .sz-cursor { color: #ece6f5; }
+  .sz-hero .sz-cursor { color: var(--fg-hero); }
   @keyframes sz-blink { 50% { opacity: 0; } }
 
   /* ========== Shared primitives ========== */
@@ -227,7 +230,7 @@
   /* Hero + About sit directly over the city photo (no panel),
      so all text shifts to a very light violet for soft clarity. */
   .sz-hero, .sz-prose {
-    color: #ece6f5;
+    color: var(--fg-hero);
   }
   .sz-hero .sz-hero-meta,
   .sz-hero .sz-hero-tag,
@@ -240,11 +243,11 @@
   .sz-prose .sz-h3,
   .sz-prose .sz-meta,
   .sz-prose .sz-links a {
-    color: #ece6f5;
+    color: var(--fg-hero);
   }
-  .sz-prose .sz-links a:hover { color: #ece6f5; border-bottom-color: #ece6f5; }
+  .sz-prose .sz-links a:hover { color: var(--fg-hero); border-bottom-color: var(--fg-hero); }
   .sz-prose code {
-    color: #ece6f5;
+    color: var(--fg-hero);
     background: rgba(0,0,0,0.35);
     border-color: rgba(236,230,245,0.18);
   }
@@ -266,7 +269,7 @@
     display: grid; grid-template-columns: 110px 1fr;
     grid-template-areas: "date title" "date summary";
     gap: 2px 20px; padding: 18px 4px;
-    text-decoration: none; color: #ece6f5;
+    text-decoration: none; color: var(--fg-hero);
   }
   .sz-post-row a:hover .sz-post-title { color: var(--violet-300); }
   .sz-post-date {
@@ -282,9 +285,9 @@
   }
   .sz-post-back:hover { color: var(--violet-300); }
   .sz-post-body { line-height: 1.75; }
-  .sz-post-body p { margin: 0 0 18px; color: #ece6f5; }
+  .sz-post-body p { margin: 0 0 18px; color: var(--fg-hero); }
   .sz-post-body h1, .sz-post-body h2, .sz-post-body h3 {
-    color: #ece6f5; letter-spacing: -0.01em; margin: 36px 0 12px;
+    color: var(--fg-hero); letter-spacing: -0.01em; margin: 36px 0 12px;
   }
   .sz-post-body a { color: var(--violet-300); }
   .sz-post-body blockquote {
@@ -377,7 +380,7 @@
   }
   .sz-log-body {
     font-family: var(--font-sans); font-size: 16px;
-    line-height: 1.7; color: #ece6f5;
+    line-height: 1.7; color: var(--fg-hero);
     margin: 0; font-weight: 300;
   }
   .sz-log-body a {
@@ -428,7 +431,7 @@
   }
   .pf-dot {
     width: 6px; height: 6px; border-radius: 50%;
-    background: #7dd3a8; box-shadow: 0 0 8px rgba(125,211,168,0.6);
+    background: var(--pos); box-shadow: 0 0 8px rgba(125,211,168,0.6);
     animation: sz-blink 2s ease-in-out infinite;
   }
 
@@ -456,8 +459,8 @@
   .pf-stat-chg {
     font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;
   }
-  .pf-stat-chg.pos { color: #7dd3a8; }
-  .pf-stat-chg.neg { color: #ff6b9d; }
+  .pf-stat-chg.pos { color: var(--pos); }
+  .pf-stat-chg.neg { color: var(--neg); }
   .pf-stat-kicker {
     font-family: var(--font-mono); font-size: 10px;
     color: var(--fg-4); letter-spacing: 0.1em;
@@ -525,8 +528,8 @@
   .pf-table .pf-num { text-align: right; font-variant-numeric: tabular-nums; }
   .pf-table .pf-sym { color: var(--fg-1); font-weight: 500; }
   .pf-table .pf-name { color: var(--fg-3); font-family: var(--font-sans); font-size: 13px; }
-  .pf-table .pos { color: #7dd3a8; }
-  .pf-table .neg { color: #ff6b9d; }
+  .pf-table .pos { color: var(--pos); }
+  .pf-table .neg { color: var(--neg); }
   .pf-type-badge {
     display: inline-block;
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
@@ -566,8 +569,8 @@
   }
 
   /* ========== Polymarket view overrides ========== */
-  .pm-view .pf-stat-value.pos { color: #7dd3a8; }
-  .pm-view .pf-stat-value.neg { color: #ff6b9d; }
+  .pm-view .pf-stat-value.pos { color: var(--pos); }
+  .pm-view .pf-stat-value.neg { color: var(--neg); }
   .pm-wallet {
     font-family: var(--font-mono); color: var(--fg-4);
     letter-spacing: 0.04em;
@@ -581,12 +584,12 @@
   }
   .pm-side-yes {
     background: rgba(125,211,168,0.14);
-    color: #7dd3a8;
+    color: var(--pos);
     border: 1px solid rgba(125,211,168,0.3);
   }
   .pm-side-no {
     background: rgba(255,107,157,0.12);
-    color: #ff6b9d;
+    color: var(--neg);
     border: 1px solid rgba(255,107,157,0.3);
   }
   .pm-market {
@@ -631,8 +634,8 @@
   .pm-footer-deep a:hover { color: var(--magenta-400); }
 
   /* Polymarket headline */
-  .pm-headline .pos { color: #7dd3a8; }
-  .pm-headline .neg { color: #ff6b9d; }
+  .pm-headline .pos { color: var(--pos); }
+  .pm-headline .neg { color: var(--neg); }
 
   /* Profit breakdown panel */
   .pm-breakdown-panel { margin-bottom: 16px; }
@@ -661,8 +664,8 @@
     font-family: var(--font-display); font-size: 22px; font-weight: 400;
     color: var(--fg-2); letter-spacing: -0.02em; line-height: 1.1;
   }
-  .pm-breakdown-val.pos { color: #7dd3a8; }
-  .pm-breakdown-val.neg { color: #ff6b9d; }
+  .pm-breakdown-val.pos { color: var(--pos); }
+  .pm-breakdown-val.neg { color: var(--neg); }
   .pm-breakdown-src {
     color: var(--violet-300); text-decoration: none;
   }
@@ -725,8 +728,8 @@
   }
   .pm-tt-date { font-size: 10px; color: var(--fg-4); letter-spacing: 0.08em; text-transform: uppercase; }
   .pm-tt-val  { font-size: 13px; font-weight: 500; margin-top: 2px; }
-  .pm-tt-val.pos { color: #7dd3a8; }
-  .pm-tt-val.neg { color: #ff6b9d; }
+  .pm-tt-val.pos { color: var(--pos); }
+  .pm-tt-val.neg { color: var(--neg); }
   .pf-tt-bench { font-size: 10px; margin-top: 2px; letter-spacing: 0.04em; }
 
   /* Benchmark overlay legend (portfolio chart) */
@@ -749,8 +752,8 @@
   }
   .cmb-tt-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
   .cmb-tt-num { margin-left: auto; padding-left: 14px; font-weight: 500; }
-  .cmb-tt-num.pos { color: #7dd3a8; }
-  .cmb-tt-num.neg { color: #ff6b9d; }
+  .cmb-tt-num.pos { color: var(--pos); }
+  .cmb-tt-num.neg { color: var(--neg); }
   .cmb-stat-link { cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
   .cmb-stat-link:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
   .cmb-stat-arrow { color: var(--violet-300); opacity: 0.7; }
