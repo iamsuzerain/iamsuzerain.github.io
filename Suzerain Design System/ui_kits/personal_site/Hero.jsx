@@ -18,7 +18,7 @@ function Hero({ setView }) {
   const c = window.CONTENT.home;
   return (
     <section className="sz-hero">
-      <div className="sz-hero-meta">▸ status · online{c.log[0] ? ` · ${c.log[0].date}` : ''}</div>
+      <div className="sz-hero-meta">▸ status · online · {new Date().toLocaleDateString('en-CA')}</div>
       <h1 className="sz-hero-name">{c.name}<Cursor /></h1>
       <p className="sz-hero-tag">{c.tag}</p>
       <p className="sz-hero-sub">{c.sub}</p>
