@@ -91,12 +91,14 @@ _Warm white fg over cool violet ink — prevents the page feeling clinical or Ma
 
 ### Backgrounds
 
-Three modes, in order of weight:
-1. **Flat ink** (default) — `#0a0612`. Used for 90% of surfaces.
-2. **Dot matrix** — 24px grid of `rgba(167,139,250,0.06)` dots. Used for hero and background canvases. Barely visible; gives texture without competing.
-3. **Violet aurora glow** — a soft radial `rgba(167,139,250,0.18)` in one corner. Used on headers, project-list pages. Never on reading content.
+The hero and about views sit over a **full-bleed city-window photo** (`assets/window-view.jpg`) — a rain-slick night skyline seen from an apartment window — behind a blurred glass wash, with a slow drifting cloud-glow and a rain/trickle layer for depth. On data-heavy views (portfolio, polymarket, combined) the photo is dimmed back (`.sz-dim`) so tables stay legible. It's the _one_ big image — everything else is texture.
 
-**Never**: full-bleed photographic backgrounds behind text, gradient meshes, glassmorphism (too trendy).
+Supporting layers, lightest first:
+1. **Flat ink** — `#0a0612`. The base beneath everything.
+2. **Dot matrix** — 24px grid of `rgba(167,139,250,0.06)` dots. Barely visible; texture without competing.
+3. **Violet aurora glow** — a soft radial `rgba(167,139,250,0.18)` in one corner.
+
+**Never**: a _second_ competing full-bleed image, gradient meshes as a primary reading surface, or neon-arcade saturation. Keep photography cool and violet-shifted — see _Imagery color vibe_.
 
 ### Cards & borders
 
@@ -125,7 +127,7 @@ Cards are `var(--ink-3)` fills with `1px solid var(--ink-4)` borders and `2–4p
 
 ### Transparency & blur
 
-Rarely. Only one place: the nav strip may use `backdrop-filter: blur(12px)` over `rgba(10,6,18,0.7)` when it sits over content. No frosted cards, no blurred modals.
+A deliberate motif here — the frosted glass _is_ the interface sitting over the city photo. The nav strip, the reading panels (about, log, post body), and the data cards / stat tiles all use `backdrop-filter: blur()` over semi-transparent ink (`rgba(10,6,18,0.45–0.7)`). Keep it to these surfaces; no blurred modals, and never so heavy that text loses contrast against the photo.
 
 ### Imagery color vibe
 
@@ -184,14 +186,14 @@ These are part of the iconography and appear throughout the system:
 /
 ├── README.md                 — this file
 ├── SKILL.md                  — cross-compatible skill definition
-├── colors_and_type.css       — design tokens + semantic element styles
 ├── assets/
 │   ├── logo-sigil.svg        — gradient mark
 │   ├── logo-sigil-mono.svg   — mono mark
 │   ├── logo-wordmark.svg     — mark + wordmark
+│   ├── window-view.jpg       — city-window hero photo
 │   └── reference/
 │       └── mood-board.png    — user-provided mood reference
-├── preview/                  — Design System tab preview cards
+├── preview/                  — Design System tab preview cards (16; import the canonical CSS)
 │   ├── palette-ink.html
 │   ├── palette-violet.html
 │   ├── palette-magenta.html
@@ -208,18 +210,24 @@ These are part of the iconography and appear throughout the system:
 │   ├── badges.html
 │   ├── logo.html
 │   └── glyphs.html
+├── screenshots/              — rendered captures of the live site
+├── uploads/                  — scratch reference material
 └── ui_kits/
-    └── personal_site/
+    └── personal_site/        — the live site (gh-pages deploy root)
         ├── README.md
-        ├── index.html        — interactive click-thru prototype
-        ├── Chrome.jsx        — shared layout / cursor glow / grid bg
+        ├── index.html        — click-thru prototype + all view styles
+        ├── colors_and_type.css — design tokens + semantic styles (canonical copy; site + previews both import this)
+        ├── App.jsx           — root view switcher, hash routing, bootstrap
+        ├── Chrome.jsx        — shared layout / cursor glow / rain / grid bg
         ├── Nav.jsx
-        ├── Blog.jsx          — landing log/feed
+        ├── Hero.jsx          — landing hero + activity log/feed
         ├── About.jsx
         ├── Portfolio.jsx     — IBKR portfolio view
         ├── Polymarket.jsx    — Polymarket P&L view
         ├── Combined.jsx      — combined IBKR + Polymarket overview
-        └── Predictfolio.jsx  — prediction-market positions view
+        ├── Writing.jsx       — thoughts index + post reader
+        ├── data/             — content.json, portfolio.json, polymarket-*.json, benchmarks.json, posts/
+        └── scripts/          — data refreshers (ibkr-flex, polymarket-pnl, betmoar-breakdown, benchmarks) + new-post.py
 ```
 
 ---
@@ -228,4 +236,4 @@ These are part of the iconography and appear throughout the system:
 
 - The project was started without a codebase or Figma, so every visual decision is **proposed, not inherited**. Everything here is negotiable in a second pass.
 - **Fonts are Google-served** (JetBrains Mono, Inter Tight). If you want locally hosted TTFs for production, drop them into `fonts/` and adjust `@font-face`.
-- **No photography or illustration assets shipped** beyond the mood board. Hero backgrounds use the dot-matrix + aurora tokens instead of stock imagery.
+- **One photographic asset ships:** `assets/window-view.jpg`, the city-window hero backdrop. Hero and about sit directly on it; data views dim it back. Beyond this single image, texture comes from the dot-matrix + aurora tokens, not stock imagery.

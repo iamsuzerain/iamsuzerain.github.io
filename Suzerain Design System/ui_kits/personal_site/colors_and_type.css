@@ -56,6 +56,11 @@
   --warn: #f0c674;
   --err: #ff6b8a;
 
+  /* ---------- Semantic status (numeric P&L + hero text over photo) ---------- */
+  --pos: #7dd3a8;      /* gains — same green as --ok */
+  --neg: #ff6b9d;      /* losses — the red actually used across the P&L views */
+  --fg-hero: #ece6f5;  /* warm white for text sitting directly on the city photo */
+
   /* ---------- Selection & focus ---------- */
   --selection-bg: var(--magenta-400);
   --selection-fg: var(--ink-0);
