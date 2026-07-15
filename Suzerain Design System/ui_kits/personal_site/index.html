@@ -758,6 +758,53 @@
   .cmb-stat-link:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.06); }
   .cmb-stat-arrow { color: var(--violet-300); opacity: 0.7; }
 
+  /* capital deployment — IBKR vs Polymarket tug-of-war */
+  .cmb-deploy { display: flex; flex-direction: column; gap: 12px; }
+  .cmb-deploy-ends {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 12px;
+  }
+  .cmb-deploy-end { display: flex; align-items: baseline; gap: 8px; }
+  .cmb-deploy-end-r { justify-content: flex-end; }
+  .cmb-deploy-dot { width: 8px; height: 8px; border-radius: 2px; align-self: center; }
+  .cmb-deploy-name {
+    color: var(--fg-3); letter-spacing: 0.14em; text-transform: uppercase; font-size: 10px;
+  }
+  .cmb-deploy-val { color: var(--fg-1); font-size: 15px; letter-spacing: 0.01em; }
+  .cmb-deploy-pct { color: var(--fg-4); font-size: 11px; }
+  .cmb-deploy-track {
+    position: relative; height: 22px; border-radius: 4px; overflow: hidden;
+    background: rgba(10,6,18,0.5); border: 1px solid rgba(167,139,250,0.14);
+  }
+  .cmb-deploy-fill { position: absolute; top: 0; bottom: 0; }
+  .cmb-deploy-fill-ibkr {
+    left: 0; background: linear-gradient(90deg, rgba(167,139,250,0.55), rgba(167,139,250,0.28));
+  }
+  .cmb-deploy-fill-poly {
+    background: linear-gradient(90deg, rgba(255,79,216,0.28), rgba(255,79,216,0.55));
+  }
+  .cmb-deploy-center {
+    position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px;
+    background: repeating-linear-gradient(180deg, rgba(229,225,241,0.4) 0 3px, transparent 3px 6px);
+  }
+  .cmb-deploy-flag {
+    position: absolute; top: -3px; bottom: -3px; width: 2px;
+    background: var(--fg-1); transform: translateX(-1px);
+    box-shadow: 0 0 8px rgba(10,6,18,0.8);
+  }
+  .cmb-deploy-knob {
+    position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: var(--fg-1); border-radius: 2px;
+    box-shadow: 0 0 8px rgba(10,6,18,0.9);
+  }
+  .cmb-deploy-foot {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    color: var(--fg-4);
+  }
+  .cmb-deploy-foot b { color: var(--fg-2); font-weight: 500; }
+
   /* log event markers + caption on the overview chart */
   .cmb-annot { cursor: pointer; }
   .cmb-annot-sq {

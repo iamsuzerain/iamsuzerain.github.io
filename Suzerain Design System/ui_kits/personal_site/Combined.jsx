@@ -443,6 +443,50 @@ function CmbStat({ label, value, tone, onClick, note }) {
   );
 }
 
+// ---------- capital deployment: IBKR vs Polymarket tug-of-war ----------
+// A single rope. The flag (divider) sits at IBKR's share of total NAV, so the
+// heavier book pushes the marker into the lighter book's territory. A faint
+// center tick marks the 50/50 neutral point the flag is pulled away from.
+function CmbDeployBar({ ibkr, poly }) {
+  const total = (ibkr || 0) + (poly || 0);
+  if (total <= 0) return null;
+  const ibkrPct = ibkr / total;
+  const polyPct = poly / total;
+  const dividerLeft = +(ibkrPct * 100).toFixed(2);
+  const leader = ibkr >= poly ? 'ibkr' : 'polymarket';
+
+  return (
+    <div className="cmb-deploy">
+      <div className="cmb-deploy-ends">
+        <div className="cmb-deploy-end">
+          <span className="cmb-deploy-dot" style={{ background: CMB_C_IBKR }}/>
+          <span className="cmb-deploy-name">ibkr</span>
+          <span className="cmb-deploy-val">{cmbUSDk(ibkr)}</span>
+          <span className="cmb-deploy-pct">{(ibkrPct * 100).toFixed(1)}%</span>
+        </div>
+        <div className="cmb-deploy-end cmb-deploy-end-r">
+          <span className="cmb-deploy-pct">{(polyPct * 100).toFixed(1)}%</span>
+          <span className="cmb-deploy-val">{cmbUSDk(poly)}</span>
+          <span className="cmb-deploy-name">polymarket</span>
+          <span className="cmb-deploy-dot" style={{ background: CMB_C_PM }}/>
+        </div>
+      </div>
+      <div className="cmb-deploy-track">
+        <div className="cmb-deploy-fill cmb-deploy-fill-ibkr" style={{ width: `${dividerLeft}%` }}/>
+        <div className="cmb-deploy-fill cmb-deploy-fill-poly" style={{ left: `${dividerLeft}%`, width: `${100 - dividerLeft}%` }}/>
+        <div className="cmb-deploy-center"/>
+        <div className="cmb-deploy-flag" style={{ left: `${dividerLeft}%` }}>
+          <span className="cmb-deploy-knob"/>
+        </div>
+      </div>
+      <div className="cmb-deploy-foot">
+        <span>total deployed <b>{cmbUSD(total)}</b></span>
+        <span>{leader} leads by {cmbUSDk(Math.abs(ibkr - poly))}</span>
+      </div>
+    </div>
+  );
+}
+
 function Combined({ setView }) {
   const [data, setData] = useCmbState(null);
   const [err, setErr] = useCmbState(null);
@@ -494,8 +538,20 @@ function Combined({ setView }) {
       } catch {}
 
       const bdExtra = await cmbFetchBdExtra();
+
+      // Current NAV split for the capital-deployment bar. IBKR NAV is on the
+      // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
+      // betmoar breakdown snapshot. Bar renders only when both are present.
+      let polyNav = null;
+      try {
+        const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
+        if (r.ok) { const bd = await r.json(); polyNav = bd.balances ? bd.balances.nav : null; }
+      } catch {}
+      const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
+
       const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers);
       built.log = log;
+      built.deploy = (ibkrNav != null && polyNav != null) ? { ibkr: ibkrNav, poly: polyNav } : null;
       return built;
     }
     load()
@@ -543,6 +599,16 @@ function Combined({ setView }) {
         <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
         <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={data.bdExtra ? '12mo · trading + rewards' : '12mo trading'}/>
       </div>
+
+      {data.deploy && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">capital deployment · now</span>
+            <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
+          </div>
+          <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
+        </div>
+      )}
 
       {data.series.length > 1 && (
         <div className="pf-panel">
