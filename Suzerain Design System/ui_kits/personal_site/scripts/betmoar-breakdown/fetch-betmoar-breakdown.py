@@ -134,6 +134,17 @@ def main():
             "uma":       sum_field("umaPnl"),
             "fees":      dollars(sum(implied_fees(s) for s in per_wallet)),
         },
+        # Current Polymarket net asset value, summed across wallets: open-position
+        # market value (portfolioValue) + idle USDC (usdcBalance). Used by the
+        # overview's capital-deployment bar to weigh Poly against IBKR NAV.
+        "balances": {
+            "positions": sum_field("portfolioValue"),
+            "cash":      sum_field("usdcBalance"),
+            "nav":       dollars(sum(
+                (s.get("portfolioValue") or 0) + (s.get("usdcBalance") or 0)
+                for s in per_wallet
+            )),
+        },
     }
 
     print(json.dumps(breakdown, indent=2))
