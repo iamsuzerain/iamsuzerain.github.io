@@ -260,7 +260,7 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
 
   const last = series[series.length - 1] || { v: 0, ibkr: 0, pm: 0 };
   return {
-    series: cmbDownsample(series, 150),
+    series: cmbDownsample(series, 400),
     total: last.v,
     ibkr: last.ibkr,
     pm: last.pm,
