@@ -600,16 +600,6 @@ function Combined({ setView }) {
         <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={data.bdExtra ? '12mo · trading + rewards' : '12mo trading'}/>
       </div>
 
-      {data.deploy && (
-        <div className="pf-panel">
-          <div className="pf-panel-head">
-            <span className="pf-panel-title">capital deployment · now</span>
-            <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
-          </div>
-          <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
-        </div>
-      )}
-
       {data.series.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
@@ -617,6 +607,16 @@ function Combined({ setView }) {
             <span className="pf-panel-meta">{data.bdExtra ? 'daily · USD · rewards spread linearly' : 'daily · USD'}{data.bench && data.bench.length ? ' · vs spx + vt' : ''}</span>
           </div>
           <CmbChart series={data.series} log={data.log} bench={data.bench} benchNotional={data.benchNotional}/>
+        </div>
+      )}
+
+      {data.deploy && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">capital deployment · now</span>
+            <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
+          </div>
+          <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
         </div>
       )}
 
