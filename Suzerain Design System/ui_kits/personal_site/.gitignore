@@ -1,2 +1,9 @@
 # Local production build output (see build.sh)
 dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor/backup cruft
+*.bak
