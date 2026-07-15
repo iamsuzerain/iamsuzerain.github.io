@@ -5,12 +5,25 @@ function parseRoute() {
   return { view: parts[0] || 'hero', param: parts[1] ? decodeURIComponent(parts[1]) : null };
 }
 
+// Safe defaults so the shell can paint before content.json lands (or if it fails).
+// Only home.log and about.links are indexed/mapped at render; the rest read as
+// undefined and render empty until content arrives.
+window.CONTENT = window.CONTENT || { about: { links: [] }, home: { log: [] }, projects: [] };
+
 function App() {
   const [route, setRoute] = React.useState(parseRoute);
+  const [, bumpContent] = React.useState(0);
   React.useEffect(() => {
     const onHash = () => setRoute(parseRoute());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  // Load content after first paint, then re-render to fill it in.
+  React.useEffect(() => {
+    fetch('data/content.json', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => { window.CONTENT = data; bumpContent(t => t + 1); })
+      .catch(() => {});
   }, []);
   const setView = (v) => { window.location.hash = v === 'hero' ? '/' : `/${v}`; };
   const views = {
@@ -32,8 +45,5 @@ function App() {
   );
 }
 
-fetch('data/content.json', { cache: 'no-store' })
-  .then(r => r.json())
-  .then(data => { window.CONTENT = data; })
-  .catch(() => { window.CONTENT = { about: {}, home: { log: [] }, projects: [] }; })
-  .finally(() => ReactDOM.createRoot(document.getElementById('root')).render(<App/>));
+// Render the shell immediately; App loads content.json and re-renders when it lands.
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
