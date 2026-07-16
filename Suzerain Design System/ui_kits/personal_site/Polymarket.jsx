@@ -101,6 +101,10 @@ async function pmFetchBreakdown() {
           maker:     bd.totals.maker,
           sponsored: bd.totals.sponsored,
           fees:      bd.totals.fees,
+          // Full Polymarket NAV (open positions + idle USDC) from the daily
+          // snapshot; used as portfolio value so it matches the overview's
+          // capital-deployment bar exactly.
+          nav:       bd.balances ? bd.balances.nav : null,
           source:    'betmoar',
         };
       }
@@ -257,7 +261,12 @@ async function pmFetchAll() {
     realized: +(p.realizedPnl || 0).toFixed(2),
   }));
 
-  const totalValue = +positions.reduce((a, p) => a + p.value, 0).toFixed(2);
+  // Portfolio value = full Polymarket NAV (positions + idle USDC) from the
+  // betmoar daily snapshot, so it matches the overview's capital-deployment
+  // bar exactly. Falls back to live open-position value if the snapshot NAV
+  // is unavailable.
+  const positionsValue = +positions.reduce((a, p) => a + p.value, 0).toFixed(2);
+  const totalValue = (breakdown && breakdown.nav != null) ? breakdown.nav : positionsValue;
   const unrealized = +positions.reduce((a, p) => a + p.unrealized, 0).toFixed(2);
   const realized = +positions.reduce((a, p) => a + p.realized, 0).toFixed(2);
 
@@ -625,7 +634,7 @@ function Polymarket() {
       </div>
 
       <div className="pf-stats">
-        <PmStat label="portfolio value" value={pmUSD(summary.totalValue)} kicker="open USDC at risk"/>
+        <PmStat label="portfolio value" value={pmUSD(summary.totalValue)}/>
         <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'} kicker="open positions"/>
         <PmStat label="realized pnl"   value={pmUSD(realizedTotal)}   tone={realizedTotal >= 0 ? 'pos' : 'neg'} kicker="settled · all markets"/>
         <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
