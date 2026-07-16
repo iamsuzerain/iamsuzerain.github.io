@@ -265,6 +265,19 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
   }
 
   const last = series[series.length - 1] || { v: 0, ibkr: 0, pm: 0 };
+
+  // Alpha vs the S&P: total return minus SPX return, both on the same benchmark
+  // notional, so the $ and percentage-point deltas reconcile.
+  const spxB = bench.find(b => b.key === 'spx');
+  let vsSpx = null;
+  if (spxB && notional) {
+    const spxLast = spxB.vals[spxB.vals.length - 1];
+    vsSpx = {
+      dollars: +(last.v - spxLast).toFixed(2),
+      pts: +(((last.v - spxLast) / notional) * 100).toFixed(2),
+    };
+  }
+
   return {
     series: cmbDownsample(series, 400),
     total: last.v,
@@ -274,6 +287,7 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
     pmAvailable: pmPts.length > 0,
     bench: bench.map(b => ({ key: b.key, label: b.label })),
     benchNotional: notional,
+    vsSpx,
   };
 }
 
@@ -321,13 +335,6 @@ function CmbChart({ series, log, bench, benchNotional }) {
 
   const hp = hover != null ? series[hover] : null;
   const lastPt = series[series.length - 1];
-
-  // Alpha vs the S&P: total return minus SPX return, both measured on the same
-  // benchmark notional, so $ and % (percentage-point) deltas stay consistent.
-  const hasSpx = benches.some(b => b.key === 'spx');
-  const alpha = (hasSpx && lastPt && lastPt.spx != null && benchNotional)
-    ? { dollars: lastPt.v - lastPt.spx, pts: ((lastPt.v - lastPt.spx) / benchNotional) * 100 }
-    : null;
 
   return (
     <>
@@ -423,15 +430,6 @@ function CmbChart({ series, log, bench, benchNotional }) {
     </div>
     {benches.length > 0 && (
       <div className="pf-bench-legend">
-        {alpha && (
-          <span className="cmb-alpha"
-            title="trailing-12mo total return minus S&P 500 return on the same notional">
-            Δ vs spx
-            <b className={alpha.dollars >= 0 ? 'pos' : 'neg'}>{cmbSigned(alpha.dollars)}</b>
-            <span className="cmb-alpha-sep">·</span>
-            <b className={alpha.pts >= 0 ? 'pos' : 'neg'}>{(alpha.pts >= 0 ? '+' : '') + alpha.pts.toFixed(1)}%</b>
-          </span>
-        )}
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
         {benches.map(b => (
           <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{benchNotional ? ` · on ${cmbUSDk(benchNotional)}` : ''}</span>
@@ -626,9 +624,13 @@ function Combined({ setView }) {
       </div>
 
       <div className="pf-stats">
-        <CmbStat label="total" value={cmbSigned(data.total)} tone={pos ? 'pos' : 'neg'} note="trailing 12mo"/>
         <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
         <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={data.bdExtra ? '12mo · trading + rewards' : '12mo trading'}/>
+        {data.vsSpx && (
+          <CmbStat label="vs spx" value={cmbSigned(data.vsSpx.dollars)}
+            tone={data.vsSpx.dollars >= 0 ? 'pos' : 'neg'}
+            note={`${data.vsSpx.pts >= 0 ? '+' : ''}${data.vsSpx.pts.toFixed(1)}% on notional`}/>
+        )}
       </div>
 
       {data.series.length > 1 && (
