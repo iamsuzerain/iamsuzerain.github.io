@@ -70,6 +70,12 @@ function cmbFullDate(iso) {
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
   return `${mo} ${d}, ${y}`;
 }
+function cmbShortDate(iso) {
+  if (!iso) return '';
+  const [, m, d] = iso.split('-').map(Number);
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+  return `${mo} ${d}`;
+}
 
 // Forward-fill step series onto every day in [start, end]. 0 before the first point.
 function cmbSampleDaily(points, start, end) {
@@ -542,16 +548,25 @@ function Combined({ setView }) {
       // Current NAV split for the capital-deployment bar. IBKR NAV is on the
       // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
       // betmoar breakdown snapshot. Bar renders only when both are present.
-      let polyNav = null;
+      let polyNav = null, polyDate = null;
       try {
         const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
-        if (r.ok) { const bd = await r.json(); polyNav = bd.balances ? bd.balances.nav : null; }
+        if (r.ok) { const bd = await r.json(); polyNav = bd.balances ? bd.balances.nav : null; polyDate = bd.generatedAt || null; }
       } catch {}
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
+      const ibkrDate = (portfolio.generatedAt || '').slice(0, 10) || null;
 
       const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers);
       built.log = log;
-      built.deploy = (ibkrNav != null && polyNav != null) ? { ibkr: ibkrNav, poly: polyNav } : null;
+      if (ibkrNav != null && polyNav != null) {
+        // Both NAVs are daily-cron snapshots. Show the *older* input date so the
+        // "as of" never overstates how fresh the bar is.
+        const dates = [ibkrDate, polyDate].filter(Boolean);
+        const asOf = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
+        built.deploy = { ibkr: ibkrNav, poly: polyNav, asOf };
+      } else {
+        built.deploy = null;
+      }
       return built;
     }
     load()
@@ -613,7 +628,7 @@ function Combined({ setView }) {
       {data.deploy && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">capital deployment · now</span>
+            <span className="pf-panel-title">capital deployment{data.deploy.asOf ? ` · as of ${cmbShortDate(data.deploy.asOf)}` : ''}</span>
             <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
           </div>
           <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
