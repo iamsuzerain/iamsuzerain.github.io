@@ -13,7 +13,7 @@ const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   : [window.SZ_ID.wallet];
 const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = 'Seutervoinen';
-const PM_CACHE_KEY = 'pm-cache-v7';
+const PM_CACHE_KEY = 'pm-cache-v8';  // v8: portfolio value now = snapshot NAV (positions + cash)
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
