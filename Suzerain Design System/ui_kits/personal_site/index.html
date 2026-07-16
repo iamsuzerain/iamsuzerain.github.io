@@ -743,6 +743,12 @@
   .pf-bench-swatch {
     display: inline-block; width: 14px; height: 2px; border-radius: 1px;
   }
+  /* Alpha chip: total vs spx delta ($ + pts), pinned to the left of the legend */
+  .cmb-alpha { margin-right: auto; gap: 8px; color: rgba(229,225,241,0.7); }
+  .cmb-alpha b { font-weight: 600; letter-spacing: 0.02em; }
+  .cmb-alpha b.pos { color: var(--pos); }
+  .cmb-alpha b.neg { color: var(--neg); }
+  .cmb-alpha-sep { opacity: 0.4; }
 
   /* Total view: multi-series tooltip, clickable stat tiles */
   .cmb-tooltip { display: flex; flex-direction: column; gap: 3px; }

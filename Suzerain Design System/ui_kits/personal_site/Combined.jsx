@@ -322,6 +322,13 @@ function CmbChart({ series, log, bench, benchNotional }) {
   const hp = hover != null ? series[hover] : null;
   const lastPt = series[series.length - 1];
 
+  // Alpha vs the S&P: total return minus SPX return, both measured on the same
+  // benchmark notional, so $ and % (percentage-point) deltas stay consistent.
+  const hasSpx = benches.some(b => b.key === 'spx');
+  const alpha = (hasSpx && lastPt && lastPt.spx != null && benchNotional)
+    ? { dollars: lastPt.v - lastPt.spx, pts: ((lastPt.v - lastPt.spx) / benchNotional) * 100 }
+    : null;
+
   return (
     <>
     <div className="pm-chart-wrap">
@@ -416,6 +423,15 @@ function CmbChart({ series, log, bench, benchNotional }) {
     </div>
     {benches.length > 0 && (
       <div className="pf-bench-legend">
+        {alpha && (
+          <span className="cmb-alpha"
+            title="trailing-12mo total return minus S&P 500 return on the same notional">
+            Δ vs spx
+            <b className={alpha.dollars >= 0 ? 'pos' : 'neg'}>{cmbSigned(alpha.dollars)}</b>
+            <span className="cmb-alpha-sep">·</span>
+            <b className={alpha.pts >= 0 ? 'pos' : 'neg'}>{(alpha.pts >= 0 ? '+' : '') + alpha.pts.toFixed(1)}%</b>
+          </span>
+        )}
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
         {benches.map(b => (
           <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{benchNotional ? ` · on ${cmbUSDk(benchNotional)}` : ''}</span>
