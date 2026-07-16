@@ -608,12 +608,12 @@ function Combined({ setView }) {
   const go = (v) => setView ? () => setView(v) : undefined;
 
   return (
-    <section className="pf-wrap">
+    <section className="pf-wrap cmb-view">
       <div className="pf-head">
         <div>
           <div className="sz-kicker">◆ overview · ibkr + polymarket</div>
           <h2 className="sz-h2 pm-headline">
-            <span className={pos ? 'pos' : 'neg'}>{pos ? '+' : ''}{cmbUSD(data.total)}</span>
+            <span>{pos ? '+' : ''}{cmbUSD(data.total)}</span>
             <span className="pf-currency">trailing 12mo pnl</span>
           </h2>
           <div className="pf-sub">
