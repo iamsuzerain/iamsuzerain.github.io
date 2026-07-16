@@ -199,6 +199,16 @@
       "sponsored": 102,
       "uma": 0,
       "fees": 1629
+    },
+    {
+      "d": "2026-07-16",
+      "trading": -16152,
+      "lp": 2657,
+      "yield": 36,
+      "maker": 1327,
+      "sponsored": 102,
+      "uma": 0,
+      "fees": 1637
     }
   ]
 }
