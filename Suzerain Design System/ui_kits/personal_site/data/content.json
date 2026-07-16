@@ -1,17 +1,17 @@
 {
   "about": {
     "headline": "the morning will come when the world is mine",
-    "bio": "I'm a degenerate (trader) since 2017. My instincts tend to revolve around theta farming but I can take momentum tracks too. Historically I'm most successful in trading the VIX, with a high return in elections, and I've recently branched out to prediction markets with a large % of capital now that Trump has made doing basically anything legal. I dabbled in predictit before from 2017-2024, but the limits were very low so my 1000% return ultimately only produced something like 18k. I might increase my 16.7% of total capital in polymarket if I decide that I have more of an edge there than in traditional markets.",
+    "bio": "I'm a degenerate (trader) since 2017. My instincts tend to revolve around theta farming but I can take momentum tracks too. Historically I'm most successful in trading the VIX, with a high return in elections, and I've recently branched out to prediction markets with a large % of capital now that Trump has made doing basically anything legal. I dabbled in predictit before from 2017-2024, but the limits were very low so my 1000% return ultimately only produced something like 18k. 2026 is the first time I've had a decently sized portfolio in prediction markets, so we'll see how it goes.",
     "links": [
       {
-        "label": "discord — krasnaya."
+        "label": "discord"
       },
       {
-        "label": "reddit — PM_ME_QT_TRANSGIRLS",
+        "label": "reddit",
         "href": "https://reddit.com/user/PM_ME_QT_TRANSGIRLS"
       },
       {
-        "label": "twitter — TaleRisk",
+        "label": "twitter",
         "href": "https://twitter.com/TaleRisk"
       }
     ]
@@ -23,9 +23,9 @@
     "log": [
       {
         "date": "2026-06-30",
-        "body": "EOQ",
+        "body": "EOQ. Despite making 5 figures on geopolitical and election predictions, we ended up with a massive drawdown on Polymarket due to touch options on oil, a tradfi position.",
         "link": {
-          "text": "EOQ",
+          "text": "touch options on oil",
           "href": "#/thoughts/eoq-reflections-an-oil-trade-that-failed"
         }
       },
