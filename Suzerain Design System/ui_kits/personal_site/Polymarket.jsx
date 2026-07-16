@@ -634,7 +634,7 @@ function Polymarket() {
       </div>
 
       <div className="pf-stats">
-        <PmStat label="portfolio value" value={pmUSD(summary.totalValue)}/>
+        <PmStat label="portfolio value" value={pmUSD(summary.totalValue)} kicker="positions + cash · daily"/>
         <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'} kicker="open positions"/>
         <PmStat label="realized pnl"   value={pmUSD(realizedTotal)}   tone={realizedTotal >= 0 ? 'pos' : 'neg'} kicker="settled · all markets"/>
         <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
