@@ -292,7 +292,7 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
 }
 
 // ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
-function CmbChart({ series, log, bench, benchNotional }) {
+function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
   const benches = bench || [];
   const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = useCmbRef(null);
@@ -432,11 +432,12 @@ function CmbChart({ series, log, bench, benchNotional }) {
       <div className="pf-bench-legend">
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
         {benches.map(b => (
-          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{benchNotional ? ` · on ${cmbUSDk(benchNotional)}` : ''}</span>
+          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{(ddNotional != null ? ddNotional : benchNotional) ? ` · on ${cmbUSDk(ddNotional != null ? ddNotional : benchNotional)}` : ''}</span>
         ))}
       </div>
     )}
-    <CmbDrawdownStrip series={series} notional={benchNotional}/>
+    <CmbDrawdownStrip series={series} notional={ddNotional != null ? ddNotional : benchNotional}/>
+    <CmbAlphaStrip series={series}/>
     {cur && (
       <div className="cmb-annot-cap">
         <div className="cmb-annot-cap-head">
@@ -583,6 +584,153 @@ function CmbDrawdownStrip({ series, notional }) {
   );
 }
 
+// ---------- range windowing ----------
+const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y'];
+const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo' };
+
+function cmbRangeCutoff(range, last) {
+  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
+  const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
+  if (!m) return null;
+  const c = new Date(last + 'T00:00:00Z');
+  c.setUTCMonth(c.getUTCMonth() - m);
+  return c.toISOString().slice(0, 10);
+}
+
+// Benchmark $ line for a window: forward-fill raw closes onto `dates`, base to the
+// first (window-start) close, and scale by the window-start equity. This is the
+// index's actual return over the window on the capital held at the window start —
+// not a constant offset of the stale 1y line.
+function cmbBenchWindow(benchSeries, notional, dates) {
+  if (!benchSeries || !benchSeries.length) return null;
+  let j = 0, lastClose = null;
+  const out = new Array(dates.length);
+  for (let i = 0; i < dates.length; i++) {
+    while (j < benchSeries.length && benchSeries[j].d <= dates[i]) { lastClose = benchSeries[j].v; j++; }
+    out[i] = lastClose;
+  }
+  const firstKnown = out.find(v => v != null);
+  if (firstKnown == null) return null;
+  for (let i = 0; i < out.length && out[i] == null; i++) out[i] = firstKnown;
+  const base = out[0];
+  if (!base) return null;
+  return out.map(v => +(notional * (v / base - 1)).toFixed(2));
+}
+
+// Slice the combined $ series to a trailing range and rebase the P&L streams
+// (v/ibkr/pm) to the window start. Benchmark lines (spx/vt) are *rebuilt* from raw
+// closes on the window-start equity, so they track the selected timeframe rather
+// than the 1y-ago capital/base. Returns the window-start equity as `notional`,
+// which also keeps the drawdown strip's % correct for the sub-window.
+function cmbWindow(series, notional, range, benchmarks) {
+  if (!series || series.length < 2) return { series, notional };
+  const last = series[series.length - 1].d;
+  const cutoff = cmbRangeCutoff(range, last);
+  let i = cutoff ? series.findIndex(p => p.d >= cutoff) : 0;
+  if (i < 0) i = 0;
+  if (i > series.length - 2) i = series.length - 2;
+  const s0 = series[i];
+  const winNotional = (notional || 0) + (s0.v || 0);
+  const out = series.slice(i).map(p => {
+    const q = { d: p.d };
+    for (const k of ['v', 'ibkr', 'pm']) if (p[k] != null) q[k] = +(p[k] - s0[k]).toFixed(2);
+    return q;
+  });
+  const dates = out.map(p => p.d);
+  for (const key of ['spx', 'vt']) {
+    let vals = null;
+    if (benchmarks && benchmarks[key] && benchmarks[key].series) {
+      vals = cmbBenchWindow(benchmarks[key].series, winNotional, dates);
+    }
+    if (vals) {
+      out.forEach((p, k) => { p[key] = vals[k]; });
+    } else if (s0[key] != null) {  // fallback: keep the line visible via subtraction
+      out.forEach((p, k) => { p[key] = +(series[i + k][key] - s0[key]).toFixed(2); });
+    }
+  }
+  return { series: out, notional: winNotional };
+}
+
+// ---------- combined rolling alpha strip (total $ minus SPX $, zero-centered) ----------
+function CmbAlphaStrip({ series }) {
+  const svgRef = useCmbRef(null);
+  const [hover, setHover] = useCmbState(null);
+  if (!series || series.length < 2 || series[0].spx == null) return null;
+  const alpha = series.map(p => ({ d: p.d, v: +(p.v - (p.spx || 0)).toFixed(2) }));
+  const last = alpha[alpha.length - 1].v;
+  const vals = alpha.map(p => p.v);
+  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const pad = (hi - lo) * 0.12 || 1;
+  const y0 = lo - pad, y1 = hi + pad;
+  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
+  const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const line = alpha.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const zeroY = y(0);
+  const area = line + ` L${x(alpha.length - 1).toFixed(2)},${zeroY.toFixed(2)} L${x(0).toFixed(2)},${zeroY.toFixed(2)} Z`;
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(alpha.length - 1, Math.round(t * (alpha.length - 1))));
+    setHover(idx);
+  }
+  const hovered = hover != null ? alpha[hover] : null;
+
+  return (
+    <>
+      <div className="pf-strip-head">
+        <span className="pf-strip-label">alpha vs spx · cumulative</span>
+        <span className="pf-strip-meta">now {cmbSigned(last)}</span>
+      </div>
+      <div className="pm-chart-wrap">
+        <svg
+          ref={svgRef}
+          className="pf-navchart"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHover(null)}
+          onTouchStart={onMove}
+          onTouchMove={onMove}
+          onTouchEnd={() => setHover(null)}
+        >
+          <defs>
+            <linearGradient id="cmb-alpha-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
+              <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
+            </linearGradient>
+          </defs>
+          <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
+            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+          <path d={area} fill="url(#cmb-alpha-fill)"/>
+          <path d={line} fill="none" stroke="rgba(96,165,250,0.85)" strokeWidth="1.25"/>
+          {hovered && (
+            <g>
+              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#0a0612" strokeWidth="1.5"/>
+            </g>
+          )}
+        </svg>
+        {hovered && (
+          <div className="pm-tooltip cmb-tooltip" style={{
+            left: `${(x(hover) / W) * 100}%`,
+            top: `${(y(hovered.v) / H) * 100}%`,
+          }}>
+            <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
+            <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{cmbSigned(hovered.v)}</div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function CmbStat({ label, value, tone, onClick, note }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
@@ -641,6 +789,7 @@ function CmbDeployBar({ ibkr, poly }) {
 function Combined({ setView }) {
   const [data, setData] = useCmbState(null);
   const [err, setErr] = useCmbState(null);
+  const [range, setRange] = useCmbState('1Y');
 
   useCmbEffect(() => {
     let cancelled = false;
@@ -703,6 +852,7 @@ function Combined({ setView }) {
 
       const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers);
       built.log = log;
+      built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
       if (ibkrNav != null && polyNav != null) {
         // Both NAVs are daily-cron snapshots. Show the *older* input date so the
         // "as of" never overstates how fresh the bar is.
@@ -735,10 +885,20 @@ function Combined({ setView }) {
     </section>
   );
 
-  const pos = data.total >= 0;
   const go = (v) => setView ? () => setView(v) : undefined;
   const risk = cmbRisk(data.series, data.benchNotional);
   const pct1 = (v) => (v * 100).toFixed(1) + '%';
+  // Range selector windows the chart + its strips (risk panel stays trailing-12mo).
+  const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks);
+  // Endpoint of the rebased window = each stream's P&L over the selected range,
+  // so the headline + summary tiles track the timeframe on the chart.
+  const wLast = (win.series && win.series.length) ? win.series[win.series.length - 1] : { v: 0, ibkr: 0, pm: 0 };
+  const wTotal = wLast.v || 0, wIbkr = wLast.ibkr || 0, wPm = wLast.pm || 0;
+  const wSpxD = wLast.spx != null ? +(wLast.v - wLast.spx).toFixed(2) : null;
+  const wSpxPts = (wSpxD != null && win.notional) ? (wSpxD / win.notional) * 100 : null;
+  const pos = wTotal >= 0;
+  const rangeSub = range === '1Y' ? 'trailing 12mo' : CMB_RANGE_LABEL[range];
+  const rangeNote = data.bdExtra ? `${CMB_RANGE_LABEL[range]} · trading + rewards` : `${CMB_RANGE_LABEL[range]} trading`;
 
   return (
     <section className="pf-wrap cmb-view">
@@ -746,33 +906,40 @@ function Combined({ setView }) {
         <div>
           <div className="sz-kicker">◆ overview · ibkr + polymarket</div>
           <h2 className="sz-h2 pm-headline">
-            <span>{pos ? '+' : ''}{cmbUSD(data.total)}</span>
-            <span className="pf-currency">trailing 12mo pnl</span>
+            <span>{pos ? '+' : ''}{cmbUSD(wTotal)}</span>
+            <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${CMB_RANGE_LABEL[range]} pnl`}</span>
           </h2>
           <div className="pf-sub">
-            deposit-adjusted brokerage + prediction-market trading{data.bdExtra ? ' + rewards' : ''}, trailing 12mo
+            deposit-adjusted brokerage + prediction-market trading{data.bdExtra ? ' + rewards' : ''}, {rangeSub}
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
       </div>
 
       <div className="pf-stats">
-        <CmbStat label="ibkr" value={cmbSigned(data.ibkr)} tone={data.ibkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
-        <CmbStat label="polymarket" value={cmbSigned(data.pm)} tone={data.pm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={data.bdExtra ? '12mo · trading + rewards' : '12mo trading'}/>
-        {data.vsSpx && (
-          <CmbStat label="vs spx" value={cmbSigned(data.vsSpx.dollars)}
-            tone={data.vsSpx.dollars >= 0 ? 'pos' : 'neg'}
-            note={`${data.vsSpx.pts >= 0 ? '+' : ''}${data.vsSpx.pts.toFixed(1)}% on notional`}/>
+        <CmbStat label="ibkr" value={cmbSigned(wIbkr)} tone={wIbkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
+        <CmbStat label="polymarket" value={cmbSigned(wPm)} tone={wPm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={rangeNote}/>
+        {wSpxD != null && (
+          <CmbStat label="vs spx" value={cmbSigned(wSpxD)}
+            tone={wSpxD >= 0 ? 'pos' : 'neg'}
+            note={`${wSpxPts >= 0 ? '+' : ''}${wSpxPts.toFixed(1)}% on notional`}/>
         )}
       </div>
 
       {data.series.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">total pnl · 12mo</span>
-            <span className="pf-panel-meta">{data.bdExtra ? 'daily · USD · rewards spread linearly' : 'daily · USD'}{data.bench && data.bench.length ? ' · vs spx + vt' : ''}</span>
+            <span className="pf-panel-title">total pnl · {CMB_RANGE_LABEL[range]}</span>
+            <div className="pf-range">
+              {CMB_RANGES.map(r => (
+                <button key={r} type="button"
+                  className={`pf-range-btn${range === r ? ' active' : ''}`}
+                  onClick={() => setRange(r)}>{r.toLowerCase()}</button>
+              ))}
+            </div>
           </div>
-          <CmbChart series={data.series} log={data.log} bench={data.bench} benchNotional={data.benchNotional}/>
+          <CmbChart series={win.series} log={data.log} bench={data.bench}
+            benchNotional={data.benchNotional} ddNotional={win.notional}/>
         </div>
       )}
 

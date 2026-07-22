@@ -65,6 +65,42 @@ function drawdownSeries(perf) {
   });
 }
 
+const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y'];
+const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo' };
+
+function pfRangeCutoff(range, dates) {
+  const last = dates[dates.length - 1];
+  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
+  const months = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
+  if (!months) return dates[0];
+  const c = new Date(last + 'T00:00:00Z');
+  c.setUTCMonth(c.getUTCMonth() - months);
+  return c.toISOString().slice(0, 10);
+}
+
+// Slice navSeries + perfSeries to a trailing range and re-base the cumulative
+// TWR to the window start, so a 3M view reads as the 3M return rather than 3M of
+// the full 12mo curve. Both arrays share dates/length, so one index aligns them.
+function pfWindow(navSeries, perfSeries, range) {
+  if (!perfSeries || perfSeries.length < 2) return { nav: navSeries, perf: perfSeries };
+  const cutoff = pfRangeCutoff(range, perfSeries.map(p => p.d));
+  let i = perfSeries.findIndex(p => p.d >= cutoff);
+  if (i < 0) i = 0;
+  if (i > perfSeries.length - 2) i = perfSeries.length - 2;  // keep >= 2 points
+  const base = perfSeries[i].v;
+  const perf = perfSeries.slice(i).map(p => ({ d: p.d, v: (1 + p.v) / (1 + base) - 1 }));
+  return { nav: navSeries.slice(i), perf };
+}
+
+// Cumulative alpha: portfolio TWR minus the benchmark's rebased cumulative
+// return, per date (both start at 0 at the window start).
+function pfAlphaSeries(perf, benchSeries) {
+  if (!perf || perf.length < 2 || !benchSeries) return null;
+  const b = rebaseBenchmark(benchSeries, perf.map(p => p.d));
+  if (!b) return null;
+  return perf.map((p, i) => ({ d: p.d, v: p.v - b[i] }));
+}
+
 // ---------- Monotone cubic spline (Fritsch-Carlson) ----------
 function smoothPath(xs, ys) {
   const n = xs.length;
@@ -394,6 +430,78 @@ function DrawdownStrip({ perfSeries }) {
   );
 }
 
+// ---------- Rolling alpha strip (cumulative TWR minus SPX, zero-centered) ----------
+function AlphaStrip({ alpha }) {
+  const svgRef = usePortRef(null);
+  const [hover, setHover] = usePortState(null);
+  if (!alpha || alpha.length < 2) return null;
+  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
+  const vals = alpha.map(p => p.v);
+  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const pad = (hi - lo) * 0.12 || 0.002;
+  const y0 = lo - pad, y1 = hi + pad;
+  const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const line = smoothPath(alpha.map((_, i) => x(i)), alpha.map(p => y(p.v)));
+  const zeroY = y(0);
+  const area = line + ` L${x(alpha.length - 1).toFixed(2)},${zeroY.toFixed(2)} L${x(0).toFixed(2)},${zeroY.toFixed(2)} Z`;
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(alpha.length - 1, Math.round(t * (alpha.length - 1))));
+    setHover(idx);
+  }
+  const hovered = hover != null ? alpha[hover] : null;
+
+  return (
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        className="pf-navchart"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id="pf-alpha-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
+            <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
+          </linearGradient>
+        </defs>
+        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
+          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <path d={area} fill="url(#pf-alpha-fill)"/>
+        <path d={line} fill="none" stroke="rgba(96,165,250,0.85)" strokeWidth="1.25"/>
+        {hovered && (
+          <g>
+            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#0a0612" strokeWidth="1.5"/>
+          </g>
+        )}
+      </svg>
+      {hovered && (
+        <div className="pm-tooltip" style={{
+          left: `${(x(hover) / W) * 100}%`,
+          top: `${(y(hovered.v) / H) * 100}%`,
+        }}>
+          <div className="pm-tt-date">{hovered.d}</div>
+          <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{hovered.v >= 0 ? '+' : ''}{fmtPctBare(hovered.v)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------- Positions table ----------
 function posTypeLabel(assetClass, subCategory) {
   const ac = (assetClass || '').toUpperCase();
@@ -487,6 +595,7 @@ function Portfolio() {
   const [data, setData] = usePortState(null);
   const [err, setErr] = usePortState(null);
   const [bench, setBench] = usePortState(null);
+  const [range, setRange] = usePortState('1Y');
 
   usePortEffect(() => {
     fetch('data/portfolio.json', { cache: 'no-store' })
@@ -523,6 +632,14 @@ function Portfolio() {
   // Plain computation (not a hook) — this runs after the early returns above, so
   // a useMemo here would violate the rules of hooks. computeBeta is cheap.
   const betaObj = bench && bench.spx ? computeBeta(d.perfSeries, bench.spx.series) : null;
+
+  // Range selector windows the chart + its strips (risk tiles stay trailing-12mo).
+  const win = pfWindow(d.navSeries, d.perfSeries, range);
+  const alpha = bench && bench.spx ? pfAlphaSeries(win.perf, bench.spx.series) : null;
+  const winDd = win.perf && win.perf.length ? drawdownSeries(win.perf) : [];
+  const winMaxDd = winDd.length ? Math.min(0, ...winDd.map(p => p.v)) : 0;
+  const winCurDd = winDd.length ? winDd[winDd.length - 1].v : 0;
+  const alphaNow = alpha && alpha.length ? alpha[alpha.length - 1].v : null;
 
   return (
     <section className="pf-wrap">
@@ -561,15 +678,30 @@ function Portfolio() {
 
       <div className="pf-panel">
         <div className="pf-panel-head">
-          <span className="pf-panel-title">performance · 12mo</span>
-          <span className="pf-panel-meta">daily · % return{bench ? ' · vs spx + vt' : ''}</span>
+          <span className="pf-panel-title">performance · {PF_RANGE_LABEL[range]}</span>
+          <div className="pf-range">
+            {PF_RANGES.map(r => (
+              <button key={r} type="button"
+                className={`pf-range-btn${range === r ? ' active' : ''}`}
+                onClick={() => setRange(r)}>{r.toLowerCase()}</button>
+            ))}
+          </div>
         </div>
-        <NavChart series={d.navSeries} perfSeries={d.perfSeries} benchmarks={bench}/>
+        <NavChart series={win.nav} perfSeries={win.perf} benchmarks={bench}/>
         <div className="pf-strip-head">
           <span className="pf-strip-label">underwater · drawdown from peak</span>
-          {risk && <span className="pf-strip-meta">max {fmtPctBare(risk.maxDrawdown)} · now {fmtPctBare(risk.currentDrawdown)}</span>}
+          <span className="pf-strip-meta">max {fmtPctBare(winMaxDd)} · now {fmtPctBare(winCurDd)}</span>
         </div>
-        <DrawdownStrip perfSeries={d.perfSeries}/>
+        <DrawdownStrip perfSeries={win.perf}/>
+        {alpha && (
+          <>
+            <div className="pf-strip-head">
+              <span className="pf-strip-label">alpha vs spx · cumulative</span>
+              <span className="pf-strip-meta">now {alphaNow >= 0 ? '+' : ''}{fmtPctBare(alphaNow)}</span>
+            </div>
+            <AlphaStrip alpha={alpha}/>
+          </>
+        )}
       </div>
 
       <div className="pf-row">
