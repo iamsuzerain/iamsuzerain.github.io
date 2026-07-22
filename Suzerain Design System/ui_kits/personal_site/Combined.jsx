@@ -436,6 +436,7 @@ function CmbChart({ series, log, bench, benchNotional }) {
         ))}
       </div>
     )}
+    <CmbDrawdownStrip series={series} notional={benchNotional}/>
     {cur && (
       <div className="cmb-annot-cap">
         <div className="cmb-annot-cap-head">
@@ -448,6 +449,136 @@ function CmbChart({ series, log, bench, benchNotional }) {
         <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>
       </div>
     )}
+    </>
+  );
+}
+
+// Risk/return analytics for the combined book, off the reconstructed equity
+// curve (window-start capital base + cumulative combined P&L). data.series is
+// calendar-daily (cmbSampleDaily fills every day), so we annualize by 365 — not
+// the 252 the IBKR tab uses on its trading-day perfSeries. rf assumed 0.
+function cmbRisk(series, notional) {
+  if (!series || series.length < 21 || !notional || notional <= 0) return null;
+  const PER = 365;
+  const eq = series.map(p => notional + p.v);
+  const rp = [];
+  for (let i = 1; i < eq.length; i++) if (eq[i - 1] > 0) rp.push(eq[i] / eq[i - 1] - 1);
+  const n = rp.length;
+  if (n < 20) return null;
+  const mean = rp.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(rp.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+  const vol = sd * Math.sqrt(PER);
+  const sharpe = vol ? (mean * PER) / vol : null;
+
+  let peak = eq[0], maxDD = 0;
+  for (const e of eq) {
+    if (e > peak) peak = e;
+    const dd = peak > 0 ? e / peak - 1 : 0;
+    if (dd < maxDD) maxDD = dd;
+  }
+
+  // Beta vs SPX, if the benchmark line is present (spx equity = notional + $spx).
+  let beta = null, r2 = null;
+  if (series[0].spx != null) {
+    const beq = series.map(p => notional + (p.spx || 0));
+    const a = [], b = [];
+    for (let i = 1; i < eq.length; i++) {
+      if (eq[i - 1] > 0 && beq[i - 1] > 0) { a.push(eq[i] / eq[i - 1] - 1); b.push(beq[i] / beq[i - 1] - 1); }
+    }
+    const m = a.length;
+    if (m >= 20) {
+      const ma = a.reduce((x, y) => x + y, 0) / m, mb = b.reduce((x, y) => x + y, 0) / m;
+      let cov = 0, vb = 0, va = 0;
+      for (let i = 0; i < m; i++) { const da = a[i] - ma, db = b[i] - mb; cov += da * db; vb += db * db; va += da * da; }
+      if (vb > 0 && va > 0) { beta = cov / vb; r2 = (cov * cov) / (vb * va); }
+    }
+  }
+  return { sharpe, vol, maxDD, beta, r2 };
+}
+
+// ---------- combined underwater (drawdown) strip ----------
+// Drawdown is a portfolio-level idea, so we rebuild an equity curve from the
+// window-start capital base (benchNotional) plus cumulative combined P&L, then
+// measure the % decline from its running peak. Straight-line to match CmbChart.
+function CmbDrawdownStrip({ series, notional }) {
+  const svgRef = useCmbRef(null);
+  const [hover, setHover] = useCmbState(null);
+  if (!series || series.length < 2 || !notional || notional <= 0) return null;
+
+  let peak = notional + series[0].v;
+  const dd = series.map(p => {
+    const eq = notional + p.v;
+    if (eq > peak) peak = eq;
+    return { d: p.d, v: peak > 0 ? eq / peak - 1 : 0 };
+  });
+  const min = Math.min(0, ...dd.map(p => p.v));
+  const maxDD = min, curDD = dd[dd.length - 1].v;
+  const pct = (v) => (v * 100).toFixed(1) + '%';
+
+  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 6, PAD_B = 12;
+  const x = (i) => PAD_L + (i / (dd.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - min) / (0 - min || 1)) * (H - PAD_T - PAD_B);
+  const line = dd.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const area = line + ` L${x(dd.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(dd.length - 1, Math.round(t * (dd.length - 1))));
+    setHover(idx);
+  }
+  const hovered = hover != null ? dd[hover] : null;
+
+  return (
+    <>
+      <div className="pf-strip-head">
+        <span className="pf-strip-label">underwater · drawdown from peak</span>
+        <span className="pf-strip-meta">max {pct(maxDD)} · now {pct(curDD)}</span>
+      </div>
+      <div className="pm-chart-wrap">
+        <svg
+          ref={svgRef}
+          className="pf-navchart"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHover(null)}
+          onTouchStart={onMove}
+          onTouchMove={onMove}
+          onTouchEnd={() => setHover(null)}
+        >
+          <defs>
+            <linearGradient id="cmb-dd-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
+              <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
+            </linearGradient>
+          </defs>
+          <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
+            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+          <path d={area} fill="url(#cmb-dd-fill)"/>
+          <path d={line} fill="none" stroke="rgba(255,110,196,0.75)" strokeWidth="1.25"/>
+          {hovered && (
+            <g>
+              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#0a0612" strokeWidth="1.5"/>
+            </g>
+          )}
+        </svg>
+        {hovered && (
+          <div className="pm-tooltip cmb-tooltip" style={{
+            left: `${(x(hover) / W) * 100}%`,
+            top: `${(y(hovered.v) / H) * 100}%`,
+          }}>
+            <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
+            <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{pct(hovered.v)}</div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -606,6 +737,8 @@ function Combined({ setView }) {
 
   const pos = data.total >= 0;
   const go = (v) => setView ? () => setView(v) : undefined;
+  const risk = cmbRisk(data.series, data.benchNotional);
+  const pct1 = (v) => (v * 100).toFixed(1) + '%';
 
   return (
     <section className="pf-wrap cmb-view">
@@ -650,6 +783,22 @@ function Combined({ setView }) {
             <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
           </div>
           <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
+        </div>
+      )}
+
+      {risk && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">risk · trailing 12mo</span>
+            <span className="pf-panel-meta">combined equity · 365d annualized</span>
+          </div>
+          <div className="cmb-risk-grid">
+            <CmbStat label="sharpe"  value={risk.sharpe != null ? risk.sharpe.toFixed(2) : '—'} note="risk-adjusted · rf 0"/>
+            <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
+            <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
+            <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
+              note={risk.beta != null && risk.r2 != null ? `vs spx · r² ${risk.r2.toFixed(2)}` : 'vs spx'}/>
+          </div>
         </div>
       )}
 

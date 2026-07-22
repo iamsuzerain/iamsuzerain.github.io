@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T07:00:14Z",
+  "generatedAt": "2026-07-22T07:19:07Z",
   "account": {
     "id": "U\u2022\u2022\u2022\u2022003",
     "currency": "USD",
@@ -25,6 +25,237 @@
       "pct": 0.49701954518999997
     }
   },
+  "risk": {
+    "sharpe": 2.55,
+    "sortino": 3.6,
+    "vol": 0.1586,
+    "maxDrawdown": -0.06,
+    "currentDrawdown": -0.0006,
+    "concentration": {
+      "top": 0.4076,
+      "top3": 0.779,
+      "hhi": 0.2813
+    }
+  },
+  "contribution": [
+    {
+      "symbol": "SPX",
+      "name": "SPX",
+      "total": 171342.85,
+      "assetClass": "OPT",
+      "legs": 342
+    },
+    {
+      "symbol": "CL",
+      "name": "CL",
+      "total": 74576.29,
+      "assetClass": "FUT",
+      "legs": 46
+    },
+    {
+      "symbol": "ES",
+      "name": "ES",
+      "total": 55261.75,
+      "assetClass": "FUT",
+      "legs": 183
+    },
+    {
+      "symbol": "GC",
+      "name": "GC",
+      "total": -41190.72,
+      "assetClass": "FOP",
+      "legs": 7
+    },
+    {
+      "symbol": "NKD",
+      "name": "NKD",
+      "total": -38387.08,
+      "assetClass": "FUT",
+      "legs": 1
+    },
+    {
+      "symbol": "SKM",
+      "name": "SK TELECOM CO LTD-SPON ADR",
+      "total": 26013.16,
+      "assetClass": "STK",
+      "legs": 5
+    },
+    {
+      "symbol": "UVIX",
+      "name": "UVIX",
+      "total": 14820.55,
+      "assetClass": "OPT",
+      "legs": 5
+    },
+    {
+      "symbol": "UVXY",
+      "name": "UVXY",
+      "total": 14189.06,
+      "assetClass": "OPT",
+      "legs": 9
+    },
+    {
+      "symbol": "MU",
+      "name": "MICRON TECHNOLOGY INC",
+      "total": 13653.99,
+      "assetClass": "STK",
+      "legs": 6
+    },
+    {
+      "symbol": "GLD",
+      "name": "SPDR GOLD SHARES",
+      "total": 12336.0,
+      "assetClass": "STK",
+      "legs": 1
+    },
+    {
+      "symbol": "MNYCG",
+      "name": "MNYCG",
+      "total": 11670.0,
+      "assetClass": "EVENT_FORECASTX",
+      "legs": 3
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA CORP",
+      "total": 9876.92,
+      "assetClass": "STK",
+      "legs": 4
+    },
+    {
+      "symbol": "TMF",
+      "name": "TMF",
+      "total": -9661.31,
+      "assetClass": "OPT",
+      "legs": 2
+    },
+    {
+      "symbol": "BTC",
+      "name": "BTC",
+      "total": -9060.12,
+      "assetClass": "FOP",
+      "legs": 3
+    },
+    {
+      "symbol": "SVIX",
+      "name": "-1X SHORT VIX FUTURES ETF",
+      "total": -7821.61,
+      "assetClass": "STK",
+      "legs": 9
+    },
+    {
+      "symbol": "MDWD",
+      "name": "MEDIWOUND LTD",
+      "total": -4803.01,
+      "assetClass": "STK",
+      "legs": 1
+    },
+    {
+      "symbol": "ETH.USD-PAXOS",
+      "name": "Ethereum cryptocurrency",
+      "total": -4542.9,
+      "assetClass": "CRYPTO",
+      "legs": 1
+    },
+    {
+      "symbol": "IBIT",
+      "name": "ISHARES BITCOIN TRUST ETF",
+      "total": -4007.42,
+      "assetClass": "STK",
+      "legs": 10
+    },
+    {
+      "symbol": "SOL.USD-PAXOS",
+      "name": "Solana cryptocurrency",
+      "total": -3922.98,
+      "assetClass": "CRYPTO",
+      "legs": 1
+    },
+    {
+      "symbol": "NQ",
+      "name": "NQ",
+      "total": 2605.5,
+      "assetClass": "FOP",
+      "legs": 10
+    },
+    {
+      "symbol": "BZ",
+      "name": "BZ",
+      "total": -2528.96,
+      "assetClass": "FUT",
+      "legs": 2
+    },
+    {
+      "symbol": "GME",
+      "name": "GME",
+      "total": 2234.68,
+      "assetClass": "OPT",
+      "legs": 2
+    },
+    {
+      "symbol": "VOYG",
+      "name": "VOYAGER TECHNOLOGIES INC-A",
+      "total": -2001.18,
+      "assetClass": "STK",
+      "legs": 1
+    },
+    {
+      "symbol": "EXPE",
+      "name": "EXPE",
+      "total": 1936.95,
+      "assetClass": "OPT",
+      "legs": 1
+    },
+    {
+      "symbol": "TSLA",
+      "name": "TSLA",
+      "total": 1412.32,
+      "assetClass": "OPT",
+      "legs": 2
+    },
+    {
+      "symbol": "EWJ",
+      "name": "EWJ",
+      "total": 1368.44,
+      "assetClass": "OPT",
+      "legs": 2
+    },
+    {
+      "symbol": "GRNJ",
+      "name": "GRNJ",
+      "total": 844.75,
+      "assetClass": "EVENT_FORECASTX",
+      "legs": 2
+    },
+    {
+      "symbol": "INTC",
+      "name": "INTC",
+      "total": 708.0,
+      "assetClass": "OPT",
+      "legs": 1
+    },
+    {
+      "symbol": "AAPL",
+      "name": "AAPL",
+      "total": 508.77,
+      "assetClass": "OPT",
+      "legs": 1
+    },
+    {
+      "symbol": "SI",
+      "name": "SI",
+      "total": 347.48,
+      "assetClass": "FOP",
+      "legs": 1
+    },
+    {
+      "symbol": "SHY",
+      "name": "ISHARES 1-3 YEAR TREASURY BO",
+      "total": 242.33,
+      "assetClass": "STK",
+      "legs": 1
+    }
+  ],
   "navSeries": [
     {
       "d": "2025-07-21",

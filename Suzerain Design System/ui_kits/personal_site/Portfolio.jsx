@@ -18,6 +18,52 @@ function fmtPct(n) {
 function fmtDate(iso) {
   try { return new Date(iso).toISOString().slice(0, 10); } catch { return iso; }
 }
+function fmtNum(n, dp = 2) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toFixed(dp);
+}
+// Unsigned percentage (for vol / drawdown / concentration where a +/- prefix
+// would read oddly). Negative values keep their sign.
+function fmtPctBare(n, dp = 1) {
+  if (n == null || isNaN(n)) return '—';
+  return (n * 100).toFixed(dp) + '%';
+}
+
+// Beta and R² of the portfolio's daily TWR against a benchmark's aligned daily
+// returns. Both inputs are cumulative-return ratios per perf date; the wealth
+// curve is 1 + v so a daily return is wealth_i / wealth_{i-1} - 1.
+function computeBeta(perf, benchSeries) {
+  if (!perf || perf.length < 21 || !benchSeries) return null;
+  const bcum = rebaseBenchmark(benchSeries, perf.map(p => p.d));
+  if (!bcum) return null;
+  const rp = [], rb = [];
+  for (let i = 1; i < perf.length; i++) {
+    const pa = 1 + perf[i - 1].v, pb = 1 + perf[i].v;
+    const ba = 1 + bcum[i - 1], bb = 1 + bcum[i];
+    if (pa > 0 && ba > 0) { rp.push(pb / pa - 1); rb.push(bb / ba - 1); }
+  }
+  const n = rp.length;
+  if (n < 20) return null;
+  const mp = rp.reduce((a, b) => a + b, 0) / n, mb = rb.reduce((a, b) => a + b, 0) / n;
+  let cov = 0, vb = 0, vp = 0;
+  for (let i = 0; i < n; i++) {
+    const dp = rp[i] - mp, db = rb[i] - mb;
+    cov += dp * db; vb += db * db; vp += dp * dp;
+  }
+  if (vb === 0 || vp === 0) return null;
+  return { beta: cov / vb, r2: (cov * cov) / (vb * vp) };
+}
+
+// Underwater series: decline from the running peak of the wealth curve, as a
+// non-positive ratio per date.
+function drawdownSeries(perf) {
+  let peak = perf.length ? 1 + perf[0].v : 1;
+  return perf.map(p => {
+    const w = 1 + p.v;
+    if (w > peak) peak = w;
+    return { d: p.d, v: peak > 0 ? w / peak - 1 : 0 };
+  });
+}
 
 // ---------- Monotone cubic spline (Fritsch-Carlson) ----------
 function smoothPath(xs, ys) {
@@ -279,6 +325,75 @@ function StatTile({ label, value, change, kicker }) {
   );
 }
 
+// ---------- Underwater (drawdown) strip ----------
+function DrawdownStrip({ perfSeries }) {
+  const svgRef = usePortRef(null);
+  const [hover, setHover] = usePortState(null);
+  if (!perfSeries || perfSeries.length < 2) return null;
+  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 6, PAD_B = 12;
+  const dd = drawdownSeries(perfSeries);
+  const min = Math.min(0, ...dd.map(p => p.v));
+  const x = (i) => PAD_L + (i / (dd.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - min) / (0 - min || 1)) * (H - PAD_T - PAD_B);
+  const line = smoothPath(dd.map((_, i) => x(i)), dd.map(p => y(p.v)));
+  const area = line + ` L${x(dd.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(dd.length - 1, Math.round(t * (dd.length - 1))));
+    setHover(idx);
+  }
+  const hovered = hover != null ? dd[hover] : null;
+
+  return (
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        className="pf-navchart"
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id="pf-dd-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
+            <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
+          </linearGradient>
+        </defs>
+        <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
+          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <path d={area} fill="url(#pf-dd-fill)"/>
+        <path d={line} fill="none" stroke="rgba(255,110,196,0.75)" strokeWidth="1.25"/>
+        {hovered && (
+          <g>
+            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#0a0612" strokeWidth="1.5"/>
+          </g>
+        )}
+      </svg>
+      {hovered && (
+        <div className="pm-tooltip" style={{
+          left: `${(x(hover) / W) * 100}%`,
+          top: `${(y(hovered.v) / H) * 100}%`,
+        }}>
+          <div className="pm-tt-date">{hovered.d}</div>
+          <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{fmtPctBare(hovered.v)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------- Positions table ----------
 function posTypeLabel(assetClass, subCategory) {
   const ac = (assetClass || '').toUpperCase();
@@ -336,6 +451,37 @@ function PositionsTable({ rows }) {
   );
 }
 
+// ---------- contribution to return (diverging bars) ----------
+function ContributionBars({ rows, limit = 12 }) {
+  if (!rows || !rows.length) return null;
+  const top = rows.slice(0, limit);
+  const maxAbs = Math.max(...top.map(r => Math.abs(r.total)), 1);
+  const sum = rows.reduce((a, r) => a + r.total, 0);
+  return (
+    <div className="pf-contrib">
+      {top.map(r => {
+        const w = (Math.abs(r.total) / maxAbs) * 50;  // % of the half-track
+        const pos = r.total >= 0;
+        return (
+          <div className="pf-contrib-row" key={r.symbol}>
+            <span className="pf-contrib-sym" title={r.legs > 1 ? `${r.name} · ${r.legs} contracts` : r.name}>{r.symbol}</span>
+            <div className="pf-contrib-track">
+              <div className="pf-contrib-center"/>
+              <div className={`pf-contrib-bar ${pos ? 'pos' : 'neg'}`}
+                style={pos ? { left: '50%', width: `${w}%` } : { right: '50%', width: `${w}%` }}/>
+            </div>
+            <span className={`pf-contrib-val ${pos ? 'pos' : 'neg'}`}>{pos ? '+' : ''}{fmtUSD(r.total)}</span>
+          </div>
+        );
+      })}
+      <div className="pf-contrib-foot">
+        <span>{top.length} of {rows.length} holdings</span>
+        <span>net {sum >= 0 ? '+' : ''}{fmtUSD(sum)}</span>
+      </div>
+    </div>
+  );
+}
+
 // ---------- main view ----------
 function Portfolio() {
   const [data, setData] = usePortState(null);
@@ -372,6 +518,11 @@ function Portfolio() {
   const d = data;
   const updated = new Date(d.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const risk = d.risk;
+  const conc = risk && risk.concentration;
+  // Plain computation (not a hook) — this runs after the early returns above, so
+  // a useMemo here would violate the rules of hooks. computeBeta is cheap.
+  const betaObj = bench && bench.spx ? computeBeta(d.perfSeries, bench.spx.series) : null;
 
   return (
     <section className="pf-wrap">
@@ -398,12 +549,27 @@ function Portfolio() {
         {d.pnl['1y'] && <StatTile label="1y" value={fmtUSD(d.pnl['1y'].abs)} change={d.pnl['1y'].pct} kicker="trailing 12mo · twr"/>}
       </div>
 
+      {risk && (
+        <div className="pf-stats pf-stats-risk">
+          <StatTile label="sharpe"  value={fmtNum(risk.sharpe)}          kicker="risk-adjusted · rf 0"/>
+          <StatTile label="ann vol" value={fmtPctBare(risk.vol)}         kicker="annualized · twr"/>
+          <StatTile label="max dd"  value={fmtPctBare(risk.maxDrawdown)} kicker="peak-to-trough"/>
+          <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}
+                    kicker={betaObj ? `vs spx · r² ${fmtNum(betaObj.r2)}` : 'vs spx'}/>
+        </div>
+      )}
+
       <div className="pf-panel">
         <div className="pf-panel-head">
           <span className="pf-panel-title">performance · 12mo</span>
           <span className="pf-panel-meta">daily · % return{bench ? ' · vs spx + vt' : ''}</span>
         </div>
         <NavChart series={d.navSeries} perfSeries={d.perfSeries} benchmarks={bench}/>
+        <div className="pf-strip-head">
+          <span className="pf-strip-label">underwater · drawdown from peak</span>
+          {risk && <span className="pf-strip-meta">max {fmtPctBare(risk.maxDrawdown)} · now {fmtPctBare(risk.currentDrawdown)}</span>}
+        </div>
+        <DrawdownStrip perfSeries={d.perfSeries}/>
       </div>
 
       <div className="pf-row">
@@ -417,11 +583,21 @@ function Portfolio() {
         <div className="pf-panel pf-panel-pos">
           <div className="pf-panel-head">
             <span className="pf-panel-title">top positions</span>
-            <span className="pf-panel-meta">{d.positions.length} shown · sorted by weight</span>
+            <span className="pf-panel-meta">{conc ? `top ${fmtPctBare(conc.top)} · top-3 ${fmtPctBare(conc.top3)}` : `${d.positions.length} shown`} · by weight</span>
           </div>
           <PositionsTable rows={d.positions}/>
         </div>
       </div>
+
+      {d.contribution && d.contribution.length > 0 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">contribution to return · 12mo</span>
+            <span className="pf-panel-meta">mark-to-market p&l per holding</span>
+          </div>
+          <ContributionBars rows={d.contribution}/>
+        </div>
+      )}
 
       <div className="pf-footer">
         <span>source · IBKR Flex Query (daily cron via github actions)</span>
