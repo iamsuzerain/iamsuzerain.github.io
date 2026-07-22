@@ -10,7 +10,7 @@ Writes JSON to stdout. Pipe it into ui_kits/personal_site/data/portfolio.json.
 Stdlib only.
 """
 from __future__ import annotations
-import json, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+import json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService"
@@ -213,6 +213,142 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> l
     return perf
 
 
+_FUT_MONTHS = set("FGHJKMNQUVXZ")  # CME month codes Jan–Dec
+
+
+def _futures_root(code: str) -> str:
+    """Strip a trailing <month-letter><1-2 year digits> so futures contract codes
+    collapse to their commodity root: ESM6 -> ES, GCJ6 -> GC, NKDM6 -> NKD.
+    Leaves equity tickers untouched (they don't end in month-letter+digits)."""
+    n = len(code)
+    for dlen in (2, 1):
+        if n > dlen + 1 and code[n - dlen:].isdigit() and code[n - dlen - 1] in _FUT_MONTHS:
+            root = code[:n - dlen - 1]
+            if root:
+                return root
+    return code
+
+
+def build_contribution(root: ET.Element) -> list[dict]:
+    """Per-symbol contribution to the trailing-period return, from the
+    Mark-to-Market Performance Summary (in Base). Each row's `total` is the
+    base-currency MTM P&L for that symbol over the statement window — realized +
+    unrealized mark-to-market change — so the rows sum to the account's period
+    P&L. That is exactly each holding's contribution to the return.
+
+    IBKR nests the rows as <MTMPerformanceSummaryUnderlying> inside
+    <MTMPerformanceSummaryInBase>. We fall back to any MTM-performance element
+    carrying both a symbol and a total. Rows are rolled up by underlying so one
+    name (MU, ES, …) aggregates its stock + every option/future contract, rather
+    than the hundreds of individual strikes IBKR lists per year. Summary/subtotal
+    rows are skipped, and net-zero underlyings are dropped.
+    """
+    rows = list(root.iter("MTMPerformanceSummaryUnderlying"))
+    if not rows:
+        rows = [e for e in root.iter()
+                if "MTMPerformanceSummary" in e.tag
+                and e.get("symbol") and e.get("total") is not None]
+
+    agg: dict[str, dict] = {}
+    for r in rows:
+        sym = (r.get("symbol") or "").strip()
+        if not sym:
+            continue
+        lod = (r.get("levelOfDetail") or "").upper()
+        if lod in ("SUMMARY", "ASSET_SUMMARY", "SUBTOTAL", "TOTAL"):
+            continue
+        # underlyingSymbol is the reliable grouping key; fall back to the leading
+        # token of the symbol (equity options read as "MU  281215C…") and finally
+        # the symbol itself for plain stocks.
+        und = (r.get("underlyingSymbol") or "").strip()
+        key = und or (sym.split()[0] if " " in sym else sym)
+        key = _futures_root(key)  # ESM6/ESH6 -> ES, CL+CLM6 -> CL, GCJ6 -> GC
+        total = to_float(r.get("total") or "0")
+        is_root = (key == sym)  # the stock/root row carries a human name
+        cur = agg.get(key)
+        if cur:
+            cur["total"] += total
+            cur["legs"] += 1
+            if is_root and cur["name"] == key:
+                cur["name"] = r.get("description") or key
+        else:
+            agg[key] = {
+                "symbol": key,
+                "name": (r.get("description") or key) if is_root else key,
+                "total": total,
+                "assetClass": r.get("assetCategory") or "",
+                "legs": 1,
+            }
+
+    out = [o for o in agg.values() if round(o["total"], 2) != 0.0]
+    for o in out:
+        o["total"] = round(o["total"], 2)
+    out.sort(key=lambda x: -abs(x["total"]))
+    return out
+
+
+TRADING_DAYS = 252  # annualization factor for daily-sampled series
+
+
+def build_risk(perf_series: list[dict], positions: list[dict]) -> dict:
+    """Risk/return analytics derived from the daily TWR curve (perf_series) and
+    current positions. perf_series carries cumulative return as a ratio, so the
+    wealth curve is 1 + v and daily HPRs are wealth_i / wealth_{i-1} - 1.
+
+    Sharpe/Sortino assume a 0% risk-free rate (short-horizon rf is negligible
+    against a ~50% annual return and keeps the figure provider-independent).
+    """
+    wealth = [1.0 + p["v"] for p in perf_series]
+    rets = [wealth[i] / wealth[i - 1] - 1.0 for i in range(1, len(wealth))
+            if wealth[i - 1] > 0]
+
+    sharpe = vol = sortino = None
+    if len(rets) >= 20:
+        n = len(rets)
+        mean = sum(rets) / n
+        var = sum((r - mean) ** 2 for r in rets) / (n - 1)
+        sd = math.sqrt(var)
+        # Downside deviation about a 0 target (only losses contribute).
+        dvar = sum(min(r, 0.0) ** 2 for r in rets) / n
+        dd = math.sqrt(dvar)
+        ann_ret = mean * TRADING_DAYS
+        vol = sd * math.sqrt(TRADING_DAYS)
+        sharpe = ann_ret / vol if vol else None
+        sortino = ann_ret / (dd * math.sqrt(TRADING_DAYS)) if dd else None
+
+    # Drawdown over the wealth curve: peak-to-trough decline as a negative ratio.
+    max_dd = cur_dd = 0.0
+    peak = wealth[0] if wealth else 1.0
+    for w in wealth:
+        if w > peak:
+            peak = w
+        if peak > 0:
+            dd_t = w / peak - 1.0
+            if dd_t < max_dd:
+                max_dd = dd_t
+    if wealth and peak > 0:
+        cur_dd = wealth[-1] / peak - 1.0
+
+    # Single-name concentration from portfolio weights (mktValue / NAV).
+    weights = sorted((abs(p.get("weight", 0.0)) for p in positions), reverse=True)
+    top = weights[0] if weights else 0.0
+    top3 = sum(weights[:3])
+    hhi = sum(w * w for w in weights)  # Herfindahl index on position weights
+
+    return {
+        "sharpe": round(sharpe, 2) if sharpe is not None else None,
+        "sortino": round(sortino, 2) if sortino is not None else None,
+        "vol": round(vol, 4) if vol is not None else None,
+        "maxDrawdown": round(max_dd, 4),
+        "currentDrawdown": round(cur_dd, 4),
+        "concentration": {
+            "top": round(top, 4),
+            "top3": round(top3, 4),
+            "hhi": round(hhi, 4),
+        },
+    }
+
+
 def period_flows(cash_flows: dict[str, float], from_date: str, to_date: str) -> float:
     """Sum daily cash flows (from build_cash_flows) between [from_date, to_date)."""
     return sum(v for d, v in cash_flows.items() if from_date <= d < to_date)
@@ -405,6 +541,8 @@ def transform(root: ET.Element) -> dict:
             "buyingPower": nav * 2,
         },
         "pnl": build_pnl(root, nav_series, nav, cash_flows, nav_correction, perf_series),
+        "risk": build_risk(perf_series, positions),
+        "contribution": build_contribution(root),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),

@@ -465,6 +465,29 @@
     font-family: var(--font-mono); font-size: 10px;
     color: var(--fg-4); letter-spacing: 0.1em;
   }
+  /* second stat row (risk metrics) sits tight under the P&L row */
+  .pf-stats-risk { margin-top: -18px; }
+  .pf-strip-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 16px; margin-bottom: 2px;
+  }
+  .pf-strip-label {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-4); letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .pf-strip-meta {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-4); letter-spacing: 0.1em;
+  }
+  /* combined-view risk panel: flat divided columns, not nested stat cards */
+  .cmb-risk-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .cmb-risk-grid .pf-stat {
+    background: transparent; border: none; border-radius: 0;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    padding: 2px 20px;
+  }
+  .cmb-risk-grid .pf-stat + .pf-stat { border-left: 1px solid var(--border-soft); }
+  .cmb-risk-grid .pf-stat:first-child { padding-left: 0; }
 
   .pf-panel {
     background: rgba(10,6,18,0.45);
@@ -488,6 +511,38 @@
     color: var(--fg-4); letter-spacing: 0.14em; text-transform: uppercase;
   }
   .pf-navchart { width: 100%; height: auto; display: block; }
+
+  /* contribution-to-return diverging bars */
+  .pf-contrib { display: flex; flex-direction: column; gap: 7px; }
+  .pf-contrib-row {
+    display: grid; grid-template-columns: 64px 1fr 96px;
+    align-items: center; gap: 12px;
+  }
+  .pf-contrib-sym {
+    font-family: var(--font-mono); font-size: 12px; color: var(--fg-2);
+    letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pf-contrib-track { position: relative; height: 14px; }
+  .pf-contrib-center {
+    position: absolute; left: 50%; top: -1px; bottom: -1px;
+    width: 1px; background: rgba(229,225,241,0.18);
+  }
+  .pf-contrib-bar {
+    position: absolute; top: 0; height: 100%; border-radius: 2px; min-width: 1px;
+  }
+  .pf-contrib-bar.pos { background: linear-gradient(90deg, rgba(167,139,250,0.55), #a78bfa); }
+  .pf-contrib-bar.neg { background: linear-gradient(270deg, rgba(255,79,216,0.55), #ff4fd8); }
+  .pf-contrib-val {
+    font-family: var(--font-mono); font-size: 11px; text-align: right; letter-spacing: 0.02em;
+  }
+  .pf-contrib-val.pos { color: var(--pos); }
+  .pf-contrib-val.neg { color: var(--neg); }
+  .pf-contrib-foot {
+    display: flex; justify-content: space-between;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft);
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-4); letter-spacing: 0.1em;
+  }
 
   .pf-row {
     display: grid; grid-template-columns: 280px 1fr; gap: 16px;
@@ -554,6 +609,9 @@
 
   @media (max-width: 760px) {
     .pf-stats { grid-template-columns: repeat(2, 1fr); }
+    .cmb-risk-grid { grid-template-columns: repeat(2, 1fr); row-gap: 18px; }
+    .cmb-risk-grid .pf-stat { padding: 2px 16px; }
+    .cmb-risk-grid .pf-stat:nth-child(odd) { padding-left: 0; border-left: none; }
     .pf-row { grid-template-columns: 1fr; }
     .sz-nav {
       gap: 12px; padding: 12px 14px; margin-bottom: 48px;
