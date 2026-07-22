@@ -65,6 +65,15 @@ function cmbMonth(iso) {
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
   return `${mo} ${String(y).slice(2)}`;
 }
+// Span-aware x-axis label: 'day' -> "Jun 12" (short windows), 'month' -> "Jun"
+// (within one year), 'monthyear' -> "Jun 26" (crosses years).
+function cmbAxisLabel(iso, mode) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+  if (mode === 'day') return `${mo} ${d}`;
+  if (mode === 'month') return mo;
+  return `${mo} ${String(y).slice(2)}`;
+}
 function cmbFullDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
@@ -321,6 +330,9 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
 
   const tickEvery = Math.max(1, Math.floor(series.length / 6));
   const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const spanDays = series.length > 1 ? cmbEpochDay(series[series.length - 1].d) - cmbEpochDay(series[0].d) : 0;
+  const axisMode = spanDays <= 95 ? 'day'
+    : (series[0].d.slice(0, 4) === series[series.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
 
   function onMove(e) {
     const svg = svgRef.current;
@@ -408,7 +420,7 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
         {ticks.map((t, i) => (
           <span key={i}
             className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
-            style={{ left: `${(x(t.i) / W) * 100}%` }}>{cmbMonth(t.d)}</span>
+            style={{ left: `${(x(t.i) / W) * 100}%` }}>{cmbAxisLabel(t.d, axisMode)}</span>
         ))}
       </div>
 
@@ -436,8 +448,9 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
         ))}
       </div>
     )}
-    <CmbDrawdownStrip series={series} notional={ddNotional != null ? ddNotional : benchNotional}/>
-    <CmbAlphaStrip series={series}/>
+    <CmbDrawdownStrip series={series} notional={ddNotional != null ? ddNotional : benchNotional}
+      markers={markers} cur={cur} onPick={setAnnot}/>
+    <CmbAlphaStrip series={series} markers={markers} cur={cur} onPick={setAnnot}/>
     {cur && (
       <div className="cmb-annot-cap">
         <div className="cmb-annot-cap-head">
@@ -497,11 +510,24 @@ function cmbRisk(series, notional) {
   return { sharpe, vol, maxDD, beta, r2 };
 }
 
+// Diamond event marker, shared by the main chart and the strips so a log entry
+// reads at the same x across all three (see .cmb-annot-sq styling).
+function CmbAnnotDot({ cx, cy, active, onClick, size = 5 }) {
+  const s = active ? size + 1 : size;
+  return (
+    <g className={`cmb-annot${active ? ' active' : ''}`} onClick={onClick}>
+      <rect x={cx - 8} y={cy - 8} width="16" height="16" fill="transparent"/>
+      <rect className="cmb-annot-sq" x={cx - s / 2} y={cy - s / 2} width={s} height={s}
+        transform={`rotate(45 ${cx} ${cy})`}/>
+    </g>
+  );
+}
+
 // ---------- combined underwater (drawdown) strip ----------
 // Drawdown is a portfolio-level idea, so we rebuild an equity curve from the
 // window-start capital base (benchNotional) plus cumulative combined P&L, then
 // measure the % decline from its running peak. Straight-line to match CmbChart.
-function CmbDrawdownStrip({ series, notional }) {
+function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   if (!series || series.length < 2 || !notional || notional <= 0) return null;
@@ -562,6 +588,10 @@ function CmbDrawdownStrip({ series, notional }) {
             stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
           <path d={area} fill="url(#cmb-dd-fill)"/>
           <path d={line} fill="none" stroke="rgba(255,110,196,0.75)" strokeWidth="1.25"/>
+          {(markers || []).map((m, k) => m.i < dd.length && (
+            <CmbAnnotDot key={k} cx={x(m.i)} cy={y(dd[m.i].v)}
+              active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
+          ))}
           {hovered && (
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -652,7 +682,7 @@ function cmbWindow(series, notional, range, benchmarks) {
 }
 
 // ---------- combined rolling alpha strip (total $ minus SPX $, zero-centered) ----------
-function CmbAlphaStrip({ series }) {
+function CmbAlphaStrip({ series, markers, cur, onPick }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   if (!series || series.length < 2 || series[0].spx == null) return null;
@@ -709,6 +739,10 @@ function CmbAlphaStrip({ series }) {
             stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
           <path d={area} fill="url(#cmb-alpha-fill)"/>
           <path d={line} fill="none" stroke="rgba(96,165,250,0.85)" strokeWidth="1.25"/>
+          {(markers || []).map((m, k) => m.i < alpha.length && (
+            <CmbAnnotDot key={k} cx={x(m.i)} cy={y(alpha[m.i].v)}
+              active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
+          ))}
           {hovered && (
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -886,10 +920,10 @@ function Combined({ setView }) {
   );
 
   const go = (v) => setView ? () => setView(v) : undefined;
-  const risk = cmbRisk(data.series, data.benchNotional);
   const pct1 = (v) => (v * 100).toFixed(1) + '%';
-  // Range selector windows the chart + its strips (risk panel stays trailing-12mo).
+  // Range selector windows the chart, its strips, AND the risk panel.
   const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks);
+  const risk = cmbRisk(win.series, win.notional);
   // Endpoint of the rebased window = each stream's P&L over the selected range,
   // so the headline + summary tiles track the timeframe on the chart.
   const wLast = (win.series && win.series.length) ? win.series[win.series.length - 1] : { v: 0, ibkr: 0, pm: 0 };
@@ -943,20 +977,10 @@ function Combined({ setView }) {
         </div>
       )}
 
-      {data.deploy && (
-        <div className="pf-panel">
-          <div className="pf-panel-head">
-            <span className="pf-panel-title">capital deployment{data.deploy.asOf ? ` · as of ${cmbShortDate(data.deploy.asOf)}` : ''}</span>
-            <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
-          </div>
-          <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
-        </div>
-      )}
-
       {risk && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">risk · trailing 12mo</span>
+            <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : CMB_RANGE_LABEL[range]}</span>
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
           <div className="cmb-risk-grid">
@@ -966,6 +990,16 @@ function Combined({ setView }) {
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
               note={risk.beta != null && risk.r2 != null ? `vs spx · r² ${risk.r2.toFixed(2)}` : 'vs spx'}/>
           </div>
+        </div>
+      )}
+
+      {data.deploy && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">capital deployment{data.deploy.asOf ? ` · as of ${cmbShortDate(data.deploy.asOf)}` : ''}</span>
+            <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
+          </div>
+          <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
         </div>
       )}
 

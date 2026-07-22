@@ -101,6 +101,26 @@ function pfAlphaSeries(perf, benchSeries) {
   return perf.map((p, i) => ({ d: p.d, v: p.v - b[i] }));
 }
 
+// Sharpe / annualized vol / max drawdown over a (windowed) TWR series. Mirrors
+// the Python build_risk: daily HPRs off the 1+v wealth curve, 252-day annualized,
+// rf 0. Returns null for windows with too few points.
+function pfRiskWindow(perf) {
+  if (!perf || perf.length < 21) return null;
+  const wealth = perf.map(p => 1 + p.v);
+  const rets = [];
+  for (let i = 1; i < wealth.length; i++) if (wealth[i - 1] > 0) rets.push(wealth[i] / wealth[i - 1] - 1);
+  const n = rets.length;
+  if (n < 20) return null;
+  const mean = rets.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+  const PER = 252;
+  const vol = sd * Math.sqrt(PER);
+  const sharpe = vol ? (mean * PER) / vol : null;
+  const dd = drawdownSeries(perf);
+  const maxDrawdown = dd.length ? Math.min(0, ...dd.map(p => p.v)) : 0;
+  return { sharpe, vol, maxDrawdown };
+}
+
 // ---------- Monotone cubic spline (Fritsch-Carlson) ----------
 function smoothPath(xs, ys) {
   const n = xs.length;
@@ -627,14 +647,15 @@ function Portfolio() {
   const d = data;
   const updated = new Date(d.generatedAt);
   const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const risk = d.risk;
-  const conc = risk && risk.concentration;
-  // Plain computation (not a hook) — this runs after the early returns above, so
-  // a useMemo here would violate the rules of hooks. computeBeta is cheap.
-  const betaObj = bench && bench.spx ? computeBeta(d.perfSeries, bench.spx.series) : null;
+  const risk = d.risk;                       // still the source for concentration
+  const conc = risk && risk.concentration;   // position-based, not windowed
 
-  // Range selector windows the chart + its strips (risk tiles stay trailing-12mo).
+  // Range selector windows the chart, its strips, AND the risk tiles.
   const win = pfWindow(d.navSeries, d.perfSeries, range);
+  // Plain computations (not hooks) — these run after the early returns above, so a
+  // useMemo here would violate the rules of hooks. Both are cheap.
+  const winRisk = pfRiskWindow(win.perf) || risk;
+  const betaObj = bench && bench.spx ? computeBeta(win.perf, bench.spx.series) : null;
   const alpha = bench && bench.spx ? pfAlphaSeries(win.perf, bench.spx.series) : null;
   const winDd = win.perf && win.perf.length ? drawdownSeries(win.perf) : [];
   const winMaxDd = winDd.length ? Math.min(0, ...winDd.map(p => p.v)) : 0;
@@ -668,9 +689,9 @@ function Portfolio() {
 
       {risk && (
         <div className="pf-stats pf-stats-risk">
-          <StatTile label="sharpe"  value={fmtNum(risk.sharpe)}          kicker="risk-adjusted · rf 0"/>
-          <StatTile label="ann vol" value={fmtPctBare(risk.vol)}         kicker="annualized · twr"/>
-          <StatTile label="max dd"  value={fmtPctBare(risk.maxDrawdown)} kicker="peak-to-trough"/>
+          <StatTile label="sharpe"  value={fmtNum(winRisk.sharpe)}          kicker="risk-adjusted · rf 0"/>
+          <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
+          <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)} kicker="peak-to-trough"/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}
                     kicker={betaObj ? `vs spx · r² ${fmtNum(betaObj.r2)}` : 'vs spx'}/>
         </div>
