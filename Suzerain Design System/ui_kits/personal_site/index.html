@@ -479,6 +479,20 @@
     font-family: var(--font-mono); font-size: 10px;
     color: var(--fg-4); letter-spacing: 0.1em;
   }
+  /* range selector (1M / 3M / 6M / YTD / 1Y) */
+  .pf-range { display: flex; gap: 4px; }
+  .pf-range-btn {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--fg-4);
+    background: transparent; border: 1px solid var(--border-soft);
+    border-radius: 3px; padding: 3px 8px; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .pf-range-btn:hover { color: var(--fg-2); border-color: rgba(167,139,250,0.35); }
+  .pf-range-btn.active {
+    color: var(--fg-1); border-color: rgba(167,139,250,0.55);
+    background: rgba(167,139,250,0.12);
+  }
   /* combined-view risk panel: flat divided columns, not nested stat cards */
   .cmb-risk-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
   .cmb-risk-grid .pf-stat {
