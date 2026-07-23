@@ -544,10 +544,181 @@ function PmBreakdown({ bd, tradingPnl }) {
   );
 }
 
+// ---------- calibration / hit-rate reliability diagram ----------
+// Win rate bucketed by implied entry odds. The 45° line is perfect calibration:
+// a point on it means the price was fair; above = the side won more often than it
+// was priced for (edge); below = overpaid. 'settlement' lots (shares held to
+// resolution) are the true calibration test. 'exit' lots (sold early, "win" =
+// closed in profit) are a hit-rate view whose wins sit above the diagonal by
+// construction — so the two are a toggle, never a blend. From the
+// polymarket-calibration daily cron.
+const PM_CAL_TEAL = '#5eead4';   // the diagonal / reference
+const PM_CAL_GOOD = '#a78bfa';   // won more than priced
+const PM_CAL_UNDER = '#ff6ec4';  // won less than priced
+
+function pmPct0(v) { return v == null ? '—' : Math.round(v * 100) + '%'; }
+function pmPct1(v) { return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
+
+function PmCalScatter({ buckets }) {
+  const svgRef = usePmRef(null);
+  const [hover, setHover] = usePmState(null);
+  const pts = (buckets || []).filter(b => b.n > 0 && b.winRate != null);
+  if (pts.length < 2) return null;
+  const maxN = Math.max(...pts.map(b => b.n));
+  // Wide plot. viewBox aspect must equal the container's, since preserveAspectRatio
+  // is "none" — otherwise the non-uniform stretch would squash the bubbles into
+  // ellipses. Radius stays in viewBox units and scales uniformly.
+  const VW = 920, VH = 460, PAD = 44;
+  const x = (p) => PAD + p * (VW - 2 * PAD);
+  const y = (p) => (VH - PAD) - p * (VH - 2 * PAD);
+  const rOf = (n) => 5 + 15 * Math.sqrt(n / maxN);
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+
+  return (
+    <div style={{ width: '100%' }}>
+      <div className="pm-chart-wrap" style={{ aspectRatio: `${VW} / ${VH}` }}>
+        <svg ref={svgRef} viewBox={`0 0 ${VW} ${VH}`} className="pf-navchart"
+          preserveAspectRatio="none"
+          onMouseLeave={() => setHover(null)}>
+          {/* grid + axes */}
+          {ticks.map(t => (
+            <g key={t}>
+              <line x1={x(t)} x2={x(t)} y1={y(0)} y2={y(1)} stroke="rgba(229,225,241,0.07)"/>
+              <line x1={x(0)} x2={x(1)} y1={y(t)} y2={y(t)} stroke="rgba(229,225,241,0.07)"/>
+            </g>
+          ))}
+          {/* perfect-calibration diagonal */}
+          <line x1={x(0)} y1={y(0)} x2={x(1)} y2={y(1)}
+            stroke={PM_CAL_TEAL} strokeWidth="1" strokeDasharray="4 4" opacity="0.6"/>
+          {/* wilson error bars */}
+          {pts.map((b, k) => (
+            <line key={'e' + k} x1={x(b.avgImplied)} x2={x(b.avgImplied)}
+              y1={y(b.wilsonLo)} y2={y(b.wilsonHi)}
+              stroke="rgba(229,225,241,0.28)" strokeWidth="1"/>
+          ))}
+          {/* bucket bubbles — sized by n, colored by edge sign */}
+          {pts.map((b, k) => {
+            const edge = b.winRate - b.avgImplied;
+            const c = edge >= 0 ? PM_CAL_GOOD : PM_CAL_UNDER;
+            const active = hover === k;
+            return (
+              <g key={k} onMouseEnter={() => setHover(k)} style={{ cursor: 'pointer' }}>
+                <circle cx={x(b.avgImplied)} cy={y(b.winRate)} r={rOf(b.n)}
+                  fill={c} fillOpacity={active ? 0.5 : 0.28}
+                  stroke={c} strokeWidth={active ? 1.75 : 1}/>
+              </g>
+            );
+          })}
+        </svg>
+
+        {/* axis labels — x = implied (priced) odds, y = actual win rate */}
+        <div className="pf-axis-x">
+          {ticks.map((t, i) => (
+            <span key={i} className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
+              style={{ left: `${(x(t) / VW) * 100}%` }}>{Math.round(t * 100)}%</span>
+          ))}
+        </div>
+        {ticks.filter(t => t > 0).map(t => (
+          <span key={'y' + t} style={{
+            position: 'absolute', left: 2, top: `${(y(t) / VH) * 100}%`,
+            transform: 'translateY(-50%)', fontSize: '0.6rem',
+            color: 'rgba(229,225,241,0.4)', pointerEvents: 'none',
+          }}>{Math.round(t * 100)}%</span>
+        ))}
+        <span style={{
+          position: 'absolute', left: 2, top: 6, fontSize: '0.6rem',
+          letterSpacing: '0.05em', color: 'rgba(229,225,241,0.55)', pointerEvents: 'none',
+        }}>won ↑</span>
+        <span style={{
+          position: 'absolute', right: 8, bottom: '11%', fontSize: '0.6rem',
+          letterSpacing: '0.05em', color: 'rgba(229,225,241,0.55)', pointerEvents: 'none',
+        }}>priced odds →</span>
+
+        {hover != null && pts[hover] && (() => {
+          const b = pts[hover];
+          const edge = b.winRate - b.avgImplied;
+          return (
+            <div className="pm-tooltip cmb-tooltip" style={{
+              left: `${(x(b.avgImplied) / VW) * 100}%`,
+              top: `${(y(b.winRate) / VH) * 100}%`,
+            }}>
+              <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} bets{b.pushes ? ` · ${b.pushes} push` : ''}</div>
+              <div className="cmb-tt-row">won<span className="cmb-tt-num">{pmPct1(b.winRate)}</span></div>
+              <div className="cmb-tt-row">priced<span className="cmb-tt-num">{pmPct1(b.avgImplied)}</span></div>
+              <div className="cmb-tt-row">edge<span className={`cmb-tt-num ${edge >= 0 ? 'pos' : 'neg'}`}>{(edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp'}</span></div>
+            </div>
+          );
+        })()}
+      </div>
+      <div className="pf-bench-legend" style={{ justifyContent: 'center' }}>
+        <span><i className="pf-bench-swatch" style={{ background: PM_CAL_TEAL }}/>fair (45°)</span>
+        <span><i className="pf-bench-swatch" style={{ background: PM_CAL_GOOD }}/>won &gt; priced</span>
+        <span><i className="pf-bench-swatch" style={{ background: PM_CAL_UNDER }}/>won &lt; priced</span>
+        <span className="sz-dim">bubble = # bets · bar = 95% ci</span>
+      </div>
+    </div>
+  );
+}
+
+function PmCalibration({ cal }) {
+  const [series, setSeries] = usePmState('settlement');
+  if (!cal || !cal.buckets) return null;
+  const h = (cal.headline && cal.headline[series]) || {};
+  const buckets = cal.buckets[series] || [];
+  const hasExit = cal.headline && cal.headline.exit && cal.headline.exit.n;
+  if (!h.n) return null;
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">calibration · win rate vs implied odds</span>
+        <div className="pf-range">
+          <button type="button" className={`pf-range-btn${series === 'settlement' ? ' active' : ''}`}
+            onClick={() => setSeries('settlement')}>held</button>
+          {hasExit && (
+            <button type="button" className={`pf-range-btn${series === 'exit' ? ' active' : ''}`}
+              onClick={() => setSeries('exit')}>sold early</button>
+          )}
+        </div>
+      </div>
+
+      <div className="pf-stats">
+        <PmStat label="hit rate" value={pmPct0(h.hitRate)}
+          tone={series === 'settlement' ? undefined : (h.hitRate >= 0.5 ? 'pos' : 'neg')}
+          kicker={`${h.n} resolved bets${h.pushes ? ` · ${h.pushes} push` : ''}`}/>
+        {series === 'settlement' && (
+          <>
+            <PmStat label="brier" value={h.brier != null ? h.brier.toFixed(3) : '—'} kicker="lower = sharper · 0 is perfect"/>
+            <PmStat label="edge · per bet"
+              value={h.edge != null ? `${h.edge >= 0 ? '+' : ''}${(h.edge * 100).toFixed(1)}pp` : '—'}
+              tone={h.edge != null ? (h.edge >= 0 ? 'pos' : 'neg') : undefined}
+              kicker="won − priced · bet-weighted"/>
+          </>
+        )}
+        <PmStat label="edge · per $"
+          value={h.roi != null ? `${h.roi >= 0 ? '+' : ''}${(h.roi * 100).toFixed(1)}%` : '—'}
+          tone={h.roi != null ? (h.roi >= 0 ? 'pos' : 'neg') : undefined}
+          kicker={`realized per $ staked · ${series === 'settlement' ? 'held to resolution' : 'early exits'}`}/>
+      </div>
+
+      <PmCalScatter buckets={buckets}/>
+
+      <div className="pf-panel-head" style={{ marginTop: 4 }}>
+        <span className="pf-panel-meta">
+          {series === 'settlement'
+            ? 'bets held to resolution — the true calibration test'
+            : 'positions sold before resolution — win = closed in profit (a hit-rate view, not calibration)'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ---------- main view ----------
 function Polymarket() {
   const [data, setData] = usePmState(null);
   const [err, setErr] = usePmState(null);
+  const [cal, setCal] = usePmState(null);
 
   usePmEffect(() => {
     let cancelled = false;
@@ -562,6 +733,12 @@ function Polymarket() {
         } catch {}
         setErr(String(e.message || e));
       });
+    // Calibration dataset (polymarket-calibration daily cron). Best-effort and
+    // independent of the live fetch — the panel renders only when present.
+    fetch('data/polymarket-calibration.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (!cancelled && j) setCal(j); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -650,6 +827,8 @@ function Polymarket() {
           <PmSpark series={sparkSeries}/>
         </div>
       )}
+
+      {cal && <PmCalibration cal={cal}/>}
 
       <div className="pf-panel">
         <div className="pf-panel-head">
