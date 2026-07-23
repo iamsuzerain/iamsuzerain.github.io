@@ -580,34 +580,88 @@ function PositionsTable({ rows }) {
   );
 }
 
-// ---------- contribution to return (diverging bars) ----------
+// ---------- contribution to return (stem + diamond lollipop, per holding) ----------
+// Same mark language as the combined view's monthly-pnl panel: a hairline stem
+// off a shared zero line, diamond at the tip, colored by sign (gain pink / loss
+// violet — the flipped contribution convention).
 function ContributionBars({ rows, limit = 12 }) {
+  const svgRef = usePortRef(null);
+  const [hover, setHover] = usePortState(null);
   if (!rows || !rows.length) return null;
   const top = rows.slice(0, limit);
-  const maxAbs = Math.max(...top.map(r => Math.abs(r.total)), 1);
   const sum = rows.reduce((a, r) => a + r.total, 0);
+  const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 22;
+  const maxAbs = Math.max(...top.map(r => Math.abs(r.total)), 1);
+  const slot = (W - PAD_L - PAD_R) / top.length;
+  const midY = PAD_T + (H - PAD_T - PAD_B) / 2;
+  const scale = ((H - PAD_T - PAD_B) / 2) / maxAbs;
+  const cx = (i) => PAD_L + slot * (i + 0.5);
+  const colOf = (v) => (v >= 0 ? '#ff4fd8' : '#a78bfa');   // gain pink / loss violet
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const idx = Math.max(0, Math.min(top.length - 1, Math.floor((px - PAD_L) / slot)));
+    setHover(idx);
+  }
+  const hovered = hover != null ? top[hover] : null;
+
   return (
-    <div className="pf-contrib">
-      {top.map(r => {
-        const w = (Math.abs(r.total) / maxAbs) * 50;  // % of the half-track
-        const pos = r.total >= 0;
-        return (
-          <div className="pf-contrib-row" key={r.symbol}>
-            <span className="pf-contrib-sym" title={r.legs > 1 ? `${r.name} · ${r.legs} contracts` : r.name}>{r.symbol}</span>
-            <div className="pf-contrib-track">
-              <div className="pf-contrib-center"/>
-              <div className={`pf-contrib-bar ${pos ? 'pos' : 'neg'}`}
-                style={pos ? { left: '50%', width: `${w}%` } : { right: '50%', width: `${w}%` }}/>
-            </div>
-            <span className={`pf-contrib-val ${pos ? 'pos' : 'neg'}`}>{pos ? '+' : ''}{fmtUSD(r.total)}</span>
-          </div>
-        );
-      })}
-      <div className="pf-contrib-foot">
-        <span>{top.length} of {rows.length} holdings</span>
-        <span>net {sum >= 0 ? '+' : ''}{fmtUSD(sum)}</span>
+    <React.Fragment>
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="pf-navchart"
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
+      >
+        <line x1={PAD_L} x2={W - PAD_R} y1={midY} y2={midY}
+          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        {top.map((r, i) => {
+          const x = cx(i);
+          const yv = midY - r.total * scale;
+          const c = colOf(r.total);
+          const ds = 3.8;   // diamond side; matches the strips' event markers
+          return (
+            <g key={r.symbol} opacity={hover == null || hover === i ? 1 : 0.3}>
+              <line x1={x} x2={x} y1={midY} y2={yv} stroke={c} strokeWidth="1.3"/>
+              <rect x={x - ds / 2} y={yv - ds / 2} width={ds} height={ds}
+                transform={`rotate(45 ${x} ${yv})`}
+                fill={c} stroke="#0a0612" strokeWidth="0.5"/>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="pf-axis-x">
+        {top.map((r, i) => (
+          <span key={r.symbol} style={{ left: `${(cx(i) / W) * 100}%` }}>{r.symbol}</span>
+        ))}
       </div>
+      {hovered && (
+        <div className="pm-tooltip" style={{ left: `${(cx(hover) / W) * 100}%`, top: '6%' }}>
+          <div className="pm-tt-date">{hovered.symbol}</div>
+          <div className="pf-contrib-tt-name">{hovered.name}{hovered.legs > 1 ? ` · ${hovered.legs} contracts` : ''}</div>
+          <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>{hovered.total >= 0 ? '+' : ''}{fmtUSD(hovered.total)}</div>
+        </div>
+      )}
     </div>
+    <div className="pf-bench-legend">
+      <span><i className="pf-bench-swatch" style={{ background: '#ff4fd8', transform: 'rotate(45deg)' }}/>gain</span>
+      <span><i className="pf-bench-swatch" style={{ background: '#a78bfa', transform: 'rotate(45deg)' }}/>loss</span>
+    </div>
+    <div className="pf-contrib-foot">
+      <span>{top.length} of {rows.length} holdings</span>
+      <span>net {sum >= 0 ? '+' : ''}{fmtUSD(sum)}</span>
+    </div>
+    </React.Fragment>
   );
 }
 
