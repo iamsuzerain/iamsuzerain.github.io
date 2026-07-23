@@ -1,0 +1,55 @@
+name: polymarket-calibration-refresh
+# Rebuilds the win-rate-vs-implied-odds (calibration / hit-rate) dataset daily
+# from Polymarket activity + gamma resolution.
+
+on:
+  schedule:
+    - cron: '20 6 * * *'   # daily at 06:20 UTC (offset from betmoar-refresh)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: install deps
+        run: pip install curl_cffi
+
+      - name: fetch calibration dataset
+        run: |
+          mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-calibration/fetch-polymarket-calibration.py" \
+            > "Suzerain Design System/ui_kits/personal_site/data/polymarket-calibration.json"
+          echo "headline:"
+          python3 -c "import json;d=json.load(open('Suzerain Design System/ui_kits/personal_site/data/polymarket-calibration.json'));print(d['headline'])"
+
+      - name: commit + push if changed
+        run: |
+          git config user.name  "calibration-bot"
+          git config user.email "calibration-bot@users.noreply.github.com"
+          F="Suzerain Design System/ui_kits/personal_site/data/polymarket-calibration.json"
+          if git diff --quiet "$F"; then
+            echo "no changes"
+            exit 0
+          fi
+          git add "$F"
+          git commit -m "polymarket: refresh calibration $(date -u +%F)"
+          # Remote main may have advanced since checkout (concurrent crons).
+          # Rebase onto it, keeping our freshly generated data on conflict, then retry.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              break
+            fi
+            echo "push rejected (attempt $attempt) — rebasing onto origin/main"
+            git pull --rebase -X theirs origin main
+          done
