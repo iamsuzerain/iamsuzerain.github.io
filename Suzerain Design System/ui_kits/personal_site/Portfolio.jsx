@@ -246,9 +246,10 @@ function NavChart({ series, perfSeries, benchmarks }) {
             <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
             <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
           </linearGradient>
-          <linearGradient id="pf-nav-stroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#a78bfa"/>
-            <stop offset="100%" stopColor="#ff4fd8"/>
+          {/* Vertical, value-keyed: pink where the line runs high, violet where low. */}
+          <linearGradient id="pf-nav-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff4fd8"/>
+            <stop offset="100%" stopColor="#a78bfa"/>
           </linearGradient>
         </defs>
         {gridLines.map((v, i) => (

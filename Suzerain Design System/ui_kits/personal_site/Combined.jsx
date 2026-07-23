@@ -367,9 +367,10 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
             <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
             <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
           </linearGradient>
-          <linearGradient id="cmb-nav-stroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#a78bfa"/>
-            <stop offset="100%" stopColor="#ff4fd8"/>
+          {/* Vertical, value-keyed: pink where the line runs high, violet where low. */}
+          <linearGradient id="cmb-nav-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff4fd8"/>
+            <stop offset="100%" stopColor="#a78bfa"/>
           </linearGradient>
         </defs>
 
@@ -395,7 +396,7 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
               stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
             <circle cx={x(hover)} cy={y(hp.ibkr)} r="2.5" fill={CMB_C_IBKR} opacity="0.6"/>
             <circle cx={x(hover)} cy={y(hp.pm)} r="2.5" fill={CMB_C_PM} opacity="0.6"/>
-            <circle cx={x(hover)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#0a0612" strokeWidth="1.5"/>
+            <circle cx={x(hover)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#f5f0ff" strokeWidth="1.5"/>
           </g>
         )}
 
@@ -596,7 +597,7 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
                 stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#0a0612" strokeWidth="1.5"/>
+              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#f5f0ff" strokeWidth="1.5"/>
             </g>
           )}
         </svg>
@@ -747,7 +748,7 @@ function CmbAlphaStrip({ series, markers, cur, onPick }) {
             <g>
               <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
                 stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#0a0612" strokeWidth="1.5"/>
+              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#f5f0ff" strokeWidth="1.5"/>
             </g>
           )}
         </svg>
@@ -817,6 +818,133 @@ function CmbDeployBar({ ibkr, poly }) {
         <span>{leader} leads by {cmbUSDk(Math.abs(ibkr - poly))}</span>
       </div>
     </div>
+  );
+}
+
+// ---------- Monthly P&L, split by book ----------
+// Each month's contribution per series = the change in that series' cumulative
+// (deposit-adjusted) P&L between the month's last observation and the prior
+// month's. `total` is the net of both books; `spx` is the benchmark's dollar
+// return on the same notional, present only when the benchmark overlay loaded.
+// Grouped bars around a shared zero line so signs read directly.
+function cmbMonthly(series) {
+  if (!series || series.length < 2) return [];
+  const end = new Map();                    // 'YYYY-MM' -> {ibkr, pm, spx}
+  for (const p of series) end.set(p.d.slice(0, 7), { ibkr: p.ibkr || 0, pm: p.pm || 0, spx: p.spx });
+  const keys = [...end.keys()].sort();
+  const out = [];
+  let prev = { ibkr: series[0].ibkr || 0, pm: series[0].pm || 0, spx: series[0].spx };
+  for (const k of keys) {
+    const e = end.get(k);
+    const row = { ym: k, ibkr: e.ibkr - prev.ibkr, pm: e.pm - prev.pm };
+    row.total = row.ibkr + row.pm;
+    if (e.spx != null && prev.spx != null) row.spx = e.spx - prev.spx;
+    out.push(row);
+    prev = e;
+  }
+  return out;
+}
+
+// Rendered as hairline stem + dot (lollipop), not filled bars, to sit with the
+// site's thin-stroke / dot-marker language. Marks are light enough that colors
+// stay full-solid — so white reads white, not gray.
+const CMB_BAR_META = [
+  { key: 'ibkr',  label: 'ibkr',       color: '#a78bfa' },
+  { key: 'pm',    label: 'polymarket', color: '#ff4fd8' },
+  { key: 'total', label: 'total',      color: '#f5f0ff' },
+  { key: 'spx',   label: 'spx',        color: '#5eead4' },
+];
+
+function CmbMonthlyBars({ series }) {
+  const svgRef = useCmbRef(null);
+  const [hover, setHover] = useCmbState(null);
+  const months = cmbMonthly(series);
+  if (months.length < 2) return null;
+  const hasSpx = months.some(m => m.spx != null);
+  const bars = CMB_BAR_META.filter(b => b.key !== 'spx' || hasSpx);
+  const nb = bars.length;
+  const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 22;
+  const maxAbs = Math.max(...months.flatMap(m => bars.map(b => Math.abs(m[b.key] || 0))), 1);
+  const slot = (W - PAD_L - PAD_R) / months.length;
+  const step = Math.max(4, Math.min(10, (slot * 0.6) / nb));
+  const midY = PAD_T + (H - PAD_T - PAD_B) / 2;
+  const scale = ((H - PAD_T - PAD_B) / 2) / maxAbs;
+  const cx = (i) => PAD_L + slot * (i + 0.5);
+  const stemX = (i, j) => cx(i) + (j - (nb - 1) / 2) * step;
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const idx = Math.max(0, Math.min(months.length - 1, Math.floor((px - PAD_L) / slot)));
+    setHover(idx);
+  }
+  const hovered = hover != null ? months[hover] : null;
+  const mLabel = (ym) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][+ym.slice(5, 7) - 1];
+
+  return (
+    <React.Fragment>
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="pf-navchart"
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
+      >
+        <line x1={PAD_L} x2={W - PAD_R} y1={midY} y2={midY}
+          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        {months.map((m, i) => (
+          <g key={m.ym} opacity={hover == null || hover === i ? 1 : 0.3}>
+            {bars.map((b, j) => {
+              const v = m[b.key];
+              if (v == null) return null;
+              const x = stemX(i, j);
+              const yv = midY - v * scale;
+              const ds = 3.8;   // diamond side; matches the strips' event markers
+              return (
+                <g key={b.key}>
+                  <line x1={x} x2={x} y1={midY} y2={yv} stroke={b.color} strokeWidth="1.3"/>
+                  <rect x={x - ds / 2} y={yv - ds / 2} width={ds} height={ds}
+                    transform={`rotate(45 ${x} ${yv})`}
+                    fill={b.color} stroke="#0a0612" strokeWidth="0.5"/>
+                </g>
+              );
+            })}
+          </g>
+        ))}
+      </svg>
+      <div className="pf-axis-x">
+        {months.map((m, i) => (
+          <span key={m.ym} style={{ left: `${(cx(i) / W) * 100}%` }}>{mLabel(m.ym)}</span>
+        ))}
+      </div>
+      {hovered && (
+        <div className="pm-tooltip" style={{ left: `${(cx(hover) / W) * 100}%`, top: '6%' }}>
+          <div className="pm-tt-date">{hovered.ym}</div>
+          <div className="pf-tt-bench" style={{ color: '#a78bfa' }}>ibkr {cmbSigned(hovered.ibkr)}</div>
+          <div className="pf-tt-bench" style={{ color: '#ff4fd8' }}>poly {cmbSigned(hovered.pm)}</div>
+          {hovered.spx != null && (
+            <div className="pf-tt-bench" style={{ color: '#5eead4' }}>spx {cmbSigned(hovered.spx)}</div>
+          )}
+          <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {cmbSigned(hovered.total)}</div>
+        </div>
+      )}
+    </div>
+    <div className="pf-bench-legend">
+      {bars.map(b => (
+        <span key={b.key}>
+          <i className="pf-bench-swatch" style={{ background: b.color, transform: 'rotate(45deg)' }}/>{b.label}
+        </span>
+      ))}
+    </div>
+    </React.Fragment>
   );
 }
 
@@ -1000,6 +1128,16 @@ function Combined({ setView }) {
             <span className="pf-panel-meta">ibkr nav vs polymarket nav</span>
           </div>
           <CmbDeployBar ibkr={data.deploy.ibkr} poly={data.deploy.poly}/>
+        </div>
+      )}
+
+      {cmbMonthly(win.series).length > 1 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">monthly pnl · {CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-meta">ibkr · polymarket · total · vs spx</span>
+          </div>
+          <CmbMonthlyBars series={win.series}/>
         </div>
       )}
 

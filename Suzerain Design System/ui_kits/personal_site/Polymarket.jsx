@@ -377,12 +377,15 @@ function PmSpark({ series }) {
       >
         <defs>
           <linearGradient id="pm-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8" stopOpacity="0.28"/>
-            <stop offset="100%" stopColor="#ff4fd8" stopOpacity="0"/>
+            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
           </linearGradient>
-          <linearGradient id="pm-stroke" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#a78bfa"/>
-            <stop offset="100%" stopColor="#ff4fd8"/>
+          {/* Vertical, value-keyed: bright pink where the line runs high, violet
+              where it runs low — the "violet bottom → pink top" look, robust to a
+              choppy/declining line (unlike a left→right horizontal gradient). */}
+          <linearGradient id="pm-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff4fd8"/>
+            <stop offset="100%" stopColor="#a78bfa"/>
           </linearGradient>
         </defs>
 
@@ -553,8 +556,8 @@ function PmBreakdown({ bd, tradingPnl }) {
 // construction — so the two are a toggle, never a blend. From the
 // polymarket-calibration daily cron.
 const PM_CAL_TEAL = '#5eead4';   // the diagonal / reference
-const PM_CAL_GOOD = '#a78bfa';   // won more than priced
-const PM_CAL_UNDER = '#ff6ec4';  // won less than priced
+const PM_CAL_GOOD = '#ff6ec4';   // won more than priced
+const PM_CAL_UNDER = '#a78bfa';  // won less than priced
 
 function pmPct0(v) { return v == null ? '—' : Math.round(v * 100) + '%'; }
 function pmPct1(v) { return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
@@ -714,11 +717,118 @@ function PmCalibration({ cal }) {
   );
 }
 
+// ---------- Rewards accrual (market-making income over time) ----------
+// One line per income source (lp / maker / yield / sponsored) from the betmoar
+// breakdown history. These are steady positive streams, distinct from swingy
+// trading P&L. Each line is re-based to the first tracked day (see below), so
+// every source starts at 0 and shows what it has earned since tracking began.
+const PM_REWARD_PARTS = [
+  { key: 'lp', label: 'lp', color: '#ff4fd8' },
+  { key: 'maker', label: 'maker', color: '#a78bfa' },
+];
+// Total still counts every income stream (incl. the tiny yield/sponsored ones we
+// no longer chart on their own), so it sits just above lp + maker.
+function pmRewardsTotal(r) {
+  return (r.lp || 0) + (r.maker || 0) + (r.yield || 0) + (r.sponsored || 0);
+}
+function PmRewardsChart({ rows }) {
+  const svgRef = usePmRef(null);
+  const [hover, setHover] = usePmState(null);
+  if (!rows || rows.length < 2) return null;
+  // The betmoar figures are cumulative *lifetime* totals, and the snapshot cron
+  // only started on rows[0].d — so lifetime rewards were already well above zero
+  // on day one. Re-base each source to that first tracked day so its line reads
+  // as earned-since-tracking-began, starting at 0.
+  const first = rows[0];
+  const lines = [
+    ...PM_REWARD_PARTS.map(p => ({
+      ...p,
+      series: rows.map(r => ({ d: r.d, v: (r[p.key] || 0) - (first[p.key] || 0) })),
+    })),
+    { key: 'total', label: 'total', color: '#f5f0ff',
+      series: rows.map(r => ({ d: r.d, v: pmRewardsTotal(r) - pmRewardsTotal(first) })) },
+  ];
+  const n = rows.length;
+  const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 14;
+  const allV = lines.flatMap(l => l.series.map(p => p.v));
+  const min = Math.min(...allV, 0), max = Math.max(...allV);
+  const pad = (max - min) * 0.1 || 1;
+  const y0 = min, y1 = max + pad;
+  const x = (i) => PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const path = (s) => s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    const idx = Math.max(0, Math.min(n - 1, Math.round(t * (n - 1))));
+    setHover(idx);
+  }
+
+  return (
+    <React.Fragment>
+    <div className="pm-chart-wrap">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="pf-navchart"
+        preserveAspectRatio="none"
+        onMouseMove={onMove}
+        onMouseLeave={() => setHover(null)}
+        onTouchStart={onMove}
+        onTouchMove={onMove}
+        onTouchEnd={() => setHover(null)}
+      >
+        <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
+          stroke="rgba(229,225,241,0.14)" strokeDasharray="3 5"/>
+        {hover != null && (
+          <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+            stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+        )}
+        {lines.map(l => (
+          <path key={l.key} d={path(l.series)} fill="none" stroke={l.color} strokeWidth="1.5"/>
+        ))}
+        {lines.map(l => (
+          <circle key={l.key} cx={x(n - 1)} cy={y(l.series[n - 1].v)} r="3" fill={l.color}/>
+        ))}
+        {hover != null && lines.map(l => (
+          <circle key={l.key} cx={x(hover)} cy={y(l.series[hover].v)} r="3.5"
+            fill={l.color} stroke="#f5f0ff" strokeWidth="1"/>
+        ))}
+      </svg>
+      {hover != null && (
+        <div className="pm-tooltip" style={{ left: `${(x(hover) / W) * 100}%`, top: '4%' }}>
+          <div className="pm-tt-date">{rows[hover].d}</div>
+          {lines.map(l => (
+            <div key={l.key} className="pf-tt-bench" style={{ color: l.color }}>
+              {l.label} +{pmUSD(l.series[hover].v)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+    <div className="pf-bench-legend">
+      {lines.map(l => (
+        <span key={l.key}>
+          <i className="pf-bench-swatch" style={{ background: l.color }}/>{l.label}
+          {' '}<b style={{ color: 'var(--fg-2)', fontWeight: 500 }}>+{pmUSD(l.series[n - 1].v)}</b>
+        </span>
+      ))}
+    </div>
+    </React.Fragment>
+  );
+}
+
 // ---------- main view ----------
 function Polymarket() {
   const [data, setData] = usePmState(null);
   const [err, setErr] = usePmState(null);
   const [cal, setCal] = usePmState(null);
+  const [hist, setHist] = usePmState(null);
 
   usePmEffect(() => {
     let cancelled = false;
@@ -738,6 +848,12 @@ function Polymarket() {
     fetch('data/polymarket-calibration.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(j => { if (!cancelled && j) setCal(j); })
+      .catch(() => {});
+    // Rewards-accrual history (betmoar breakdown daily cron). Best-effort; the
+    // panel renders only when the history file is present.
+    fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (!cancelled && j) setHist(j); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -845,6 +961,16 @@ function Polymarket() {
             <span className="pf-panel-meta">last {activity.length} trades</span>
           </div>
           <PmActivity rows={activity}/>
+        </div>
+      )}
+
+      {hist && hist.rows && hist.rows.length > 1 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">rewards accrual · market-making income</span>
+            <span className="pf-panel-meta">lp · maker · total · since {hist.rows[0].d}</span>
+          </div>
+          <PmRewardsChart rows={hist.rows}/>
         </div>
       )}
 
