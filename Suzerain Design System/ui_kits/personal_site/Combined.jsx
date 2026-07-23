@@ -867,6 +867,7 @@ function CmbMonthlyBars({ series }) {
   const maxAbs = Math.max(...months.flatMap(m => bars.map(b => Math.abs(m[b.key] || 0))), 1);
   const slot = (W - PAD_L - PAD_R) / months.length;
   const step = Math.max(4, Math.min(10, (slot * 0.6) / nb));
+  const bw = Math.max(2, Math.min(4, step * 0.6));   // thin bar width
   const midY = PAD_T + (H - PAD_T - PAD_B) / 2;
   const scale = ((H - PAD_T - PAD_B) / 2) / maxAbs;
   const cx = (i) => PAD_L + slot * (i + 0.5);
@@ -906,15 +907,11 @@ function CmbMonthlyBars({ series }) {
               const v = m[b.key];
               if (v == null) return null;
               const x = stemX(i, j);
-              const yv = midY - v * scale;
-              const ds = 3.8;   // diamond side; matches the strips' event markers
+              const h = Math.max(0.5, Math.abs(v) * scale);
               return (
-                <g key={b.key}>
-                  <line x1={x} x2={x} y1={midY} y2={yv} stroke={b.color} strokeWidth="1.3"/>
-                  <rect x={x - ds / 2} y={yv - ds / 2} width={ds} height={ds}
-                    transform={`rotate(45 ${x} ${yv})`}
-                    fill={b.color} stroke="#0a0612" strokeWidth="0.5"/>
-                </g>
+                <rect key={b.key}
+                  x={x - bw / 2} y={v >= 0 ? midY - h : midY}
+                  width={bw} height={h} rx="1" fill={b.color}/>
               );
             })}
           </g>
@@ -940,7 +937,7 @@ function CmbMonthlyBars({ series }) {
     <div className="pf-bench-legend">
       {bars.map(b => (
         <span key={b.key}>
-          <i className="pf-bench-swatch" style={{ background: b.color, transform: 'rotate(45deg)' }}/>{b.label}
+          <i className="pf-bench-swatch" style={{ background: b.color }}/>{b.label}
         </span>
       ))}
     </div>
