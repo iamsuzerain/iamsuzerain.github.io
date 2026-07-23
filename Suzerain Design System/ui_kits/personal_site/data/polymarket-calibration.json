@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T00:01:25Z",
+  "generatedAt": "2026-07-23T08:47:15Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -39,13 +39,13 @@
       "calibrationError": 0.0332
     },
     "exit": {
-      "n": 272,
-      "wins": 200,
+      "n": 275,
+      "wins": 202,
       "pushes": 7,
-      "hitRate": 0.7547,
-      "volume": 981045.1,
-      "realizedPnl": -15046.3,
-      "roi": -0.0153
+      "hitRate": 0.7537,
+      "volume": 993049.07,
+      "realizedPnl": -14960.9,
+      "roi": -0.0151
     }
   },
   "buckets": {
@@ -315,28 +315,28 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 39,
+        "n": 40,
         "wins": 22,
         "pushes": 1,
-        "winRate": 0.5789,
-        "avgImplied": 0.8463,
-        "volume": 79708.18,
-        "winRateByVolume": 0.6832,
-        "wilsonLo": 0.4219,
-        "wilsonHi": 0.7215
+        "winRate": 0.5641,
+        "avgImplied": 0.8454,
+        "volume": 79895.55,
+        "winRateByVolume": 0.6816,
+        "wilsonLo": 0.4098,
+        "wilsonHi": 0.707
       },
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 64,
-        "wins": 47,
+        "n": 65,
+        "wins": 48,
         "pushes": 1,
-        "winRate": 0.746,
-        "avgImplied": 0.9279,
-        "volume": 295941.24,
-        "winRateByVolume": 0.8968,
-        "wilsonLo": 0.6266,
-        "wilsonHi": 0.8372
+        "winRate": 0.75,
+        "avgImplied": 0.9277,
+        "volume": 296305.06,
+        "winRateByVolume": 0.8969,
+        "wilsonLo": 0.6318,
+        "wilsonHi": 0.8399
       },
       {
         "lo": 0.95,
@@ -346,23 +346,23 @@
         "pushes": 0,
         "winRate": 0.8605,
         "avgImplied": 0.9681,
-        "volume": 318282.31,
-        "winRateByVolume": 0.7902,
+        "volume": 318454.72,
+        "winRateByVolume": 0.7903,
         "wilsonLo": 0.7718,
         "wilsonHi": 0.9183
       },
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 15,
-        "wins": 11,
+        "n": 16,
+        "wins": 12,
         "pushes": 3,
-        "winRate": 0.9167,
-        "avgImplied": 0.995,
-        "volume": 120627.08,
-        "winRateByVolume": 0.7659,
-        "wilsonLo": 0.6461,
-        "wilsonHi": 0.9851
+        "winRate": 0.9231,
+        "avgImplied": 0.9948,
+        "volume": 131907.45,
+        "winRateByVolume": 0.7859,
+        "wilsonLo": 0.6669,
+        "wilsonHi": 0.9863
       }
     ]
   }
