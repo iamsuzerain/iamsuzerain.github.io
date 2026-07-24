@@ -908,10 +908,14 @@ function CmbMonthlyBars({ series }) {
               if (v == null) return null;
               const x = stemX(i, j);
               const h = Math.max(0.5, Math.abs(v) * scale);
+              // spx is a benchmark, not a book — mute its solid fill so it reads
+              // as a passive reference behind the violet/pink books rather than
+              // competing as a fourth series.
               return (
                 <rect key={b.key}
                   x={x - bw / 2} y={v >= 0 ? midY - h : midY}
-                  width={bw} height={h} rx="1" fill={b.color}/>
+                  width={bw} height={h} rx="1"
+                  fill={b.color} fillOpacity={b.key === 'spx' ? 0.5 : 1}/>
               );
             })}
           </g>
@@ -937,7 +941,7 @@ function CmbMonthlyBars({ series }) {
     <div className="pf-bench-legend">
       {bars.map(b => (
         <span key={b.key}>
-          <i className="pf-bench-swatch" style={{ background: b.color }}/>{b.label}
+          <i className="pf-bench-swatch" style={{ background: b.color, opacity: b.key === 'spx' ? 0.5 : 1 }}/>{b.label}
         </span>
       ))}
     </div>
