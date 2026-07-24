@@ -144,7 +144,7 @@ function cmbCaptionBody(entry) {
 // the endpoint to pnl["1y"].abs — IBKR's authoritative deposit-adjusted dollar P&L
 // (ChangeInNAV) — so this matches the Portfolio tab exactly. Without anchoring,
 // startNAV * TWR drifts from the headline once there are cash flows.
-function cmbIbkrPoints(portfolio) {
+function cmbIbkrPoints(portfolio, pnlHistory) {
   const nav = portfolio.navSeries || [];
   const perf = portfolio.perfSeries || [];
   if (!nav.length) return [];
@@ -160,7 +160,29 @@ function cmbIbkrPoints(portfolio) {
     ? (v) => oneY * (v / last)
     : (v) => startNAV * v;
 
-  return shape.map(p => ({ day: cmbEpochDay(p.d), v: toDollars(p.v) }));
+  const trailing = shape.map(p => ({ day: cmbEpochDay(p.d), v: toDollars(p.v) }));
+
+  // Prepend accumulated pre-window history (nav-history.json) so the MAX range
+  // can span multiple years. History rows are cumulative-$ P&L on their own
+  // baseline; the trailing curve starts at 0 on nav[0].d. Offset the history
+  // block by its value at the seam so the two meet continuously — the trailing
+  // year (endpoint anchored to pnl["1y"].abs) is left untouched.
+  const hist = (pnlHistory && pnlHistory.rows) || [];
+  if (hist.length && trailing.length) {
+    const seamDay = trailing[0].day;
+    let seamV = null;
+    for (const r of hist) {
+      const rd = cmbEpochDay(r.d);
+      if (rd <= seamDay) seamV = r.v; else break;
+    }
+    if (seamV != null) {
+      const pre = hist
+        .filter(r => cmbEpochDay(r.d) < seamDay)
+        .map(r => ({ day: cmbEpochDay(r.d), v: r.v - seamV }));
+      if (pre.length) return pre.concat(trailing);
+    }
+  }
+  return trailing;
 }
 
 // Polymarket raw user-pnl rows: [{ t: unixSeconds, p: dollars }] → daily $ points.
@@ -221,10 +243,10 @@ function cmbBenchDollars(benchSeries, notional, start, end) {
   return closes.map((c, i) => notional * ((i < firstIdx ? base : c) / base - 1));
 }
 
-function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers) {
+function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory) {
   const today = Math.floor(Date.now() / CMB_DAY_MS);
 
-  const ibkrPts = cmbIbkrPoints(portfolio);
+  const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
   const pmPts = cmbPmPoints(pmRows);
 
   // Window = IBKR's actual trailing-year series start, so the IBKR endpoint isn't
@@ -616,8 +638,8 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
 }
 
 // ---------- range windowing ----------
-const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y'];
-const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo' };
+const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
+const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
 function cmbRangeCutoff(range, last) {
   if (range === 'YTD') return last.slice(0, 4) + '-01-01';
@@ -1000,6 +1022,14 @@ function Combined({ setView }) {
         if (bRes.ok) { const bj = await bRes.json(); benchmarks = bj.benchmarks || null; }
       } catch {}
 
+      // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
+      // before the Flex window so the MAX range keeps charting aged-out markers.
+      let pnlHistory = null;
+      try {
+        const hRes = await fetch('data/nav-history.json', { cache: 'no-store' });
+        if (hRes.ok) pnlHistory = await hRes.json();
+      } catch {}
+
       const bdExtra = await cmbFetchBdExtra();
 
       // Current NAV split for the capital-deployment bar. IBKR NAV is on the
@@ -1013,7 +1043,7 @@ function Combined({ setView }) {
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
       const ibkrDate = (portfolio.generatedAt || '').slice(0, 10) || null;
 
-      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers);
+      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
       if (ibkrNav != null && polyNav != null) {
