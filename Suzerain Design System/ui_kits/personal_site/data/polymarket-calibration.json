@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T05:16:13Z",
+  "generatedAt": "2026-07-24T08:45:44Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,8 +45,8 @@
       "wins": 203,
       "pushes": 7,
       "hitRate": 0.7575,
-      "volume": 1042179.18,
-      "realizedPnl": -14549.91,
+      "volume": 1042256.05,
+      "realizedPnl": -14547.69,
       "roi": -0.014
     }
   },
@@ -348,8 +348,8 @@
         "pushes": 0,
         "winRate": 0.8605,
         "avgImplied": 0.9681,
-        "volume": 318798.32,
-        "winRateByVolume": 0.7905,
+        "volume": 318875.19,
+        "winRateByVolume": 0.7906,
         "wilsonLo": 0.7718,
         "wilsonHi": 0.9183
       },
@@ -564,23 +564,23 @@
     "other": {
       "combined": {
         "n": 28,
-        "volume": 69596.33,
-        "realizedPnl": 1765.29,
+        "volume": 69673.2,
+        "realizedPnl": 1767.51,
         "roi": 0.0254,
         "hitRate": 0.8148,
         "avgImplied": 0.8002,
         "edge": 0.0146,
-        "top1Share": 0.2169
+        "top1Share": 0.2167
       },
       "exit": {
         "n": 28,
-        "volume": 69596.33,
-        "realizedPnl": 1765.29,
+        "volume": 69673.2,
+        "realizedPnl": 1767.51,
         "roi": 0.0254,
         "hitRate": 0.8148,
         "avgImplied": 0.8002,
         "edge": 0.0146,
-        "top1Share": 0.2169
+        "top1Share": 0.2167
       }
     },
     "politics": {
