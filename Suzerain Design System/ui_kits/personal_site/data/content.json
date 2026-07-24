@@ -22,6 +22,14 @@
     "sub": "tracker live since 2026",
     "log": [
       {
+        "date": "2026-07-24",
+        "body": "Shipped a max view on the P&L charts today. IBKR's Flex Query only hands back a trailing year, so the site now keeps its own history — from here the window just grows.",
+        "link": {
+          "text": "keeps its own history",
+          "href": "#/thoughts/the-charts-now-remember"
+        }
+      },
+      {
         "date": "2026-06-30",
         "body": "EOQ. Despite making 5 figures on geopolitical and election predictions, we ended up with a massive drawdown on Polymarket due to touch options on oil, a tradfi position.",
         "link": {
