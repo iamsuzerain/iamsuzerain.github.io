@@ -2597,5 +2597,55 @@
       "currency": "USD",
       "weight": -4.3726954096362206e-05
     }
+  ],
+  "byAssetClass": [
+    {
+      "code": "OPT",
+      "label": "options",
+      "total": 200394.48,
+      "names": 11,
+      "legs": 371,
+      "share": 0.683
+    },
+    {
+      "code": "FUT",
+      "label": "futures",
+      "total": 89314.95,
+      "names": 4,
+      "legs": 232,
+      "share": 0.3044
+    },
+    {
+      "code": "STK",
+      "label": "stock",
+      "total": 46289.58,
+      "names": 9,
+      "legs": 38,
+      "share": 0.1578
+    },
+    {
+      "code": "EVENT_FORECASTX",
+      "label": "event contracts",
+      "total": 12514.75,
+      "names": 2,
+      "legs": 5,
+      "share": 0.0427
+    },
+    {
+      "code": "CRYPTO",
+      "label": "crypto",
+      "total": -7829.63,
+      "names": 2,
+      "legs": 2,
+      "share": -0.0267
+    },
+    {
+      "code": "FOP",
+      "label": "futures options",
+      "total": -47297.86,
+      "names": 4,
+      "legs": 21,
+      "share": -0.1612
+    }
   ]
 }

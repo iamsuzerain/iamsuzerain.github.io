@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T08:47:15Z",
+  "generatedAt": "2026-07-24T05:16:13Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -22,30 +22,32 @@
       0.95,
       0.99,
       1.0
-    ]
+    ],
+    "category": "gamma event tags -> canonical category; venue tags ignored",
+    "minCategoryN": 25
   },
   "headline": {
     "settlement": {
-      "n": 572,
-      "wins": 496,
+      "n": 573,
+      "wins": 497,
       "pushes": 0,
-      "hitRate": 0.8671,
-      "volume": 2384343.51,
-      "realizedPnl": -8269.09,
-      "roi": -0.0035,
-      "brier": 0.0733,
-      "avgImplied": 0.8624,
-      "edge": 0.0047,
-      "calibrationError": 0.0332
+      "hitRate": 0.8674,
+      "volume": 2385822.99,
+      "realizedPnl": -8129.74,
+      "roi": -0.0034,
+      "brier": 0.0731,
+      "avgImplied": 0.8625,
+      "edge": 0.0048,
+      "calibrationError": 0.0333
     },
     "exit": {
       "n": 275,
-      "wins": 202,
+      "wins": 203,
       "pushes": 7,
-      "hitRate": 0.7537,
-      "volume": 993049.07,
-      "realizedPnl": -14960.9,
-      "roi": -0.0151
+      "hitRate": 0.7575,
+      "volume": 1042179.18,
+      "realizedPnl": -14549.91,
+      "roi": -0.014
     }
   },
   "buckets": {
@@ -170,15 +172,15 @@
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 106,
-        "wins": 100,
+        "n": 107,
+        "wins": 101,
         "pushes": 0,
-        "winRate": 0.9434,
-        "avgImplied": 0.9263,
-        "volume": 436856.7,
-        "winRateByVolume": 0.9412,
-        "wilsonLo": 0.882,
-        "wilsonHi": 0.9738
+        "winRate": 0.9439,
+        "avgImplied": 0.9262,
+        "volume": 438336.18,
+        "winRateByVolume": 0.9414,
+        "wilsonLo": 0.883,
+        "wilsonHi": 0.974
       },
       {
         "lo": 0.95,
@@ -320,8 +322,8 @@
         "pushes": 1,
         "winRate": 0.5641,
         "avgImplied": 0.8454,
-        "volume": 79895.55,
-        "winRateByVolume": 0.6816,
+        "volume": 81542.76,
+        "winRateByVolume": 0.6678,
         "wilsonLo": 0.4098,
         "wilsonHi": 0.707
       },
@@ -329,14 +331,14 @@
         "lo": 0.9,
         "hi": 0.95,
         "n": 65,
-        "wins": 48,
+        "wins": 49,
         "pushes": 1,
-        "winRate": 0.75,
+        "winRate": 0.7656,
         "avgImplied": 0.9277,
-        "volume": 296305.06,
-        "winRateByVolume": 0.8969,
-        "wilsonLo": 0.6318,
-        "wilsonHi": 0.8399
+        "volume": 298322.82,
+        "winRateByVolume": 0.9074,
+        "wilsonLo": 0.6487,
+        "wilsonHi": 0.8525
       },
       {
         "lo": 0.95,
@@ -346,8 +348,8 @@
         "pushes": 0,
         "winRate": 0.8605,
         "avgImplied": 0.9681,
-        "volume": 318454.72,
-        "winRateByVolume": 0.7903,
+        "volume": 318798.32,
+        "winRateByVolume": 0.7905,
         "wilsonLo": 0.7718,
         "wilsonHi": 0.9183
       },
@@ -359,11 +361,323 @@
         "pushes": 3,
         "winRate": 0.9231,
         "avgImplied": 0.9948,
-        "volume": 131907.45,
-        "winRateByVolume": 0.7859,
+        "volume": 177028.99,
+        "winRateByVolume": 0.8405,
         "wilsonLo": 0.6669,
         "wilsonHi": 0.9863
       }
     ]
+  },
+  "byCategory": {
+    "commodities": {
+      "combined": {
+        "n": 101,
+        "volume": 408456.41,
+        "realizedPnl": -92953.16,
+        "roi": -0.2276,
+        "hitRate": 0.8515,
+        "avgImplied": 0.8939,
+        "edge": -0.0424,
+        "top1Share": 0.6026
+      },
+      "settlement": {
+        "n": 69,
+        "volume": 266431.82,
+        "realizedPnl": -92812.8,
+        "roi": -0.3484,
+        "hitRate": 0.913,
+        "avgImplied": 0.9185,
+        "edge": -0.0055,
+        "top1Share": 0.7055
+      },
+      "exit": {
+        "n": 32,
+        "volume": 142024.59,
+        "realizedPnl": -140.36,
+        "roi": -0.001,
+        "hitRate": 0.7188,
+        "avgImplied": 0.8407,
+        "edge": -0.122,
+        "top1Share": 0.1915
+      }
+    },
+    "crypto": {
+      "combined": {
+        "n": 17,
+        "volume": 240876.07,
+        "realizedPnl": 10586.17,
+        "roi": 0.0439,
+        "hitRate": 1.0,
+        "avgImplied": 0.9569,
+        "edge": 0.0431,
+        "top1Share": 0.8798
+      },
+      "settlement": {
+        "n": 11,
+        "volume": 225087.69,
+        "realizedPnl": 9656.86,
+        "roi": 0.0429,
+        "hitRate": 1.0,
+        "avgImplied": 0.9649,
+        "edge": 0.0351,
+        "top1Share": 0.9644
+      },
+      "exit": {
+        "n": 6,
+        "volume": 15788.38,
+        "realizedPnl": 929.31,
+        "roi": 0.0589,
+        "hitRate": 1.0,
+        "avgImplied": 0.9421,
+        "edge": 0.0579,
+        "top1Share": 0.4154
+      }
+    },
+    "culture": {
+      "combined": {
+        "n": 6,
+        "volume": 11307.39,
+        "realizedPnl": 82.22,
+        "roi": 0.0073,
+        "hitRate": 1.0,
+        "avgImplied": 0.9884,
+        "edge": 0.0116,
+        "top1Share": 0.8555
+      },
+      "settlement": {
+        "n": 2,
+        "volume": 8448.71,
+        "realizedPnl": 70.52,
+        "roi": 0.0083,
+        "hitRate": 1.0,
+        "avgImplied": 0.9924,
+        "edge": 0.0076,
+        "top1Share": 0.9974
+      },
+      "exit": {
+        "n": 4,
+        "volume": 2858.68,
+        "realizedPnl": 11.7,
+        "roi": 0.0041,
+        "hitRate": 1.0,
+        "avgImplied": 0.9864,
+        "edge": 0.0136,
+        "top1Share": 0.5829
+      }
+    },
+    "equities": {
+      "combined": {
+        "n": 71,
+        "volume": 105781.74,
+        "realizedPnl": 430.6,
+        "roi": 0.0041,
+        "hitRate": 0.8857,
+        "avgImplied": 0.8826,
+        "edge": 0.0031,
+        "top1Share": 0.2069
+      },
+      "settlement": {
+        "n": 44,
+        "volume": 74676.12,
+        "realizedPnl": 359.69,
+        "roi": 0.0048,
+        "hitRate": 0.8636,
+        "avgImplied": 0.8831,
+        "edge": -0.0195,
+        "top1Share": 0.2729
+      },
+      "exit": {
+        "n": 27,
+        "volume": 31105.62,
+        "realizedPnl": 70.91,
+        "roi": 0.0023,
+        "hitRate": 0.9231,
+        "avgImplied": 0.8818,
+        "edge": 0.0413,
+        "top1Share": 0.3745
+      }
+    },
+    "geopolitics": {
+      "combined": {
+        "n": 187,
+        "volume": 1227475.95,
+        "realizedPnl": 49475.86,
+        "roi": 0.0403,
+        "hitRate": 0.8486,
+        "avgImplied": 0.8761,
+        "edge": -0.0275,
+        "top1Share": 0.3056
+      },
+      "settlement": {
+        "n": 123,
+        "volume": 744865.0,
+        "realizedPnl": 48927.7,
+        "roi": 0.0657,
+        "hitRate": 0.9106,
+        "avgImplied": 0.9029,
+        "edge": 0.0077,
+        "top1Share": 0.4944
+      },
+      "exit": {
+        "n": 64,
+        "volume": 482610.95,
+        "realizedPnl": 548.16,
+        "roi": 0.0011,
+        "hitRate": 0.7258,
+        "avgImplied": 0.8248,
+        "edge": -0.099,
+        "top1Share": 0.3168
+      }
+    },
+    "macro": {
+      "combined": {
+        "n": 8,
+        "volume": 7370.51,
+        "realizedPnl": 137.01,
+        "roi": 0.0186,
+        "hitRate": 0.875,
+        "avgImplied": 0.924,
+        "edge": -0.049,
+        "top1Share": 0.2832
+      },
+      "settlement": {
+        "n": 4,
+        "volume": 911.19,
+        "realizedPnl": 8.8,
+        "roi": 0.0097,
+        "hitRate": 0.75,
+        "avgImplied": 0.9376,
+        "edge": -0.1876,
+        "top1Share": 0.4633
+      },
+      "exit": {
+        "n": 4,
+        "volume": 6459.32,
+        "realizedPnl": 128.21,
+        "roi": 0.0198,
+        "hitRate": 1.0,
+        "avgImplied": 0.9103,
+        "edge": 0.0897,
+        "top1Share": 0.5483
+      }
+    },
+    "other": {
+      "combined": {
+        "n": 28,
+        "volume": 69596.33,
+        "realizedPnl": 1765.29,
+        "roi": 0.0254,
+        "hitRate": 0.8148,
+        "avgImplied": 0.8002,
+        "edge": 0.0146,
+        "top1Share": 0.2169
+      },
+      "exit": {
+        "n": 28,
+        "volume": 69596.33,
+        "realizedPnl": 1765.29,
+        "roi": 0.0254,
+        "hitRate": 0.8148,
+        "avgImplied": 0.8002,
+        "edge": 0.0146,
+        "top1Share": 0.2169
+      }
+    },
+    "politics": {
+      "combined": {
+        "n": 151,
+        "volume": 512067.35,
+        "realizedPnl": 17489.97,
+        "roi": 0.0342,
+        "hitRate": 0.8389,
+        "avgImplied": 0.854,
+        "edge": -0.0151,
+        "top1Share": 0.1748
+      },
+      "settlement": {
+        "n": 92,
+        "volume": 424037.11,
+        "realizedPnl": 17366.59,
+        "roi": 0.041,
+        "hitRate": 0.8478,
+        "avgImplied": 0.8567,
+        "edge": -0.0088,
+        "top1Share": 0.2142
+      },
+      "exit": {
+        "n": 59,
+        "volume": 88030.24,
+        "realizedPnl": 123.38,
+        "roi": 0.0014,
+        "hitRate": 0.8246,
+        "avgImplied": 0.8499,
+        "edge": -0.0253,
+        "top1Share": 0.2238
+      }
+    },
+    "sports": {
+      "combined": {
+        "n": 274,
+        "volume": 715527.03,
+        "realizedPnl": -13824.97,
+        "roi": -0.0193,
+        "hitRate": 0.7802,
+        "avgImplied": 0.7927,
+        "edge": -0.0125,
+        "top1Share": 0.1415
+      },
+      "settlement": {
+        "n": 224,
+        "volume": 516240.85,
+        "realizedPnl": 4277.17,
+        "roi": 0.0083,
+        "hitRate": 0.8304,
+        "avgImplied": 0.8123,
+        "edge": 0.0181,
+        "top1Share": 0.119
+      },
+      "exit": {
+        "n": 50,
+        "volume": 199286.18,
+        "realizedPnl": -18102.14,
+        "roi": -0.0908,
+        "hitRate": 0.551,
+        "avgImplied": 0.7051,
+        "edge": -0.154,
+        "top1Share": 0.268
+      }
+    },
+    "tech": {
+      "combined": {
+        "n": 5,
+        "volume": 129543.39,
+        "realizedPnl": 4131.36,
+        "roi": 0.0319,
+        "hitRate": 1.0,
+        "avgImplied": 0.9207,
+        "edge": 0.0793,
+        "top1Share": 0.6448
+      },
+      "settlement": {
+        "n": 4,
+        "volume": 125124.5,
+        "realizedPnl": 4015.73,
+        "roi": 0.0321,
+        "hitRate": 1.0,
+        "avgImplied": 0.956,
+        "edge": 0.044,
+        "top1Share": 0.6634
+      },
+      "exit": {
+        "n": 1,
+        "volume": 4418.89,
+        "realizedPnl": 115.63,
+        "roi": 0.0262,
+        "hitRate": 1.0,
+        "avgImplied": 0.7796,
+        "edge": 0.2204,
+        "top1Share": 1.0
+      }
+    }
   }
 }

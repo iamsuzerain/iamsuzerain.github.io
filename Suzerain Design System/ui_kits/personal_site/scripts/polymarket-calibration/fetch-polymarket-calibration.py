@@ -50,13 +50,70 @@ WALLETS = [w.strip() for w in os.environ.get("PM_WALLET", ",".join(DEFAULT_WALLE
 
 ACTIVITY_URL = "https://data-api.polymarket.com/activity"
 GAMMA_URL = "https://gamma-api.polymarket.com/markets"
+EVENTS_URL = "https://gamma-api.polymarket.com/events"
 PAGE = 500          # activity page size
 OFFSET_CEIL = 5000  # /activity rejects offset past ~5500; slide the window before then
 GAMMA_CHUNK = 25    # condition_ids per gamma request (URL-length safe)
+EVENTS_CHUNK = 20   # event ids per gamma /events request
 EPS = 1e-6          # share dust threshold
+MIN_CATEGORY_N = 25 # below this a category is noise; the UI folds it into "other"
 # Deciles below 0.9, then split the top decile finely: ~75% of this book's bets
 # land in 0.9-1.0, so plain deciles would collapse it into one unreadable bin.
 BUCKET_EDGES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0]
+
+# ── Market taxonomy ─────────────────────────────────────────────────────────
+# Polymarket exposes categories ONLY on the /events endpoint. The market object
+# has a `category` field but it is empty on every modern market, and the `events`
+# array embedded in a /markets response is stripped of its `tags`. So the join is
+# necessarily two hops: conditionId -> market.events[0].id -> event.tags[].label.
+# Note `closed=true` is mandatory on the /markets query — without it gamma
+# returns zero rows for a condition_ids filter.
+#
+# NOISE: tags describing HOW a market is priced or merchandised, not what it is
+# about. They must never decide a category — several price-ladder markets carry
+# `Hit Price` + `Finance` alongside the real subject tag, and matching on those
+# files WTI crude under whatever generic bucket happens to be checked first.
+NOISE_TAGS = {
+    "Hit Price", "Hide From New", "Monthly", "Weekly", "Daily", "Recurring",
+    "Finance Updown", "Pyth Finance", "Games", "All", "Featured", "New",
+}
+
+# Specific asset/topic tags are matched before broad umbrella tags, so a market
+# tagged both {Oil, Commodities, Finance} lands in commodities rather than a
+# generic finance bucket. Order within this list IS the precedence rule.
+CATEGORY_TAGS = [
+    ("commodities", {"Oil", "Commodities", "WTI", "Metals", "Gas", "Gold",
+                     "Natural Gas", "Silver", "Copper"}),
+    ("crypto",      {"Crypto", "Bitcoin", "Ethereum", "Solana", "FDV",
+                     "Pre-Market", "Memecoins", "Crypto Prices"}),
+    ("equities",    {"SPX", "Indicies", "Indices", "Stocks", "Earnings",
+                     "Nasdaq", "S&P"}),
+    ("macro",       {"Fed", "Inflation", "Interest Rates", "Recession",
+                     "Economy", "CPI", "Jobs", "GDP"}),
+    ("sports",      {"Sports", "NFL", "NBA", "MLB", "Soccer", "EPL", "Tennis",
+                     "F1", "NHL", "UFC", "Golf", "Chess", "Olympics", "Cricket",
+                     "FIFA World Cup", "baseball", "football", "basketball"}),
+    ("geopolitics", {"Geopolitics", "War", "Ukraine", "Russia", "Israel", "Iran",
+                     "China", "Middle East", "Foreign Policy", "Venezuela",
+                     "Iran Ceasefire", "U.S. x Iran", "World"}),
+    ("politics",    {"Politics", "Elections", "US Election", "Trump", "Congress",
+                     "Midterms", "Primaries", "Senate Primaries", "Polls",
+                     "primary elections", "Governor midterms", "US-current-affairs",
+                     "California Governor", "California Primary", "California Midterm",
+                     "June 2 Primaries"}),
+    ("tech",        {"Tech", "AI", "Science", "Space", "OpenAI", "SpaceX", "Elon Musk"}),
+    ("culture",     {"Culture", "Pop Culture", "Awards", "Movies", "Music",
+                     "Celebrities", "Weather", "Health", "Mentions"}),
+]
+
+
+def categorize(tags: list[str]) -> str:
+    """Map an event's tag labels to one canonical category (first match wins)."""
+    ts = set(tags or []) - NOISE_TAGS
+    for name, keys in CATEGORY_TAGS:
+        if ts & keys:
+            return name
+    return "other"
 
 
 def log(*a):
@@ -170,6 +227,52 @@ def fetch_resolutions(sess, condition_ids):
             if prices[win_idx] >= 0.99:
                 winners[cond] = win_idx
     return winners
+
+
+def fetch_categories(sess, condition_ids):
+    """conditionId -> canonical category, via market -> event -> tags.
+
+    Two hops because gamma only carries tags on /events (see NOISE_TAGS above).
+    Markets that fail either hop are left uncategorized and surface as "other".
+    """
+    cond_event = {}
+    ids = list(condition_ids)
+    for i in range(0, len(ids), GAMMA_CHUNK):
+        chunk = ids[i:i + GAMMA_CHUNK]
+        params = ([("condition_ids", c) for c in chunk]
+                  + [("closed", "true"), ("limit", GAMMA_CHUNK)])
+        try:
+            d = sess.get(GAMMA_URL, params=params, timeout=30).json()
+        except Exception as e:
+            log("category markets chunk failed:", e)
+            continue
+        if not isinstance(d, list):
+            continue
+        for m in d:
+            cond, evs = m.get("conditionId"), (m.get("events") or [])
+            if cond and evs and evs[0].get("id"):
+                cond_event[cond] = str(evs[0]["id"])
+
+    event_cat = {}
+    eids = sorted(set(cond_event.values()))
+    for i in range(0, len(eids), EVENTS_CHUNK):
+        chunk = eids[i:i + EVENTS_CHUNK]
+        params = [("id", e) for e in chunk] + [("limit", 100)]
+        try:
+            d = sess.get(EVENTS_URL, params=params, timeout=30).json()
+        except Exception as e:
+            log("category events chunk failed:", e)
+            continue
+        if not isinstance(d, list):
+            continue
+        for ev in d:
+            labels = [t.get("label") for t in (ev.get("tags") or []) if t.get("label")]
+            event_cat[str(ev.get("id"))] = categorize(labels)
+
+    out = {c: event_cat[e] for c, e in cond_event.items() if e in event_cat}
+    log(f"categories: {len(cond_event)}/{len(ids)} markets -> events, "
+        f"{len(out)} categorized")
+    return out
 
 
 def build_records(pos, winners):
@@ -302,6 +405,71 @@ def headline(records, series):
     return out
 
 
+def category_stats(rows):
+    """P&L attribution for one slice of records.
+
+    The panel reads the picking-vs-sizing story off two edges in the units the
+    calibration headline already uses, rather than a Brier score (which isn't
+    comparable across categories — it falls automatically as odds shorten, so a
+    book of favourites scores well with no skill):
+
+      edge  — won − priced, one vote per bet (probability points). Directional
+              picking skill: did the side win more often than its entry price
+              implied? Meaningful on settled lots only, so the UI reads it from
+              the settlement slice.
+      roi   — realized P&L per dollar staked. The dollar-weighted counterpart —
+              this is what actually hit the book.
+
+    Their disagreement is the finding: edge ≈ 0 (fairly priced) with a deeply
+    negative roi means the picking was fine and the sizing wasn't — the losses
+    rode on a few oversized bets. `top1Share` guards the read by flagging a
+    category that is really one trade wearing a category's name.
+    """
+    n = len(rows)
+    if not n:
+        return None
+    decided = [r for r in rows if not r.get("push")]
+    wins = sum(1 for r in decided if r["win"])
+    vol = sum(r["volume"] for r in rows)
+    pnl = sum(r["realizedPnl"] for r in rows)
+    avg_implied = sum(r["impliedEntry"] for r in rows) / n
+    # Share of the slice's gross P&L carried by its single largest move — guards
+    # against reading a one-trade category as a systematic edge (or leak).
+    gross = sum(abs(r["realizedPnl"]) for r in rows)
+    top1 = (max(abs(r["realizedPnl"]) for r in rows) / gross) if gross else None
+    hit = (wins / len(decided)) if decided else None
+    return {
+        "n": n,
+        "volume": round(vol, 2),
+        "realizedPnl": round(pnl, 2),
+        "roi": round(pnl / vol, 4) if vol else None,
+        "hitRate": round(hit, 4) if hit is not None else None,
+        "avgImplied": round(avg_implied, 4),
+        "edge": round(hit - avg_implied, 4) if hit is not None else None,
+        "top1Share": round(top1, 4) if top1 is not None else None,
+    }
+
+
+def by_category(records):
+    """Per-category attribution, for the whole book and split by lot type.
+
+    `combined` is what the P&L bars read; `settlement`/`exit` expose the split
+    that shows whether a category's damage comes from the bets themselves or
+    from trading out of them early.
+    """
+    cats = sorted({r["category"] for r in records})
+    out = {}
+    for cat in cats:
+        rows = [r for r in records if r["category"] == cat]
+        entry = {"combined": category_stats(rows)}
+        for series in ("settlement", "exit"):
+            s = category_stats([r for r in rows if r["resolvedVia"] == series])
+            if s:
+                entry[series] = s
+        out[cat] = entry
+    return out
+
+
 def main():
     sess = requests.Session(impersonate="chrome124")
     all_rows = []
@@ -322,6 +490,12 @@ def main():
     exit_ = [r for r in records if r["resolvedVia"] == "exit"]
     log(f"records: {len(settle)} settlement, {len(exit_)} exit")
 
+    cats = fetch_categories(sess, conds)
+    for r in records:
+        r["category"] = cats.get(r["conditionId"], "other")
+    uncat = sum(1 for r in records if r["category"] == "other")
+    log(f"uncategorized records: {uncat}/{len(records)}")
+
     out = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "wallets": WALLETS,
@@ -330,6 +504,8 @@ def main():
             "settlement": "shares held to resolution; win = held side settled to 1",
             "exit": "shares sold before resolution; win = sold above avg entry (profit)",
             "bucketEdges": BUCKET_EDGES,
+            "category": "gamma event tags -> canonical category; venue tags ignored",
+            "minCategoryN": MIN_CATEGORY_N,
         },
         "headline": {
             "settlement": headline(records, "settlement"),
@@ -339,6 +515,7 @@ def main():
             "settlement": bucketize(records, "settlement"),
             "exit": bucketize(records, "exit"),
         },
+        "byCategory": by_category(records),
         # Note: the per-lot `positions` array is intentionally NOT emitted — the
         # panel only reads `buckets` + `headline` (a few KB, fixed size), so
         # shipping the ~700 raw records would bloat the static payload ~40x for

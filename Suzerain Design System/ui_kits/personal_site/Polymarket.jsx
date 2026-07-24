@@ -547,6 +547,137 @@ function PmBreakdown({ bd, tradingPnl }) {
   );
 }
 
+// ---------- attribution by market type ----------
+// The aggregate hides the book. Net P&L is a small negative number that is
+// actually a large positive book (geopolitics, politics) netted against a large
+// negative one (commodities), so the only honest read is per-category.
+//
+// The picking-vs-sizing story reads off two columns in the same units the
+// calibration headline already uses:
+//   edge/pos — won − priced on settled bets (pp), one vote per bet. Directional
+//              picking skill.
+//   roi      — realized P&L per dollar staked. The dollar-weighted outcome.
+// edge/pos ≈ 0 (fairly priced) beside a deeply negative roi = the picking was
+// fine and the sizing wasn't. top-1 (share of gross p&l in the single biggest
+// move) guards against reading one trade as a category.
+// From the polymarket-calibration daily cron (`byCategory`).
+const PM_CAT_MIN_N = 25;    // below this the row is noise — dimmed, not dropped
+// A category whose |P&L| is under this fraction of the largest bar renders as a
+// 1px speck indistinguishable from the zero-line divider. Plot only material
+// movers (like the contribution-to-return chart); the table keeps the full tail.
+const PM_CAT_BAR_FLOOR = 0.01;
+
+function PmCategoryPanel({ byCategory }) {
+  const [sort, setSort] = usePmState('pnl');
+  if (!byCategory) return null;
+
+  const rows = Object.entries(byCategory)
+    .map(([cat, v]) => ({
+      cat,
+      c: v.combined,
+      settle: v.settlement || null,
+      exit: v.exit || null,
+    }))
+    .filter(r => r.c && r.c.n);
+  if (!rows.length) return null;
+
+  rows.sort(sort === 'pnl'
+    ? (a, b) => b.c.realizedPnl - a.c.realizedPnl
+    : (a, b) => b.c.volume - a.c.volume);
+
+  const maxAbs = Math.max(...rows.map(r => Math.abs(r.c.realizedPnl)), 1);
+  const net = rows.reduce((a, r) => a + r.c.realizedPnl, 0);
+  const barRows = rows.filter(r => Math.abs(r.c.realizedPnl) >= maxAbs * PM_CAT_BAR_FLOOR);
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">attribution · by market type</span>
+        <div className="pf-range">
+          {[['pnl', 'p&l'], ['volume', 'stake']].map(([k, lbl]) => (
+            <button key={k} className={`pf-range-btn${sort === k ? ' active' : ''}`}
+              onClick={() => setSort(k)}>{lbl}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="pf-contrib pm-cat-bars">
+        {barRows.map(r => {
+          const w = (Math.abs(r.c.realizedPnl) / maxAbs) * 50;
+          const pos = r.c.realizedPnl >= 0;
+          return (
+            <div className="pf-contrib-row" key={r.cat}
+              title={`${r.c.n} positions · ${pmUSD(r.c.volume)} staked`}>
+              <span className={`pf-contrib-sym${r.c.n < PM_CAT_MIN_N ? ' pm-cat-thin' : ''}`}>
+                {r.cat}
+              </span>
+              <div className="pf-contrib-track">
+                <div className="pf-contrib-center"/>
+                <div className={`pf-contrib-bar ${pos ? 'pos' : 'neg'}`}
+                  style={pos ? { left: '50%', width: `${w}%` } : { right: '50%', width: `${w}%` }}/>
+              </div>
+              <span className={`pf-contrib-val ${pos ? 'pos' : 'neg'}`}>
+                {pos ? '+' : ''}{pmUSD(r.c.realizedPnl)}
+              </span>
+            </div>
+          );
+        })}
+        <div className="pf-contrib-foot">
+          <span>
+            {rows.length} market types
+            {barRows.length < rows.length && ` · ${rows.length - barRows.length} near zero`}
+          </span>
+          <span>net {net >= 0 ? '+' : ''}{pmUSD(net)}</span>
+        </div>
+      </div>
+
+      <div className="pf-table-wrap pm-cat-table-wrap">
+        <table className="pf-table">
+          <thead>
+            <tr>
+              <th>type</th>
+              <th className="pf-num">n</th>
+              <th className="pf-num">staked</th>
+              <th className="pf-num">edge/pos</th>
+              <th className="pf-num">roi</th>
+              <th className="pf-num">settle</th>
+              <th className="pf-num">exit</th>
+              <th className="pf-num">top-1</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => {
+              // Picking edge is a settled-market concept (won vs priced); exit
+              // lots have no resolution truth, so read it from the settlement slice.
+              const edge = r.settle ? r.settle.edge : null;
+              return (
+                <tr key={r.cat} className={r.c.n < PM_CAT_MIN_N ? 'pm-cat-thin-row' : ''}>
+                  <td className="pf-sym">{r.cat}</td>
+                  <td className="pf-num">{r.c.n}</td>
+                  <td className="pf-num">{pmUSD(r.c.volume, true)}</td>
+                  <td className={`pf-num ${edge == null ? '' : (edge >= 0 ? 'pos' : 'neg')}`}
+                    title={edge == null ? 'no settled bets in this type' : undefined}>
+                    {edge != null ? (edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp' : '—'}
+                  </td>
+                  <td className={`pf-num ${r.c.roi >= 0 ? 'pos' : 'neg'}`}>{pmPct1(r.c.roi)}</td>
+                  <td className={`pf-num ${r.settle ? (r.settle.roi >= 0 ? 'pos' : 'neg') : ''}`}>
+                    {r.settle ? pmPct1(r.settle.roi) : '—'}
+                  </td>
+                  <td className={`pf-num ${r.exit ? (r.exit.roi >= 0 ? 'pos' : 'neg') : ''}`}>
+                    {r.exit ? pmPct1(r.exit.roi) : '—'}
+                  </td>
+                  <td className="pf-num pm-cat-top1">{r.c.top1Share != null ? pmPct0(r.c.top1Share) : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  );
+}
+
 // ---------- calibration / hit-rate reliability diagram ----------
 // Win rate bucketed by implied entry odds. The 45° line is perfect calibration:
 // a point on it means the price was fair; above = the side won more often than it
@@ -943,6 +1074,8 @@ function Polymarket() {
           <PmSpark series={sparkSeries}/>
         </div>
       )}
+
+      {cal && <PmCategoryPanel byCategory={cal.byCategory}/>}
 
       {cal && <PmCalibration cal={cal}/>}
 

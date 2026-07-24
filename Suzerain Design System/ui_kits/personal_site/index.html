@@ -580,6 +580,25 @@
   .pf-legend-label { color: var(--fg-2); letter-spacing: 0.02em; }
   .pf-legend-pct { color: var(--fg-3); font-variant-numeric: tabular-nums; }
 
+  /* attribution-by-market-type (polymarket) + by-instrument-type (portfolio):
+     shared bar treatment. Category/asset-class names are longer than tickers, so
+     the label column is 118px (fits "futures options"/"event contracts") vs the
+     64px .pf-contrib-row default. */
+  .pm-cat-bars .pf-contrib-row { grid-template-columns: 118px 1fr 96px; }
+  .pm-cat-bars .pf-contrib-sym { text-transform: lowercase; }
+  .pm-cat-table-wrap { margin-top: 18px; padding-top: 4px; border-top: 1px solid var(--border-soft); }
+  /* Under-sampled rows stay visible but read as provisional. */
+  .pm-cat-thin, .pm-cat-thin-row td { opacity: 0.45; }
+  /* top-1 is a reference-context column, not a headline metric — muted so the
+     eye lands on edge/pos and roi first. */
+  .pm-cat-top1 { color: var(--fg-4); }
+
+  @media (max-width: 640px) {
+    /* Reclaim track width on phones; labels shrink rather than the bars. */
+    .pm-cat-bars .pf-contrib-row { grid-template-columns: 84px 1fr 76px; gap: 8px; }
+    .pm-cat-bars .pf-contrib-sym { font-size: 11px; }
+  }
+
   .pf-table-wrap { overflow-x: auto; }
   .pf-table {
     width: 100%; border-collapse: collapse;
