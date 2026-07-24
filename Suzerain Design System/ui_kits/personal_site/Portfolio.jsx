@@ -611,6 +611,53 @@ function ContributionBars({ rows, limit = 12 }) {
   );
 }
 
+// ---------- attribution by instrument type ----------
+// The same question the polymarket category panel asks, answered from data the
+// Flex statement already carries: every contribution row reports the asset class
+// IBKR booked it under, so rolling them up says which instrument type actually
+// produced the return. `share` is signed against NET p&l — winners and losers
+// offset, so individual shares can exceed 100% while the column sums to 100%.
+// Categories whose |P&L| is under this fraction of the largest bar render as a
+// 1px speck next to the zero line — plot only material movers, like the
+// contribution chart above. The table (portfolio.json) keeps every class.
+const AC_BAR_FLOOR = 0.01;
+
+function AssetClassBars({ rows }) {
+  if (!rows || !rows.length) return null;
+  const maxAbs = Math.max(...rows.map(r => Math.abs(r.total)), 1);
+  const net = rows.reduce((a, r) => a + r.total, 0);
+  const barRows = rows.filter(r => Math.abs(r.total) >= maxAbs * AC_BAR_FLOOR);
+  return (
+    <div className="pf-contrib pm-cat-bars">
+      {barRows.map(r => {
+        const w = (Math.abs(r.total) / maxAbs) * 50;
+        const pos = r.total >= 0;
+        return (
+          <div className="pf-contrib-row" key={r.code}
+            title={`${r.names} underlying${r.names === 1 ? '' : 's'} · ${r.legs} legs`}>
+            <span className="pf-contrib-sym">{r.label}</span>
+            <div className="pf-contrib-track">
+              <div className="pf-contrib-center"/>
+              <div className={`pf-contrib-bar ${pos ? 'pos' : 'neg'}`}
+                style={pos ? { left: '50%', width: `${w}%` } : { right: '50%', width: `${w}%` }}/>
+            </div>
+            <span className={`pf-contrib-val ${pos ? 'pos' : 'neg'}`}>
+              {pos ? '+' : ''}{fmtUSD(r.total)}
+            </span>
+          </div>
+        );
+      })}
+      <div className="pf-contrib-foot">
+        <span>
+          {rows.length} instrument types
+          {barRows.length < rows.length && ` · ${rows.length - barRows.length} near zero`}
+        </span>
+        <span>net {net >= 0 ? '+' : ''}{fmtUSD(net)}</span>
+      </div>
+    </div>
+  );
+}
+
 // ---------- main view ----------
 function Portfolio() {
   const [data, setData] = usePortState(null);
@@ -742,6 +789,16 @@ function Portfolio() {
           <PositionsTable rows={d.positions}/>
         </div>
       </div>
+
+      {d.byAssetClass && d.byAssetClass.length > 0 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">attribution · by instrument type</span>
+            <span className="pf-panel-meta">mark-to-market p&l per asset class</span>
+          </div>
+          <AssetClassBars rows={d.byAssetClass}/>
+        </div>
+      )}
 
       {d.contribution && d.contribution.length > 0 && (
         <div className="pf-panel">

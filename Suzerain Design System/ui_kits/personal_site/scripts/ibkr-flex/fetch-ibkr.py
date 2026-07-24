@@ -287,6 +287,54 @@ def build_contribution(root: ET.Element) -> list[dict]:
     return out
 
 
+# IBKR asset-class codes → the labels the site uses. Anything unmapped falls
+# through with its raw code so a new instrument type is visible rather than
+# silently pooled into "other".
+ASSET_CLASS_LABELS = {
+    "STK": "stock",
+    "OPT": "options",
+    "FUT": "futures",
+    "FOP": "futures options",
+    "CRYPTO": "crypto",
+    "EVENT_FORECASTX": "event contracts",
+    "CASH": "fx",
+    "BOND": "bonds",
+    "FUND": "funds",
+}
+
+
+def build_asset_class(contribution: list[dict]) -> list[dict]:
+    """Roll the per-underlying contribution rows up by instrument type.
+
+    Same question the Polymarket category panel asks — where did the P&L
+    actually come from — but the answer is already in the data: every
+    contribution row carries the assetCategory IBKR reported for it. `share` is
+    signed against NET P&L, so a losing class reads negative and the shares sum
+    to 1.0 (they can exceed ±100% individually when winners and losers offset).
+    """
+    agg: dict[str, dict] = {}
+    for row in contribution:
+        code = (row.get("assetClass") or "").strip() or "?"
+        cur = agg.setdefault(code, {
+            "code": code,
+            "label": ASSET_CLASS_LABELS.get(code, code.lower()),
+            "total": 0.0,
+            "names": 0,
+            "legs": 0,
+        })
+        cur["total"] += row.get("total", 0.0)
+        cur["names"] += 1
+        cur["legs"] += row.get("legs", 0)
+
+    net = sum(a["total"] for a in agg.values())
+    out = list(agg.values())
+    for a in out:
+        a["total"] = round(a["total"], 2)
+        a["share"] = round(a["total"] / net, 4) if net else None
+    out.sort(key=lambda a: -a["total"])
+    return out
+
+
 TRADING_DAYS = 252  # annualization factor for daily-sampled series
 
 
@@ -530,6 +578,7 @@ def transform(root: ET.Element) -> dict:
         p["weight"] = (p["mktValue"] / nav) if nav > 0 else 0.0
 
     perf_series = build_perf_series(nav_series, cash_flows)
+    contribution = build_contribution(root)
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -542,7 +591,8 @@ def transform(root: ET.Element) -> dict:
         },
         "pnl": build_pnl(root, nav_series, nav, cash_flows, nav_correction, perf_series),
         "risk": build_risk(perf_series, positions),
-        "contribution": build_contribution(root),
+        "contribution": contribution,
+        "byAssetClass": build_asset_class(contribution),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "allocation": build_allocation(positions, cash),
