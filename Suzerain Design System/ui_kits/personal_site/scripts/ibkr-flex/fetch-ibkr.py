@@ -213,6 +213,34 @@ def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> l
     return perf
 
 
+def build_pnl_series(nav_series: list[dict], cash_flows: dict[str, float]) -> list[dict]:
+    """Daily cumulative deposit-adjusted $ P&L over the statement window, rebased
+    to 0 at the first day. This is the dollar analogue of build_perf_series (which
+    is a return *ratio*); the site plots it directly and stitches successive
+    snapshots into a growing multi-year history (see merge-nav-history.py).
+
+        v_t = (nav_t - nav_0) - Σ flows[day_1 .. day_t]
+
+    Prefers CashTransaction-derived flows (cash_flows); falls back to the
+    depositsWithdrawals `cf` carried on each EquitySummary row. nav_series is
+    already override-corrected by the caller, so v_t reflects the corrected NAV.
+    Day-0 flows are already embedded in nav_0's close, so summing starts at day 1
+    — the same convention as build_perf_series / build_pnl's start_nav.
+    """
+    if not nav_series:
+        return []
+    base = nav_series[0]["v"]
+    use_cash_flows = bool(cash_flows)
+    cum_cf = 0.0
+    out = [{"d": nav_series[0]["d"], "v": 0.0}]
+    for i in range(1, len(nav_series)):
+        d = nav_series[i]["d"]
+        cf = cash_flows.get(d, 0.0) if use_cash_flows else nav_series[i].get("cf", 0.0)
+        cum_cf += cf
+        out.append({"d": d, "v": round((nav_series[i]["v"] - base) - cum_cf, 2)})
+    return out
+
+
 _FUT_MONTHS = set("FGHJKMNQUVXZ")  # CME month codes Jan–Dec
 
 
@@ -595,6 +623,7 @@ def transform(root: ET.Element) -> dict:
         "byAssetClass": build_asset_class(contribution),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
+        "pnlSeries": build_pnl_series(nav_series, cash_flows),
         "allocation": build_allocation(positions, cash),
         "positions": positions[:20],  # top 20 by value
     }

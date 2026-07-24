@@ -65,8 +65,8 @@ function drawdownSeries(perf) {
   });
 }
 
-const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y'];
-const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo' };
+const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
+const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
 function pfRangeCutoff(range, dates) {
   const last = dates[dates.length - 1];
@@ -76,6 +76,26 @@ function pfRangeCutoff(range, dates) {
   const c = new Date(last + 'T00:00:00Z');
   c.setUTCMonth(c.getUTCMonth() - months);
   return c.toISOString().slice(0, 10);
+}
+
+// Prepend accumulated multi-year history (nav-history.json `t` = cumulative TWR)
+// ahead of the Flex-window perfSeries so the MAX range extends the IBKR curve
+// past 12 months. History is rebased multiplicatively to meet perfSeries[0]
+// (v = 0 at the seam) continuously — the trailing window is left untouched. A
+// length-matched placeholder nav rides along because NavChart reads navSeries
+// only for its length when perfSeries is present (values come from perf).
+function pfExtendHistory(navSeries, perfSeries, hist) {
+  const rows = hist && hist.rows;
+  if (!rows || !rows.length || !perfSeries || !perfSeries.length) return { nav: navSeries, perf: perfSeries };
+  const seamD = perfSeries[0].d;
+  let tSeam = null;                            // history TWR at the seam (exact, else nearest earlier)
+  for (const r of rows) { if (r.t == null) continue; if (r.d <= seamD) tSeam = r.t; else break; }
+  if (tSeam == null) return { nav: navSeries, perf: perfSeries };
+  const f = 1 + tSeam;
+  const pre = rows.filter(r => r.d < seamD && r.t != null)
+                  .map(r => ({ d: r.d, v: (1 + r.t) / f - 1 }));
+  if (!pre.length) return { nav: navSeries, perf: perfSeries };
+  return { nav: pre.map(r => ({ d: r.d, v: 0 })).concat(navSeries), perf: pre.concat(perfSeries) };
 }
 
 // Slice navSeries + perfSeries to a trailing range and re-base the cumulative
@@ -663,6 +683,7 @@ function Portfolio() {
   const [data, setData] = usePortState(null);
   const [err, setErr] = usePortState(null);
   const [bench, setBench] = usePortState(null);
+  const [hist, setHist] = usePortState(null);
   const [range, setRange] = usePortState('1Y');
 
   usePortEffect(() => {
@@ -674,6 +695,11 @@ function Portfolio() {
     fetch('data/benchmarks.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(b => { if (b && b.benchmarks) setBench(b.benchmarks); })
+      .catch(() => {});
+    // Accumulated multi-year history (best-effort) — extends the curve under MAX.
+    fetch('data/nav-history.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(h => { if (h && h.rows) setHist(h); })
       .catch(() => {});
   }, []);
 
@@ -698,8 +724,11 @@ function Portfolio() {
   const risk = d.risk;                       // still the source for concentration
   const conc = risk && risk.concentration;   // position-based, not windowed
 
-  // Range selector windows the chart, its strips, AND the risk tiles.
-  const win = pfWindow(d.navSeries, d.perfSeries, range);
+  // Range selector windows the chart, its strips, AND the risk tiles. MAX draws
+  // on the accumulated history (nav-history.json) prepended ahead of the Flex
+  // window; shorter ranges slice within the trailing year exactly as before.
+  const ext = pfExtendHistory(d.navSeries, d.perfSeries, hist);
+  const win = pfWindow(ext.nav, ext.perf, range);
   // Plain computations (not hooks) — these run after the early returns above, so a
   // useMemo here would violate the rules of hooks. Both are cheap.
   const winRisk = pfRiskWindow(win.perf) || risk;

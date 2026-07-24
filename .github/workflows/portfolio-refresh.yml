@@ -34,6 +34,12 @@ jobs:
           echo "first 400 bytes of result:"
           head -c 400 "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
 
+      - name: merge NAV history
+        # Stitch today's trailing-year pnlSeries into the growing multi-year
+        # history so days aged out of the Flex window are preserved (MAX range).
+        run: |
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/merge-nav-history.py"
+
       - name: fetch benchmark closes (SPX + VT)
         # Best-effort: a Yahoo hiccup shouldn't block the IBKR refresh.
         run: |
@@ -51,6 +57,7 @@ jobs:
             exit 0
           fi
           git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/nav-history.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json"
           git commit -m "portfolio: refresh $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
