@@ -645,7 +645,7 @@ function PmCalScatter({ buckets }) {
               left: `${(x(b.avgImplied) / VW) * 100}%`,
               top: `${(y(b.winRate) / VH) * 100}%`,
             }}>
-              <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} bets{b.pushes ? ` · ${b.pushes} push` : ''}</div>
+              <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} positions{b.pushes ? ` · ${b.pushes} push` : ''}</div>
               <div className="cmb-tt-row">won<span className="cmb-tt-num">{pmPct1(b.winRate)}</span></div>
               <div className="cmb-tt-row">priced<span className="cmb-tt-num">{pmPct1(b.avgImplied)}</span></div>
               <div className="cmb-tt-row">edge<span className={`cmb-tt-num ${edge >= 0 ? 'pos' : 'neg'}`}>{(edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp'}</span></div>
@@ -657,7 +657,7 @@ function PmCalScatter({ buckets }) {
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_TEAL }}/>fair (45°)</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_GOOD }}/>won &gt; priced</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_UNDER }}/>won &lt; priced</span>
-        <span className="sz-dim">bubble = # bets · bar = 95% ci</span>
+        <span className="sz-dim">bubble = # positions · bar = 95% ci</span>
       </div>
     </div>
   );
@@ -688,14 +688,14 @@ function PmCalibration({ cal }) {
       <div className="pf-stats">
         <PmStat label="hit rate" value={pmPct0(h.hitRate)}
           tone={series === 'settlement' ? undefined : (h.hitRate >= 0.5 ? 'pos' : 'neg')}
-          kicker={`${h.n} resolved bets${h.pushes ? ` · ${h.pushes} push` : ''}`}/>
+          kicker={`${h.n} resolved positions${h.pushes ? ` · ${h.pushes} push` : ''}`}/>
         {series === 'settlement' && (
           <>
             <PmStat label="brier" value={h.brier != null ? h.brier.toFixed(3) : '—'} kicker="lower = sharper · 0 is perfect"/>
-            <PmStat label="edge · per bet"
+            <PmStat label="edge · per position"
               value={h.edge != null ? `${h.edge >= 0 ? '+' : ''}${(h.edge * 100).toFixed(1)}pp` : '—'}
               tone={h.edge != null ? (h.edge >= 0 ? 'pos' : 'neg') : undefined}
-              kicker="won − priced · bet-weighted"/>
+              kicker="won − priced · position-weighted"/>
           </>
         )}
         <PmStat label="edge · per $"
@@ -709,7 +709,7 @@ function PmCalibration({ cal }) {
       <div className="pf-panel-head" style={{ marginTop: 4 }}>
         <span className="pf-panel-meta">
           {series === 'settlement'
-            ? 'bets held to resolution — the true calibration test'
+            ? 'positions held to resolution — the true calibration test'
             : 'positions sold before resolution — win = closed in profit (a hit-rate view, not calibration)'}
         </span>
       </div>
