@@ -372,6 +372,22 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
 
   return (
     <>
+    {/* Event-log caption sits above the chart, not under the strips. Below, it
+        landed between the alpha and rolling-beta strips and broke the stack of
+        strips that are meant to read as one column against the chart — and it
+        appears and disappears on click, shifting everything under it. */}
+    {cur && (
+      <div className="cmb-annot-cap cmb-annot-cap-top">
+        <div className="cmb-annot-cap-head">
+          <button className="cmb-annot-nav" disabled={curIdx <= 0}
+            onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
+          <div className="cmb-annot-cap-date">{cmbFullDate(cur.date)}</div>
+          <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
+            onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
+        </div>
+        <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>
+      </div>
+    )}
     <div className="pm-chart-wrap">
       <svg
         ref={svgRef}
@@ -474,18 +490,6 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
     <CmbDrawdownStrip series={series} notional={ddNotional != null ? ddNotional : benchNotional}
       markers={markers} cur={cur} onPick={setAnnot}/>
     <CmbAlphaStrip series={series} markers={markers} cur={cur} onPick={setAnnot}/>
-    {cur && (
-      <div className="cmb-annot-cap">
-        <div className="cmb-annot-cap-head">
-          <button className="cmb-annot-nav" disabled={curIdx <= 0}
-            onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
-          <div className="cmb-annot-cap-date">{cmbFullDate(cur.date)}</div>
-          <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
-            onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
-        </div>
-        <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>
-      </div>
-    )}
     </>
   );
 }
@@ -532,6 +536,27 @@ function cmbRisk(series, notional) {
   }
   return { sharpe, vol, maxDD, beta, r2 };
 }
+
+// ---------- adapters onto the shared risk panels (window.SZ_RISK) ----------
+// Portfolio.jsx owns the distribution / rolling / capture / drawdown-episode
+// panels and expects a perfSeries: { d, v } with v a cumulative return *ratio*.
+// The overview carries cumulative *dollars* against a notional instead, so
+// convert rather than reimplement — equity is notional + v, and rebasing the
+// equity curve leaves daily returns unchanged.
+function cmbPerfSeries(series, notional) {
+  if (!series || series.length < 2 || !notional || notional <= 0) return null;
+  return series.map(p => ({ d: p.d, v: (notional + (p.v || 0)) / notional - 1 }));
+}
+
+// The benchmark goes in as raw closes (data.benchmarks.spx.series) rather than
+// the windowed spx dollar column. rebaseBenchmark() rebases whatever it is given
+// to the first date it is asked about, and the dollar column is only defined
+// across the current window — feeding that to a full-series rolling lookback
+// makes every pre-window day back-fill to a constant, i.e. a flat benchmark, and
+// the regression at the window's left edge silently reads against a straight
+// line. Raw closes span the whole history, so every lookback sees real returns.
+// (The two are equivalent inside a window: notional + spx$ = notional*close/base,
+// so consecutive ratios are identical.)
 
 // Diamond event marker, shared by the main chart and the strips so a log entry
 // reads at the same x across all three (see .cmb-annot-sq styling).
@@ -1083,6 +1108,14 @@ function Combined({ setView }) {
   // Range selector windows the chart, its strips, AND the risk panel.
   const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks);
   const risk = cmbRisk(win.series, win.notional);
+  // Shared risk panels, on the combined equity curve. The overview samples every
+  // calendar day (prediction markets trade weekends), so vol annualizes on 365.
+  const SZ = window.SZ_RISK || {};
+  const cPerf = cmbPerfSeries(win.series, win.notional);
+  const cFullPerf = cmbPerfSeries(data.series, data.benchNotional);
+  const cSpx = (data.benchmarks && data.benchmarks.spx && data.benchmarks.spx.series) || null;
+  const cCapture = (cPerf && cSpx && SZ.pfCapture) ? SZ.pfCapture(cPerf, cSpx) : null;
+  const cEpisodes = (cPerf && SZ.pfDrawdownEpisodes) ? SZ.pfDrawdownEpisodes(cPerf) : [];
   // Endpoint of the rebased window = each stream's P&L over the selected range,
   // so the headline + summary tiles track the timeframe on the chart.
   const wLast = (win.series && win.series.length) ? win.series[win.series.length - 1] : { v: 0, ibkr: 0, pm: 0 };
@@ -1133,6 +1166,10 @@ function Combined({ setView }) {
           </div>
           <CmbChart series={win.series} log={data.log} bench={data.bench}
             benchNotional={data.benchNotional} ddNotional={win.notional}/>
+          {SZ.RollingStrip && cPerf && (
+            <SZ.RollingStrip fullSeries={cFullPerf || cPerf} perfSeries={cPerf}
+              benchSeries={cSpx} periods={365}/>
+          )}
         </div>
       )}
 
@@ -1172,13 +1209,51 @@ function Combined({ setView }) {
         </div>
       )}
 
-      <div className="pf-footer">
-        <span>ibkr flex (daily cron) + polymarket user-pnl (live + daily snapshot)</span>
-        <span className="sz-sep">·</span>
-        <span>not financial advice</span>
-        <span className="sz-sep">·</span>
-        <span>polymarket here is 12mo, all sources (rewards spread linearly); the polymarket tab shows all-time</span>
-      </div>
+      {/* Shared with the ibkr view — same panels, combined equity curve. */}
+      {cPerf && SZ.ReturnDistribution && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">return distribution · daily</span>
+            <span className="pf-panel-meta">vs normal, same mean and sd</span>
+          </div>
+          <SZ.ReturnDistribution perfSeries={cPerf}/>
+        </div>
+      )}
+
+      {cCapture && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">capture vs spx</span>
+            <span className="pf-panel-meta">
+              {cCapture.upDays} up · {cCapture.downDays} down sessions · negative = moved opposite
+            </span>
+          </div>
+          <div className="cmb-risk-grid">
+            <CmbStat label="up capture"
+              value={cCapture.upCapture != null ? pct1(cCapture.upCapture) : '—'}
+              note="of spx gains on its up days"/>
+            <CmbStat label="down capture"
+              value={cCapture.downCapture != null ? pct1(cCapture.downCapture) : '—'}
+              note="of spx losses on its down days"/>
+            <CmbStat label="bull beta"
+              value={cCapture.bullBeta != null ? cCapture.bullBeta.toFixed(2) : '—'}
+              note="slope · spx up days"/>
+            <CmbStat label="bear beta"
+              value={cCapture.bearBeta != null ? cCapture.bearBeta.toFixed(2) : '—'}
+              note="slope · spx down days"/>
+          </div>
+        </div>
+      )}
+
+      {cEpisodes.length > 0 && SZ.DrawdownTable && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">drawdown episodes · {CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-meta">deepest {cEpisodes.length}, peak to recovery</span>
+          </div>
+          <SZ.DrawdownTable episodes={cEpisodes}/>
+        </div>
+      )}
     </section>
   );
 }

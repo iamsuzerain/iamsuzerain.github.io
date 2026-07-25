@@ -18,16 +18,32 @@ SEND = f"{BASE}/SendRequest"
 GET  = f"{BASE}/GetStatement"
 VERSION = "3"
 
-# asset-class → legend color (mirrors the allocation palette the UI expects)
+# asset-class → legend color (mirrors the allocation palette the UI expects).
+# Futures/FOP get hues off the violet-magenta axis so the six classes this account
+# actually holds stay separable under deuteranopia; the emerald/teal pair was picked
+# so the worst-separating pair in the set is a pre-existing one rather than one of
+# these. Both are deliberately deep rather than bright — futures options can grow
+# into a large slice, and a light turquoise or yellow would then dominate the ring
+# while also colliding with the pink `options` step for red-blind viewers (classic
+# turquoise #40e0d0 separates from it by only ΔE 3.1). teal-600 is additionally the
+# only step here inside the dark-mode lightness band, and stays clear of the #5eead4
+# the benchmark overlay already uses. The legend direct-labels every slice, which is
+# what keeps the low-contrast `cash` step legible.
 CLASS_COLORS = {
-    "us equities":   "#a78bfa",
-    "intl equities": "#c4b5fd",
-    "bonds":         "#7c5cf5",
-    "crypto":        "#ff4fd8",
-    "options":       "#ff9ae8",
-    "cash":          "#3d2a5c",
-    "other":         "#5a4480",
+    "us equities":     "#a78bfa",
+    "intl equities":   "#c4b5fd",
+    "bonds":           "#7c5cf5",
+    "crypto":          "#ff4fd8",
+    "options":         "#ff9ae8",
+    "futures":         "#34d399",
+    "futures options": "#0d9488",
+    "cash":            "#3d2a5c",
+    "other":           "#5a4480",
 }
+
+# Canonical slice order for the allocation donut.
+ALLOC_ORDER = ["us equities", "intl equities", "bonds", "crypto", "options",
+               "futures", "futures options", "cash", "other"]
 
 
 def fetch(url: str) -> ET.Element:
@@ -88,6 +104,8 @@ def classify(asset_class: str, sub_category: str, currency: str) -> str:
     if ac == "CASH":  return "cash"
     if ac == "BOND" or "BOND" in sub: return "bonds"
     if ac == "OPT":   return "options"
+    if ac == "FOP":   return "futures options"
+    if ac == "FUT":   return "futures"
     if ac == "CRYPTO" or "CRYPTO" in sub: return "crypto"
     if ac == "STK":
         return "us equities" if currency == "USD" else "intl equities"
@@ -118,23 +136,53 @@ def build_positions(root: ET.Element) -> list[dict]:
 
 
 def build_allocation(positions: list[dict], cash: float) -> list[dict]:
-    buckets: dict[str, float] = {}
+    """Share of *gross* exposure per asset class.
+
+    Slices are weighted against gross exposure — Σ|market value| plus |cash| — not
+    the signed sum of the buckets. A short position carries real exposure, so
+    netting it against the longs shrinks the denominator instead of the numerator:
+    with a −$372k short future in the book the old signed total made a single
+    equity bucket read 140%, and the donut drew an arc longer than its own
+    circumference. Buckets that netted negative were dropped outright, so the
+    short leg was invisible on top of that.
+
+    Each slice reports |value| as `pct` (what the arc draws, summing to 1.0) and
+    keeps the signed `net` and unsigned `gross` in dollars, so the UI can mark a
+    bucket that is net short rather than implying every slice is a long.
+    """
+    buckets: dict[str, dict] = {}
+
+    def bucket(k: str) -> dict:
+        return buckets.setdefault(k, {"gross": 0.0, "net": 0.0})
+
     for p in positions:
-        k = classify(p["assetClass"], p["subCategory"], p["currency"])
-        buckets[k] = buckets.get(k, 0) + p["mktValue"]
-    if cash > 0:
-        buckets["cash"] = buckets.get("cash", 0) + cash
-    total = sum(buckets.values()) or 1
-    # preserve a canonical order
-    order = ["us equities", "intl equities", "bonds", "crypto", "options", "cash", "other"]
+        b = bucket(classify(p["assetClass"], p["subCategory"], p["currency"]))
+        b["gross"] += abs(p["mktValue"])
+        b["net"] += p["mktValue"]
+    if cash:
+        # A negative cash balance is a margin loan — real financing exposure, so
+        # it counts toward gross rather than being dropped.
+        b = bucket("cash")
+        b["gross"] += abs(cash)
+        b["net"] += cash
+
+    total = sum(b["gross"] for b in buckets.values()) or 1.0
+    # Canonical order first, then anything classify() emitted that isn't listed —
+    # a new instrument type stays visible instead of being silently dropped.
+    order = ALLOC_ORDER + [k for k in buckets if k not in ALLOC_ORDER]
     alloc = []
     for k in order:
-        if k in buckets and buckets[k] > 0:
-            alloc.append({
-                "label": k,
-                "pct": buckets[k] / total,
-                "color": CLASS_COLORS.get(k, "#5a4480"),
-            })
+        b = buckets.get(k)
+        if not b or b["gross"] <= 0:
+            continue
+        alloc.append({
+            "label": k,
+            "pct": b["gross"] / total,
+            "gross": round(b["gross"], 2),
+            "net": round(b["net"], 2),
+            "short": b["net"] < 0,
+            "color": CLASS_COLORS.get(k, "#5a4480"),
+        })
     return alloc
 
 
