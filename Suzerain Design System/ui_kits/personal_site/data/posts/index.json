@@ -4,7 +4,7 @@
       "slug": "the-charts-now-remember",
       "title": "the charts now remember",
       "date": "2026-07-24",
-      "summary": "Shipped a max view for the P&L charts today. They used to cap at a year because IBKR's Flex Query only returns a trailing ~365 days, so now the site keeps its own history."
+      "summary": "Shipped a max view for the P&L charts today. They used to cap at a year because IBKR's Flex Query only returns a trailing ~365 days, so now the site keeps its own history, rebuilt from old snapshots back to April 2025."
     },
     {
       "slug": "eoq-reflections-an-oil-trade-that-failed",
