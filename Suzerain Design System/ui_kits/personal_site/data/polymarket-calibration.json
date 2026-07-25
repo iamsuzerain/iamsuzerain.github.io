@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T08:45:44Z",
+  "generatedAt": "2026-07-25T08:26:50Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -41,13 +41,13 @@
       "calibrationError": 0.0333
     },
     "exit": {
-      "n": 275,
-      "wins": 203,
+      "n": 277,
+      "wins": 205,
       "pushes": 7,
-      "hitRate": 0.7575,
-      "volume": 1042256.05,
-      "realizedPnl": -14547.69,
-      "roi": -0.014
+      "hitRate": 0.7593,
+      "volume": 1053388.97,
+      "realizedPnl": -14241.38,
+      "roi": -0.0135
     }
   },
   "buckets": {
@@ -226,15 +226,15 @@
       {
         "lo": 0.1,
         "hi": 0.2,
-        "n": 5,
-        "wins": 4,
+        "n": 6,
+        "wins": 5,
         "pushes": 0,
-        "winRate": 0.8,
-        "avgImplied": 0.145,
-        "volume": 62501.08,
-        "winRateByVolume": 0.5894,
-        "wilsonLo": 0.3755,
-        "wilsonHi": 0.9638
+        "winRate": 0.8333,
+        "avgImplied": 0.1375,
+        "volume": 62760.68,
+        "winRateByVolume": 0.5911,
+        "wilsonLo": 0.4365,
+        "wilsonHi": 0.9699
       },
       {
         "lo": 0.2,
@@ -348,23 +348,23 @@
         "pushes": 0,
         "winRate": 0.8605,
         "avgImplied": 0.9681,
-        "volume": 318875.19,
-        "winRateByVolume": 0.7906,
+        "volume": 328682.39,
+        "winRateByVolume": 0.7968,
         "wilsonLo": 0.7718,
         "wilsonHi": 0.9183
       },
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 16,
-        "wins": 12,
+        "n": 17,
+        "wins": 13,
         "pushes": 3,
-        "winRate": 0.9231,
-        "avgImplied": 0.9948,
-        "volume": 177028.99,
-        "winRateByVolume": 0.8405,
-        "wilsonLo": 0.6669,
-        "wilsonHi": 0.9863
+        "winRate": 0.9286,
+        "avgImplied": 0.9947,
+        "volume": 178095.11,
+        "winRateByVolume": 0.8414,
+        "wilsonLo": 0.6853,
+        "wilsonHi": 0.9873
       }
     ]
   },
@@ -563,24 +563,24 @@
     },
     "other": {
       "combined": {
-        "n": 28,
-        "volume": 69673.2,
-        "realizedPnl": 1767.51,
-        "roi": 0.0254,
-        "hitRate": 0.8148,
-        "avgImplied": 0.8002,
-        "edge": 0.0146,
-        "top1Share": 0.2167
+        "n": 30,
+        "volume": 80806.12,
+        "realizedPnl": 2073.82,
+        "roi": 0.0257,
+        "hitRate": 0.8276,
+        "avgImplied": 0.7833,
+        "edge": 0.0443,
+        "top1Share": 0.1967
       },
       "exit": {
-        "n": 28,
-        "volume": 69673.2,
-        "realizedPnl": 1767.51,
-        "roi": 0.0254,
-        "hitRate": 0.8148,
-        "avgImplied": 0.8002,
-        "edge": 0.0146,
-        "top1Share": 0.2167
+        "n": 30,
+        "volume": 80806.12,
+        "realizedPnl": 2073.82,
+        "roi": 0.0257,
+        "hitRate": 0.8276,
+        "avgImplied": 0.7833,
+        "edge": 0.0443,
+        "top1Share": 0.1967
       }
     },
     "politics": {
