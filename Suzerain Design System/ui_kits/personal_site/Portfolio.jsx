@@ -830,13 +830,16 @@ function ReturnDistribution({ perfSeries }) {
         <svg viewBox={`0 0 ${W} ${H}`} className="pf-navchart" preserveAspectRatio="none"
           onMouseLeave={() => setHover(null)}>
           <defs>
+            {/* Diverging pair matches .pf-contrib-bar.pos/.neg and the nav-chart
+                stroke: pink is the positive/high side, violet the negative/low
+                side. Same convention across every chart on the page. */}
             <linearGradient id="pf-hist-pos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.85"/>
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.35"/>
+              <stop offset="0%" stopColor="#ff4fd8" stopOpacity="0.85"/>
+              <stop offset="100%" stopColor="#ff4fd8" stopOpacity="0.35"/>
             </linearGradient>
             <linearGradient id="pf-hist-neg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff6ec4" stopOpacity="0.85"/>
-              <stop offset="100%" stopColor="#ff6ec4" stopOpacity="0.35"/>
+              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.85"/>
+              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.35"/>
             </linearGradient>
           </defs>
           <line x1={PAD_L} x2={W - PAD_R} y1={base} y2={base} stroke="rgba(229,225,241,0.18)"/>
