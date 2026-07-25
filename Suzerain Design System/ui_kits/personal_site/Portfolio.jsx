@@ -29,29 +29,60 @@ function fmtPctBare(n, dp = 1) {
   return (n * 100).toFixed(dp) + '%';
 }
 
-// Beta and R² of the portfolio's daily TWR against a benchmark's aligned daily
-// returns. Both inputs are cumulative-return ratios per perf date; the wealth
-// curve is 1 + v so a daily return is wealth_i / wealth_{i-1} - 1.
-function computeBeta(perf, benchSeries) {
-  if (!perf || perf.length < 21 || !benchSeries) return null;
+// ---------- shared daily-return helpers ----------
+// perfSeries carries cumulative return as a ratio, so the wealth curve is 1 + v
+// and a daily holding-period return is wealth_i / wealth_{i-1} - 1. The
+// distribution, rolling, and capture panels below all start from these two.
+
+function pfDailyReturns(perf) {
+  const out = [];
+  if (!perf) return out;
+  for (let i = 1; i < perf.length; i++) {
+    const a = 1 + perf[i - 1].v, b = 1 + perf[i].v;
+    if (a > 0) out.push({ d: perf[i].d, v: b / a - 1 });
+  }
+  return out;
+}
+
+// Portfolio and benchmark daily returns on one shared date axis, so every
+// paired statistic (beta, correlation, capture) compares like with like.
+function pfPairedReturns(perf, benchSeries) {
+  if (!perf || perf.length < 2 || !benchSeries) return null;
   const bcum = rebaseBenchmark(benchSeries, perf.map(p => p.d));
   if (!bcum) return null;
-  const rp = [], rb = [];
+  const out = [];
   for (let i = 1; i < perf.length; i++) {
     const pa = 1 + perf[i - 1].v, pb = 1 + perf[i].v;
     const ba = 1 + bcum[i - 1], bb = 1 + bcum[i];
-    if (pa > 0 && ba > 0) { rp.push(pb / pa - 1); rb.push(bb / ba - 1); }
+    if (pa > 0 && ba > 0) out.push({ d: perf[i].d, p: pb / pa - 1, b: bb / ba - 1 });
   }
-  const n = rp.length;
-  if (n < 20) return null;
-  const mp = rp.reduce((a, b) => a + b, 0) / n, mb = rb.reduce((a, b) => a + b, 0) / n;
+  return out;
+}
+
+// OLS of portfolio return on benchmark return over an already-paired sample.
+// Returns the slope (beta) plus R²; null when either side has no variance.
+function pfOls(pairs) {
+  const n = pairs.length;
+  if (n < 2) return null;
+  let mp = 0, mb = 0;
+  for (const x of pairs) { mp += x.p; mb += x.b; }
+  mp /= n; mb /= n;
   let cov = 0, vb = 0, vp = 0;
-  for (let i = 0; i < n; i++) {
-    const dp = rp[i] - mp, db = rb[i] - mb;
+  for (const x of pairs) {
+    const dp = x.p - mp, db = x.b - mb;
     cov += dp * db; vb += db * db; vp += dp * dp;
   }
   if (vb === 0 || vp === 0) return null;
-  return { beta: cov / vb, r2: (cov * cov) / (vb * vp) };
+  return { beta: cov / vb, r2: (cov * cov) / (vb * vp), corr: cov / Math.sqrt(vb * vp) };
+}
+
+// Beta and R² of the portfolio's daily TWR against a benchmark's aligned daily
+// returns.
+function computeBeta(perf, benchSeries) {
+  if (!perf || perf.length < 21) return null;
+  const pairs = pfPairedReturns(perf, benchSeries);
+  if (!pairs || pairs.length < 20) return null;
+  return pfOls(pairs);
 }
 
 // Underwater series: decline from the running peak of the wealth curve, as a
@@ -139,6 +170,200 @@ function pfRiskWindow(perf) {
   const dd = drawdownSeries(perf);
   const maxDrawdown = dd.length ? Math.min(0, ...dd.map(p => p.v)) : 0;
   return { sharpe, vol, maxDrawdown };
+}
+
+// ---------- distribution moments ----------
+// Sharpe describes a return series as if it were normal. This is the check on
+// that assumption: skew says which tail is longer, excess kurtosis how fat both
+// are. A short-gamma book typically prints negative skew with fat tails, which
+// is precisely the shape an annualized Sharpe flatters.
+function pfMoments(rets) {
+  const n = rets.length;
+  if (n < 20) return null;
+  const mean = rets.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+  if (!sd) return null;
+  let s3 = 0, s4 = 0;
+  for (const r of rets) { const z = (r - mean) / sd; s3 += z ** 3; s4 += z ** 4; }
+  const sorted = [...rets].sort((a, b) => a - b);
+  return {
+    n, mean, sd,
+    median: n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2,
+    skew: s3 / n,
+    kurt: s4 / n - 3,          // excess: 0 is normal
+    posDays: rets.filter(r => r > 0).length / n,
+    best: sorted[n - 1],
+    worst: sorted[0],
+  };
+}
+
+// Abramowitz & Stegun 7.1.26 — plenty of precision for a reference curve.
+function pfErf(x) {
+  const s = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t
+    - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return s * y;
+}
+const pfNormCdf = (z) => 0.5 * (1 + pfErf(z / Math.SQRT2));
+
+// Histogram of daily returns on bins of equal width, laid out symmetrically about
+// zero so the zero line always falls on a bin edge rather than inside a bar.
+// `expected` is the count a normal with the same mean/sd would put in each bin —
+// the overlay that makes the tails legible.
+function pfHistogram(rets, moments, targetBins = 28) {
+  if (!rets.length || !moments) return null;
+  const maxAbs = Math.max(...rets.map(r => Math.abs(r))) || 0.01;
+  const half = Math.max(4, Math.round(targetBins / 2));
+  const w = maxAbs / half;
+  const bins = [];
+  for (let i = -half; i < half; i++) {
+    const lo = i * w, hi = lo + w;
+    bins.push({
+      lo, hi, count: 0,
+      expected: moments.n * (pfNormCdf((hi - moments.mean) / moments.sd)
+                           - pfNormCdf((lo - moments.mean) / moments.sd)),
+    });
+  }
+  for (const r of rets) {
+    let i = Math.floor(r / w) + half;
+    if (i < 0) i = 0;
+    if (i >= bins.length) i = bins.length - 1;
+    bins[i].count++;
+  }
+  return { bins, w };
+}
+
+// ---------- rolling risk ----------
+// The tiles report one number per window; this reports how that number moved
+// inside the window. A book whose net exposure swings shows it here and nowhere
+// else. Window adapts down on short ranges so 1M still plots something honest.
+const PF_ROLL_METRICS = {
+  beta: { label: 'beta vs spx', zero: 1, fmt: (v) => fmtNum(v, 2), bench: true },
+  vol:  { label: 'ann vol',     zero: 0, fmt: (v) => fmtPctBare(v, 1), bench: false },
+  corr: { label: 'corr vs spx', zero: 0, fmt: (v) => fmtNum(v, 2), bench: true },
+};
+
+// `periods` is the annualization factor for vol: 252 for a trading-day series
+// (IBKR), 365 for a calendar-day one (the overview, which includes weekends
+// because prediction markets trade them).
+function pfRolling(perf, benchSeries, metric, periods = 252) {
+  const spec = PF_ROLL_METRICS[metric];
+  if (!spec) return null;
+  const rows = spec.bench
+    ? pfPairedReturns(perf, benchSeries)
+    : pfDailyReturns(perf).map(r => ({ d: r.d, p: r.v, b: 0 }));
+  if (!rows || rows.length < 40) return null;
+  // Half the sample, capped at 60 sessions and floored at 20 — enough points to
+  // mean something, few enough that a 3M range still yields a curve.
+  const w = Math.max(20, Math.min(60, Math.floor(rows.length / 2)));
+
+  // One slot per perf date, null until the lookback window has filled. The strip
+  // must share the chart's date axis: a rolling series is shorter than the window
+  // it summarises, and stretching those fewer points across the same pixel width
+  // silently slides every date sideways, so a vertical read against the chart and
+  // the strips above it lands on the wrong day. Leading nulls keep x = date.
+  const series = perf.map(p => ({ d: p.d, v: null }));
+  const slotOf = new Map();
+  perf.forEach((p, i) => slotOf.set(p.d, i));
+
+  for (let j = w - 1; j < rows.length; j++) {
+    const slice = rows.slice(j - w + 1, j + 1);
+    let v = null;
+    if (metric === 'vol') {
+      const m = slice.reduce((a, x) => a + x.p, 0) / w;
+      v = Math.sqrt(slice.reduce((a, x) => a + (x.p - m) ** 2, 0) / (w - 1)) * Math.sqrt(periods);
+    } else {
+      const o = pfOls(slice);
+      v = o && (metric === 'beta' ? o.beta : o.corr);
+    }
+    const slot = slotOf.get(rows[j].d);
+    if (v != null && isFinite(v) && slot != null) series[slot].v = v;
+  }
+
+  const firstIdx = series.findIndex(p => p.v != null);
+  const defined = series.filter(p => p.v != null).length;
+  return defined > 2 ? { series, window: w, firstIdx, defined } : null;
+}
+
+// Roll over the FULL series, then show the selected window.
+//
+// Computing the roll on the windowed slice instead would waste history that is
+// already loaded: a 3M view would spend its first 30 sessions warming up a
+// lookback that could have been filled from February. Because the lookback may
+// reach back past the left edge, a short range arrives fully populated, and a
+// "60-session beta" means the same thing on every range rather than silently
+// shrinking with the window. Daily returns are invariant to pfWindow's rebasing
+// (it scales the whole wealth curve by a constant), so the full-series roll and
+// the windowed chart describe the same underlying days.
+function pfRollingWindowed(fullPerf, winPerf, benchSeries, metric, periods = 252) {
+  const full = pfRolling(fullPerf, benchSeries, metric, periods);
+  if (!full || !winPerf || !winPerf.length) return null;
+  const byDate = new Map(full.series.map(p => [p.d, p.v]));
+  const series = winPerf.map(p => ({ d: p.d, v: byDate.has(p.d) ? byDate.get(p.d) : null }));
+  const defined = series.filter(p => p.v != null).length;
+  if (defined <= 2) return null;
+  return {
+    series, window: full.window, defined,
+    firstIdx: series.findIndex(p => p.v != null),
+  };
+}
+
+// ---------- up / down capture ----------
+// Beta assumes one linear relationship holds in both directions. For a book with
+// options on both sides that is the wrong shape, so measure each direction
+// separately: how much of SPX's gain the book captured on its up days, and how
+// much of its loss on the down days. Down capture below up capture is the
+// asymmetry every hedged book is trying to buy.
+function pfCapture(perf, benchSeries) {
+  const pairs = pfPairedReturns(perf, benchSeries);
+  if (!pairs || pairs.length < 20) return null;
+  const up = pairs.filter(x => x.b > 0), down = pairs.filter(x => x.b < 0);
+  if (up.length < 5 || down.length < 5) return null;
+  // Compounded over the subset, the standard capture-ratio definition.
+  const comp = (arr, k) => arr.reduce((a, x) => a * (1 + x[k]), 1) - 1;
+  const upB = comp(up, 'b'), downB = comp(down, 'b');
+  const bull = pfOls(up), bear = pfOls(down);
+  return {
+    upCapture: upB ? comp(up, 'p') / upB : null,
+    downCapture: downB ? comp(down, 'p') / downB : null,
+    bullBeta: bull ? bull.beta : null,
+    bearBeta: bear ? bear.beta : null,
+    upDays: up.length,
+    downDays: down.length,
+  };
+}
+
+// ---------- drawdown episodes ----------
+// The underwater strip shows the shape; this names the events. An episode runs
+// from the peak that preceded the decline to the day the curve regains it, and
+// stays open (recovery null) if the book is still below that peak today.
+function pfDrawdownEpisodes(perf, limit = 5) {
+  if (!perf || perf.length < 3) return [];
+  const dd = drawdownSeries(perf);
+  const eps = [];
+  let cur = null;
+  for (let i = 0; i < dd.length; i++) {
+    if (dd[i].v < 0) {
+      if (!cur) cur = { start: dd[Math.max(0, i - 1)].d, depth: 0, trough: dd[i].d };
+      if (dd[i].v < cur.depth) { cur.depth = dd[i].v; cur.trough = dd[i].d; }
+    } else if (cur) {
+      cur.recovery = dd[i].d;
+      eps.push(cur);
+      cur = null;
+    }
+  }
+  if (cur) { cur.recovery = null; eps.push(cur); }
+  const last = dd[dd.length - 1].d;
+  const days = (a, b) => Math.round(
+    (new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000);
+  for (const e of eps) {
+    e.length = days(e.start, e.recovery || last);
+    e.toTrough = days(e.start, e.trough);
+    e.recoveryDays = e.recovery ? days(e.trough, e.recovery) : null;
+  }
+  return eps.sort((a, b) => a.depth - b.depth).slice(0, limit);
 }
 
 // ---------- Monotone cubic spline (Fritsch-Carlson) ----------
@@ -337,6 +562,10 @@ function NavChart({ series, perfSeries, benchmarks }) {
 }
 
 // ---------- Allocation donut ----------
+// Slices are shares of gross exposure (see build_allocation): pct is unsigned and
+// the set sums to 1, so the ring is always exactly one revolution. A bucket that
+// is net short still occupies its share of the ring — it carries that exposure —
+// and is called out in the legend rather than being drawn as if it were a long.
 function AllocDonut({ data }) {
   const R = 64, r = 40, cx = 80, cy = 80;
   const C = 2 * Math.PI * ((R + r) / 2);
@@ -349,20 +578,40 @@ function AllocDonut({ data }) {
       <svg viewBox="0 0 160 160" className="pf-donut">
         <circle cx={cx} cy={cy} r={ring} fill="none" stroke="rgba(167,139,250,0.08)" strokeWidth={thick}/>
         {data.map((seg, i) => {
-          const len = seg.pct * C;
+          // Clamp defensively: a malformed feed must never draw an arc longer
+          // than the circumference (that wraps and paints over its neighbours).
+          const len = Math.max(0, Math.min(seg.pct || 0, 1)) * C;
           const offset = -acc;
           acc += len;
+          const dash = { strokeDasharray: `${len} ${C - len}`, strokeDashoffset: offset };
+          const spin = `rotate(-90 ${cx} ${cy})`;
           return (
-            <circle key={i}
-              cx={cx} cy={cy} r={ring}
-              fill="none"
-              stroke={seg.color}
-              strokeWidth={thick}
-              strokeDasharray={`${len} ${C - len}`}
-              strokeDashoffset={offset}
-              transform={`rotate(-90 ${cx} ${cy})`}
-              style={{ transition: 'stroke-dasharray 400ms ease' }}
-            />
+            <React.Fragment key={i}>
+              {/* Long slices are solid. Net-short slices read hollow — the band
+                  drops to a ghost and a thin rail runs down its centre — so
+                  direction is legible without leaning on the legend alone. */}
+              <circle
+                cx={cx} cy={cy} r={ring}
+                fill="none"
+                stroke={seg.color}
+                strokeOpacity={seg.short ? 0.26 : 1}
+                strokeWidth={thick}
+                {...dash}
+                transform={spin}
+                style={{ transition: 'stroke-dasharray 400ms ease' }}
+              />
+              {seg.short && (
+                <circle
+                  cx={cx} cy={cy} r={ring}
+                  fill="none"
+                  stroke={seg.color}
+                  strokeWidth="2.5"
+                  {...dash}
+                  transform={spin}
+                  style={{ transition: 'stroke-dasharray 400ms ease' }}
+                />
+              )}
+            </React.Fragment>
           );
         })}
         <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="JetBrains Mono, monospace"
@@ -374,10 +623,17 @@ function AllocDonut({ data }) {
       </svg>
       <ul className="pf-legend">
         {data.map((seg, i) => (
-          <li key={i}>
+          <li key={i} title={seg.net != null ? `net ${fmtUSD(seg.net)} · gross ${fmtUSD(seg.gross)}` : undefined}>
             <span className="pf-legend-dot" style={{ background: seg.color }}/>
-            <span className="pf-legend-label">{seg.label}</span>
-            <span className="pf-legend-pct">{(seg.pct * 100).toFixed(0)}%</span>
+            <span className="pf-legend-label">
+              {seg.label}
+              {seg.short && <span className="pf-legend-short">short</span>}
+            </span>
+            {/* A real but sub-1% slice reads "<1%" rather than rounding to a
+                flat 0% — it is present in the book, so say so. */}
+            <span className="pf-legend-pct">
+              {seg.pct > 0 && seg.pct < 0.005 ? '<1%' : `${(seg.pct * 100).toFixed(0)}%`}
+            </span>
           </li>
         ))}
       </ul>
@@ -539,6 +795,226 @@ function AlphaStrip({ alpha }) {
           <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{hovered.v >= 0 ? '+' : ''}{fmtPctBare(hovered.v)}</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------- Return distribution (histogram + normal reference) ----------
+function ReturnDistribution({ perfSeries }) {
+  const [hover, setHover] = usePortState(null);
+  const rets = pfDailyReturns(perfSeries).map(r => r.v);
+  const m = pfMoments(rets);
+  const hist = m && pfHistogram(rets, m);
+  if (!hist) return null;
+
+  const W = 920, H = 180, PAD_L = 8, PAD_R = 8, PAD_T = 12, PAD_B = 24;
+  const { bins } = hist;
+  const maxCount = Math.max(...bins.map(b => Math.max(b.count, b.expected)), 1);
+  const bw = (W - PAD_L - PAD_R) / bins.length;
+  const x = (i) => PAD_L + i * bw;
+  const y = (c) => PAD_T + (1 - c / maxCount) * (H - PAD_T - PAD_B);
+  const base = y(0);
+  const zeroX = PAD_L + (bins.findIndex(b => b.lo >= 0)) * bw;
+
+  // Normal reference with the same mean and sd — where the bars overshoot it in
+  // the tails and undershoot near the middle is the fat tail, drawn.
+  const normPath = smoothPath(
+    bins.map((_, i) => x(i) + bw / 2),
+    bins.map(b => y(b.expected)));
+
+  const hb = hover != null ? bins[hover] : null;
+
+  return (
+    <React.Fragment>
+      <div className="pm-chart-wrap">
+        <svg viewBox={`0 0 ${W} ${H}`} className="pf-navchart" preserveAspectRatio="none"
+          onMouseLeave={() => setHover(null)}>
+          <defs>
+            <linearGradient id="pf-hist-pos" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.85"/>
+              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.35"/>
+            </linearGradient>
+            <linearGradient id="pf-hist-neg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff6ec4" stopOpacity="0.85"/>
+              <stop offset="100%" stopColor="#ff6ec4" stopOpacity="0.35"/>
+            </linearGradient>
+          </defs>
+          <line x1={PAD_L} x2={W - PAD_R} y1={base} y2={base} stroke="rgba(229,225,241,0.18)"/>
+          {bins.map((b, i) => {
+            const h = base - y(b.count);
+            return (
+              <rect key={i}
+                x={x(i) + 0.75} width={Math.max(0.5, bw - 1.5)}
+                y={y(b.count)} height={Math.max(0, h)}
+                fill={b.lo < 0 ? 'url(#pf-hist-neg)' : 'url(#pf-hist-pos)'}
+                opacity={hover == null || hover === i ? 1 : 0.45}
+                onMouseEnter={() => setHover(i)}
+              />
+            );
+          })}
+          {/* Hit targets wider than the bars themselves. */}
+          {bins.map((b, i) => (
+            <rect key={`h${i}`} x={x(i)} y={PAD_T} width={bw} height={H - PAD_T - PAD_B}
+              fill="transparent" onMouseEnter={() => setHover(i)}/>
+          ))}
+          <path d={normPath} fill="none" stroke="rgba(94,234,212,0.7)"
+            strokeWidth="1.25" strokeDasharray="3 3"/>
+          <line x1={zeroX} x2={zeroX} y1={PAD_T} y2={base}
+            stroke="rgba(229,225,241,0.28)" strokeDasharray="2 3"/>
+        </svg>
+        <div className="pf-axis-x">
+          <span className="start" style={{ left: '0%' }}>{fmtPctBare(bins[0].lo, 1)}</span>
+          <span style={{ left: `${(zeroX / W) * 100}%` }}>0%</span>
+          <span className="end" style={{ left: '100%' }}>{fmtPctBare(bins[bins.length - 1].hi, 1)}</span>
+        </div>
+        {hb && (
+          <div className="pm-tooltip" style={{
+            left: `${((x(bins.indexOf(hb)) + bw / 2) / W) * 100}%`,
+            top: `${(y(hb.count) / H) * 100}%`,
+          }}>
+            <div className="pm-tt-date">{fmtPctBare(hb.lo, 1)} … {fmtPctBare(hb.hi, 1)}</div>
+            <div className={`pm-tt-val ${hb.lo < 0 ? 'neg' : 'pos'}`}>{hb.count} sessions</div>
+            <div className="pf-tt-bench" style={{ color: '#5eead4' }}>
+              normal {hb.expected.toFixed(1)}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="pf-dist-stats">
+        <span><b>{fmtNum(m.skew, 2)}</b> skew</span>
+        <span><b>{fmtNum(m.kurt, 2)}</b> excess kurtosis</span>
+        <span><b>{fmtPctBare(m.posDays, 0)}</b> positive sessions</span>
+        <span><b>{fmtPctBare(m.best, 2)}</b> best</span>
+        <span><b>{fmtPctBare(m.worst, 2)}</b> worst</span>
+        <span><b>{m.n}</b> sessions</span>
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ---------- Rolling risk strip ----------
+function RollingStrip({ fullSeries, perfSeries, benchSeries, periods = 252 }) {
+  const [metric, setMetric] = usePortState('beta');
+  const svgRef = usePortRef(null);
+  const [hover, setHover] = usePortState(null);
+
+  const available = Object.keys(PF_ROLL_METRICS)
+    .filter(k => (benchSeries ? true : !PF_ROLL_METRICS[k].bench));
+  const active = available.includes(metric) ? metric : available[0];
+  const spec = PF_ROLL_METRICS[active];
+  const roll = pfRollingWindowed(fullSeries || perfSeries, perfSeries, benchSeries, active, periods);
+  if (!roll) return null;
+
+  const { series, window: win, firstIdx } = roll;
+  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
+  const vals = series.filter(p => p.v != null).map(p => p.v);
+  const lo = Math.min(spec.zero, ...vals), hi = Math.max(spec.zero, ...vals);
+  const pad = (hi - lo) * 0.12 || 0.01;
+  const y0 = lo - pad, y1 = hi + pad;
+  // x spans every perf date, including the blank warm-up, so this strip lines up
+  // column-for-column with the chart and strips above it.
+  const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const drawn = series.map((p, i) => ({ p, i })).filter(o => o.p.v != null);
+  const line = smoothPath(drawn.map(o => x(o.i)), drawn.map(o => y(o.p.v)));
+  const refY = y(spec.zero);
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    setHover(Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1)))));
+  }
+  // Only the filled part of the axis carries a reading; hovering the warm-up
+  // shows the crosshair (so it still tracks the charts above) but no value.
+  const hovered = hover != null && series[hover] && series[hover].v != null
+    ? series[hover] : null;
+  const now = vals.length ? vals[vals.length - 1] : null;
+
+  return (
+    <React.Fragment>
+      <div className="pf-strip-head">
+        <span className="pf-strip-label">rolling {spec.label} · {win}-session</span>
+        <div className="pf-strip-toggle">
+          <div className="pf-range">
+            {available.map(k => (
+              <button key={k} type="button"
+                className={`pf-range-btn${active === k ? ' active' : ''}`}
+                onClick={() => setMetric(k)}>{k}</button>
+            ))}
+          </div>
+          <span className="pf-strip-meta">now {spec.fmt(now)}</span>
+        </div>
+      </div>
+      <div className="pm-chart-wrap">
+        <svg ref={svgRef} className="pf-navchart" viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          onMouseMove={onMove} onMouseLeave={() => setHover(null)}
+          onTouchStart={onMove} onTouchMove={onMove} onTouchEnd={() => setHover(null)}>
+          <line x1={PAD_L} x2={W - PAD_R} y1={refY} y2={refY}
+            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+          {/* Where the lookback window finishes filling — left of it the metric
+              simply does not exist yet, rather than being zero. */}
+          {firstIdx > 0 && (
+            <line x1={x(firstIdx)} x2={x(firstIdx)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(167,139,250,0.22)" strokeDasharray="1 4"/>
+          )}
+          <path d={line} fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth="1.25"/>
+          {hover != null && (
+            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+          )}
+          {hovered && (
+            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#a78bfa"
+              stroke="#0a0612" strokeWidth="1.5"/>
+          )}
+        </svg>
+        {hovered && (
+          <div className="pm-tooltip" style={{
+            left: `${(x(hover) / W) * 100}%`,
+            top: `${(y(hovered.v) / H) * 100}%`,
+          }}>
+            <div className="pm-tt-date">{hovered.d}</div>
+            <div className="pm-tt-val">{spec.fmt(hovered.v)}</div>
+          </div>
+        )}
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ---------- Drawdown episode table ----------
+function DrawdownTable({ episodes }) {
+  if (!episodes || !episodes.length) return null;
+  return (
+    <div className="pf-table-wrap">
+      <table className="pf-table">
+        <thead>
+          <tr>
+            <th className="pf-num">depth</th>
+            <th>peak</th>
+            <th>trough</th>
+            <th>recovered</th>
+            <th className="pf-num">to trough</th>
+            <th className="pf-num">to recover</th>
+          </tr>
+        </thead>
+        <tbody>
+          {episodes.map((e, i) => (
+            <tr key={i}>
+              <td className="pf-num neg">{fmtPctBare(e.depth, 2)}</td>
+              <td className="pf-sym">{e.start}</td>
+              <td>{e.trough}</td>
+              <td>{e.recovery || <span className="pf-dd-open">open</span>}</td>
+              <td className="pf-num">{e.toTrough}d</td>
+              <td className="pf-num">{e.recoveryDays != null ? `${e.recoveryDays}d` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -738,6 +1214,10 @@ function Portfolio() {
   const winMaxDd = winDd.length ? Math.min(0, ...winDd.map(p => p.v)) : 0;
   const winCurDd = winDd.length ? winDd[winDd.length - 1].v : 0;
   const alphaNow = alpha && alpha.length ? alpha[alpha.length - 1].v : null;
+  // Range-aware like the risk tiles: every panel below re-reads the same window.
+  const spxSeries = bench && bench.spx ? bench.spx.series : null;
+  const capture = spxSeries ? pfCapture(win.perf, spxSeries) : null;
+  const episodes = pfDrawdownEpisodes(win.perf);
 
   return (
     <section className="pf-wrap">
@@ -755,6 +1235,17 @@ function Portfolio() {
           <span className="pf-dot"/>
           <span>auto-updated {updatedStr}</span>
         </div>
+      </div>
+
+      {/* Provenance sits above the panels: the analytics stack below now runs
+          past the fold, and a note explaining what the numbers are is no use
+          underneath them. */}
+      <div className="pf-footer pf-note-top">
+        <span>source · IBKR Flex Query (daily cron via github actions)</span>
+        <span className="sz-sep">·</span>
+        <span>not financial advice</span>
+        <span className="sz-sep">·</span>
+        <span>delayed up to 24h</span>
       </div>
 
       <div className="pf-stats">
@@ -800,13 +1291,14 @@ function Portfolio() {
             <AlphaStrip alpha={alpha}/>
           </>
         )}
+        <RollingStrip fullSeries={ext.perf} perfSeries={win.perf} benchSeries={spxSeries}/>
       </div>
 
       <div className="pf-row">
         <div className="pf-panel pf-panel-alloc">
           <div className="pf-panel-head">
             <span className="pf-panel-title">allocation</span>
-            <span className="pf-panel-meta">by asset class</span>
+            <span className="pf-panel-meta">share of gross exposure</span>
           </div>
           <AllocDonut data={d.allocation}/>
         </div>
@@ -839,15 +1331,71 @@ function Portfolio() {
         </div>
       )}
 
-      <div className="pf-footer">
-        <span>source · IBKR Flex Query (daily cron via github actions)</span>
-        <span className="sz-sep">·</span>
-        <span>not financial advice</span>
-        <span className="sz-sep">·</span>
-        <span>delayed up to 24h</span>
+      {/* Second-order risk analytics. These sit below the holdings panels rather
+          than beside the headline chart: they interrogate the return series the
+          chart already showed, so they read as footnotes to it, not as the lead.
+          All three re-read the same window as the range selector above. */}
+      <div className="pf-panel">
+        <div className="pf-panel-head">
+          <span className="pf-panel-title">return distribution · daily</span>
+          <span className="pf-panel-meta">vs normal, same mean and sd</span>
+        </div>
+        <ReturnDistribution perfSeries={win.perf}/>
       </div>
+
+      {capture && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">capture vs spx</span>
+            {/* A net-short book prints negative capture — it moves against the
+                index rather than damping it — so say what the sign means. */}
+            <span className="pf-panel-meta">
+              {capture.upDays} up · {capture.downDays} down sessions · negative = moved opposite
+            </span>
+          </div>
+          <div className="pf-stats pf-stats-capture">
+            <StatTile label="up capture"
+              value={capture.upCapture != null ? fmtPctBare(capture.upCapture, 0) : '—'}
+              kicker="of spx gains on its up days"/>
+            <StatTile label="down capture"
+              value={capture.downCapture != null ? fmtPctBare(capture.downCapture, 0) : '—'}
+              kicker="of spx losses on its down days"/>
+            <StatTile label="bull beta" value={fmtNum(capture.bullBeta)}
+              kicker="slope · spx up days"/>
+            <StatTile label="bear beta" value={fmtNum(capture.bearBeta)}
+              kicker="slope · spx down days"/>
+          </div>
+        </div>
+      )}
+
+      {episodes.length > 0 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">drawdown episodes · {PF_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-meta">deepest {episodes.length}, peak to recovery</span>
+          </div>
+          <DrawdownTable episodes={episodes}/>
+        </div>
+      )}
+
     </section>
   );
 }
 
 window.Portfolio = Portfolio;
+
+// Shared with the overview (Combined.jsx). In the production bundle each
+// component file is compiled to its own IIFE and concatenated, so top-level
+// declarations do not cross files — window is the channel, the same one
+// Chrome.jsx uses for Cursor/useDecode. Callers supply a perfSeries in this
+// file's shape ({ d, v } where v is cumulative return as a ratio); the overview
+// adapts its dollar series to that shape rather than these re-deriving it.
+window.SZ_RISK = {
+  ReturnDistribution,
+  RollingStrip,
+  DrawdownTable,
+  pfCapture,
+  pfDrawdownEpisodes,
+  pfMoments,
+  pfDailyReturns,
+};

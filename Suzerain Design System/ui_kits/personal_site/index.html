@@ -479,6 +479,30 @@
     font-family: var(--font-mono); font-size: 10px;
     color: var(--fg-4); letter-spacing: 0.1em;
   }
+  /* rolling-metric strip: the beta/vol/corr switch sits inline with the readout */
+  .pf-strip-toggle { display: flex; align-items: center; gap: 12px; }
+
+  /* moments under the return histogram — the numbers a Sharpe ratio hides */
+  .pf-dist-stats {
+    display: flex; flex-wrap: wrap; gap: 6px 22px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--border-soft);
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--fg-4); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .pf-dist-stats b {
+    color: var(--fg-2); font-weight: 500;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  }
+
+  /* capture tiles sit flush inside their panel — the panel head is the title */
+  .pf-stats-capture { margin-bottom: 0; }
+
+  /* a drawdown still underwater has no recovery date to print */
+  .pf-dd-open {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--neg);
+  }
   /* range selector (1M / 3M / 6M / YTD / 1Y) */
   .pf-range { display: flex; gap: 4px; }
   .pf-range-btn {
@@ -511,8 +535,13 @@
     border-radius: 4px; padding: 20px 22px;
     margin-bottom: 16px;
   }
+  /* Column gap keeps the title and the meta apart in a narrow panel (the
+     allocation column is half-width, where "share of gross exposure" would
+     otherwise butt straight into the title); wrapping drops the meta onto its
+     own line rather than letting the two collide. */
   .pf-panel-head {
     display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 4px 20px;
     margin-bottom: 16px;
     padding-bottom: 12px; border-bottom: 1px solid var(--border-soft);
   }
@@ -579,6 +608,13 @@
   .pf-legend-dot { width: 8px; height: 8px; border-radius: 1px; }
   .pf-legend-label { color: var(--fg-2); letter-spacing: 0.02em; }
   .pf-legend-pct { color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  /* Net-short bucket: the ring slice is hatched, this repeats it in words so
+     direction never rests on the fill alone. */
+  .pf-legend-short {
+    margin-left: 6px; padding: 1px 4px; border-radius: 2px;
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--fg-3); border: 1px solid var(--border);
+  }
 
   /* attribution-by-market-type (polymarket) + by-instrument-type (portfolio):
      shared bar treatment. Category/asset-class names are longer than tickers, so
@@ -640,6 +676,13 @@
     margin-top: 32px; padding-top: 20px;
     border-top: 1px solid var(--border-soft);
     display: flex; flex-wrap: wrap; gap: 2px;
+  }
+  /* Same note, hoisted above the panels — the rule flips to the underside so it
+     still reads as a divider between the note and the content it introduces. */
+  .pf-footer.pf-note-top {
+    margin-top: 0; margin-bottom: 24px;
+    padding-top: 0; padding-bottom: 14px;
+    border-top: none; border-bottom: 1px solid var(--border-soft);
   }
 
   @media (max-width: 760px) {

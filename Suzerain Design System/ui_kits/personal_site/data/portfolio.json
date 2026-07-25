@@ -2416,17 +2416,50 @@
   "allocation": [
     {
       "label": "us equities",
-      "pct": 1.4034361922276963,
+      "pct": 0.3129121480484138,
+      "gross": 495660.0,
+      "net": 495660.0,
+      "short": false,
       "color": "#a78bfa"
     },
     {
       "label": "crypto",
-      "pct": 0.00749597904875036,
+      "pct": 0.0016713142491695328,
+      "gross": 2647.4,
+      "net": 2647.4,
+      "short": false,
       "color": "#ff4fd8"
     },
     {
+      "label": "options",
+      "pct": 0.29196154780847366,
+      "gross": 462473.77,
+      "net": -23833.09,
+      "short": true,
+      "color": "#ff9ae8"
+    },
+    {
+      "label": "futures",
+      "pct": 0.23500291956385833,
+      "gross": 372250.0,
+      "net": -372250.0,
+      "short": true,
+      "color": "#34d399"
+    },
+    {
+      "label": "futures options",
+      "pct": 1.2626080298931274e-05,
+      "gross": 20.0,
+      "net": -20.0,
+      "short": true,
+      "color": "#0d9488"
+    },
+    {
       "label": "cash",
-      "pct": 0.7106136713560524,
+      "pct": 0.15843944424978587,
+      "gross": 250971.7,
+      "net": 250971.7,
+      "short": false,
       "color": "#3d2a5c"
     }
   ],
