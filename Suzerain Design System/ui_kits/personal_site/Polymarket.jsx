@@ -62,7 +62,12 @@ function pmTrimFlat(series) {
   }
   return series.slice(-1);
 }
-function pmDownsample(arr, target = 150) {
+// Plot-point ceiling shared with the overview (CMB_CHART_MAX_POINTS). Sized so
+// daily resolution survives ~11 years of history rather than reverting to
+// every-other-day partway through 2027.
+const PM_CHART_MAX_POINTS = 2000;
+
+function pmDownsample(arr, target = PM_CHART_MAX_POINTS) {
   const step = Math.max(1, Math.floor(arr.length / target));
   const out = [];
   for (let i = 0; i < arr.length; i += step) out.push(arr[i]);
@@ -271,7 +276,14 @@ async function pmFetchAll() {
   const realized = +positions.reduce((a, p) => a + p.realized, 0).toFixed(2);
 
   const trimmed = pmTrimFlat(summedPnl);
-  const sampled = pmDownsample(trimmed, 150);
+  // One point per day, matching the ibkr and overview charts. At 150 the
+  // ~425-point series took every 2nd day, putting this chart on a different
+  // time base to the others. The cap is 2000 rather than something tighter
+  // because floor(len/target) only steps to 2 at 2x the target: 400 would hold
+  // 1d resolution just past 2027 and then silently coarsen again, whereas
+  // smoothPath costs ~1.6ms at 2000 points — well inside a frame even though
+  // it is recomputed on every hover move.
+  const sampled = pmDownsample(trimmed, PM_CHART_MAX_POINTS);
   const pnlSeries = sampled.map(r => ({
     d: new Date(r.t * 1000).toISOString().slice(0, 10),
     v: +r.p.toFixed(2),
