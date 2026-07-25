@@ -97,7 +97,14 @@ function cmbSampleDaily(points, start, end) {
   return out;
 }
 
-function cmbDownsample(arr, target = 150) {
+// Plot-point ceiling shared with the polymarket view (PM_CHART_MAX_POINTS).
+// Sized so daily resolution survives ~11 years of history: floor(len/target)
+// only steps to 2 at 2x the target, so a tighter cap would hold 1d for a while
+// and then silently coarsen. smoothPath costs ~1.6ms at 2000 points, well
+// inside a frame even though it is recomputed on every hover move.
+const CMB_CHART_MAX_POINTS = 2000;
+
+function cmbDownsample(arr, target = CMB_CHART_MAX_POINTS) {
   if (arr.length <= target) return arr;
   const step = Math.floor(arr.length / target);
   const out = [];
@@ -310,7 +317,7 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
   }
 
   return {
-    series: cmbDownsample(series, 400),
+    series: cmbDownsample(series, CMB_CHART_MAX_POINTS),
     total: last.v,
     ibkr: last.ibkr,
     pm: last.pm,
