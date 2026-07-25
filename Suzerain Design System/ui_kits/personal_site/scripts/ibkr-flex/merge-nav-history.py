@@ -46,10 +46,19 @@ def merge(incoming: list[dict], existing: list[dict]) -> list[dict]:
     then keep older stored rows and let incoming win on the recent overlap.
 
     Each series is rebased to its own origin, so we align the incoming block to
-    the stored baseline at their newest common date (the seam): the $ P&L `v`
+    the stored baseline at their *oldest* common date (the seam): the $ P&L `v`
     shifts additively; the TWR `t` scales multiplicatively (chained returns).
     Incoming wins on overlapping dates so NAV corrections/overrides propagate.
     Rows older than the incoming window are retained verbatim.
+
+    The seam is the oldest shared date, not the newest, because that is where the
+    retained tail meets the incoming block. Anchoring there keeps the curve
+    continuous across the junction and leaves the original baseline (v = t = 0 at
+    the earliest recorded date) fixed. Anchoring at the newest shared date instead
+    pins the incoming block to the stored *endpoint*, so any IBKR restatement over
+    the overlap gets dumped into a one-day step at the junction and silently drags
+    the baseline — that produced a phantom +10%/day print on the first backfilled
+    day before this was corrected.
     """
     inc = []
     for r in incoming:
@@ -70,7 +79,7 @@ def merge(incoming: list[dict], existing: list[dict]) -> list[dict]:
     inc_start = inc[0]["d"]
 
     common = sorted(d for d in ex if d in inc_map)
-    seam = common[-1] if common else max(ex)     # newest shared date, else last stored
+    seam = common[0] if common else max(ex)      # oldest shared date, else last stored
     base_inc = inc_map[seam] if common else inc[0]
     v_off = round(ex[seam]["v"] - base_inc["v"], 2)
     et, it = ex[seam].get("t"), base_inc.get("t")
