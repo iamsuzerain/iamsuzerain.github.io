@@ -718,6 +718,13 @@
   /* top-1 is a reference-context column, not a headline metric — muted so the
      eye lands on edge/pos and roi first. */
   .pm-cat-top1 { color: var(--fg-4); }
+  /* Scope note — what the bars leave out. Borrows .pf-contrib-foot's type scale
+     but drops its rule: the table above already ends on a border, and two hairlines
+     14px apart read as a broken cell rather than a divider. */
+  .pm-cat-scope { margin-top: 14px; padding-top: 0; border-top: none; }
+  .pm-cat-scope b { font-weight: 500; }
+  .pm-cat-scope b.pos { color: var(--pos); }
+  .pm-cat-scope b.neg { color: var(--neg); }
 
   @media (max-width: 640px) {
     /* Reclaim track width on phones; labels shrink rather than the bars. */

@@ -49,6 +49,7 @@ DEFAULT_WALLETS = [
 WALLETS = [w.strip() for w in os.environ.get("PM_WALLET", ",".join(DEFAULT_WALLETS)).split(",") if w.strip()]
 
 ACTIVITY_URL = "https://data-api.polymarket.com/activity"
+POSITIONS_URL = "https://data-api.polymarket.com/positions"
 GAMMA_URL = "https://gamma-api.polymarket.com/markets"
 EVENTS_URL = "https://gamma-api.polymarket.com/events"
 PAGE = 500          # activity page size
@@ -315,6 +316,70 @@ def fetch_categories(sess, condition_ids):
     return out
 
 
+def fetch_open_book(sess, resolved_conds, settled_conds):
+    """Unrealized mark on positions still genuinely open, for the panel's scope note.
+
+    Everything else in this file measures CLOSED lots — settled or exited. That
+    leaves the open book invisible, so the panel can't say how much of the story
+    it isn't telling. This quantifies exactly that, and nothing else consumes it.
+
+    The trap: /positions keeps RESOLVED-BUT-UNREDEEMED LOSERS. Their curPrice is
+    0.00 and currentValue 0, but `redeemable` is True and initialValue still
+    carries the full cost, so cashPnl reads as a huge unrealized loss for a bet
+    that already lost and is already counted as a settlement lot. Counting those
+    double-counted ~$102k against commodities alone. Filter on gamma's `closed`
+    flag plus the conds we already booked as settlements — and never test
+    openness by summing redeemable currentValue, which is $0 for precisely these
+    rows and so cannot detect them.
+    """
+    rows = []
+    for w in WALLETS:
+        off = 0
+        while True:
+            try:
+                d = sess.get(POSITIONS_URL,
+                             params={"user": w, "limit": 500, "offset": off},
+                             timeout=30).json()
+            except Exception as e:
+                log("positions fetch failed:", e)
+                break
+            if not isinstance(d, list) or not d:
+                break
+            rows += d
+            if len(d) < 500:
+                break
+            off += 500
+
+    # gamma's own closed flag for the markets we still hold
+    conds = sorted({p.get("conditionId") for p in rows if p.get("conditionId")})
+    closed = set()
+    for i in range(0, len(conds), GAMMA_CHUNK):
+        chunk = conds[i:i + GAMMA_CHUNK]
+        for flag in ("true", "false"):
+            params = ([("condition_ids", c) for c in chunk]
+                      + [("closed", flag), ("limit", GAMMA_CHUNK)])
+            try:
+                d = sess.get(GAMMA_URL, params=params, timeout=30).json()
+            except Exception as e:
+                log("open-book gamma chunk failed:", e)
+                continue
+            for m in d if isinstance(d, list) else []:
+                if m.get("closed") and m.get("conditionId"):
+                    closed.add(m["conditionId"])
+
+    stale = closed | set(resolved_conds) | set(settled_conds)
+    live = [p for p in rows if p.get("conditionId") not in stale]
+    ob = {
+        "n": len(live),
+        "cost": round(sum(float(p.get("initialValue") or 0) for p in live), 2),
+        "mark": round(sum(float(p.get("currentValue") or 0) for p in live), 2),
+        "unrealized": round(sum(float(p.get("cashPnl") or 0) for p in live), 2),
+    }
+    log(f"open book: {ob['n']}/{len(rows)} positions live "
+        f"({len(rows) - ob['n']} already resolved), unrealized {ob['unrealized']:,.0f}")
+    return ob
+
+
 def build_records(pos, winners):
     """One position -> up to two lots (settlement + exit), each bucketable."""
     records = []
@@ -545,6 +610,10 @@ def main():
     uncat = sum(1 for r in records if r["category"] == "other")
     log(f"uncategorized records: {uncat}/{len(records)}")
 
+    open_book = fetch_open_book(
+        sess, winners.keys(),
+        {r["conditionId"] for r in records if r["resolvedVia"] == "settlement"})
+
     out = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "wallets": WALLETS,
@@ -565,6 +634,10 @@ def main():
             "exit": bucketize(records, "exit"),
         },
         "byCategory": by_category(records),
+        # Scope note for the by-market-type panel: every figure above is closed
+        # lots, so this is what those bars leave out. Small in this book (+$10k
+        # spread thin) but the panel shouldn't make the reader assume that.
+        "openBook": open_book,
         # Note: the per-lot `positions` array is intentionally NOT emitted — the
         # panel only reads `buckets` + `headline` (a few KB, fixed size), so
         # shipping the ~700 raw records would bloat the static payload ~40x for
