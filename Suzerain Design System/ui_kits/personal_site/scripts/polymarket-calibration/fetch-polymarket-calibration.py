@@ -352,6 +352,13 @@ def bucketize(records, series):
         decided = n - pushes  # pushes excluded from the win-rate denominator
         vol = sum(r["volume"] for r in inb)
         vwins = sum(r["volume"] for r in inb if r["win"])
+        pnl = sum(r["realizedPnl"] for r in inb)
+        # Unsigned P&L: wins and losses both counted positive, so a bucket that
+        # churned a lot to end flat doesn't cancel itself out. This is what the
+        # panel sizes its bubbles by — `volume` (cost basis) overstates buckets
+        # you merely parked money in, and net P&L would erase the busy-but-even
+        # ones entirely.
+        gross = sum(abs(r["realizedPnl"]) for r in inb)
         wlo, whi = wilson(wins, decided)
         buckets.append({
             "lo": round(lo, 2), "hi": round(hi, 2),
@@ -359,6 +366,8 @@ def bucketize(records, series):
             "winRate": round(wins / decided, 4) if decided else None,
             "avgImplied": round(sum(r["impliedEntry"] for r in inb) / n, 4) if n else None,
             "volume": round(vol, 2),
+            "realizedPnl": round(pnl, 2),
+            "grossPnl": round(gross, 2),
             "winRateByVolume": round(vwins / vol, 4) if vol else None,
             "wilsonLo": round(wlo, 4), "wilsonHi": round(whi, 4),
         })

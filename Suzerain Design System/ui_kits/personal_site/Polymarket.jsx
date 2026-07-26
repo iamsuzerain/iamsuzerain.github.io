@@ -710,14 +710,24 @@ function PmCalScatter({ buckets }) {
   const [hover, setHover] = usePmState(null);
   const pts = (buckets || []).filter(b => b.n > 0 && b.winRate != null);
   if (pts.length < 2) return null;
-  const maxN = Math.max(...pts.map(b => b.n));
+  // Bubbles are sized by gross P&L — wins plus losses, unsigned — not by position
+  // count: 8 lottery tickets at $2 and 8 five-figure bets are the same dot under
+  // count-weighting, which reads the wrong way when the money is this lopsided.
+  // Gross rather than $ staked or net: staked inflates buckets you only parked
+  // money in, and net would shrink a busy bucket whose wins and losses happened
+  // to cancel down to nothing. Area scales with the weight (radius ~ sqrt), so a
+  // bucket's ink matches its share of the money that actually moved.
+  // grossPnl postdates the panel, so fall back to cost basis if a stale
+  // calibration payload is still in front of a fresh bundle.
+  const wOf = (b) => (b.grossPnl != null ? b.grossPnl : b.volume) || 0;
+  const maxW = Math.max(...pts.map(wOf)) || 1;
   // Wide plot. viewBox aspect must equal the container's, since preserveAspectRatio
   // is "none" — otherwise the non-uniform stretch would squash the bubbles into
   // ellipses. Radius stays in viewBox units and scales uniformly.
   const VW = 920, VH = 460, PAD = 44;
   const x = (p) => PAD + p * (VW - 2 * PAD);
   const y = (p) => (VH - PAD) - p * (VH - 2 * PAD);
-  const rOf = (n) => 5 + 15 * Math.sqrt(n / maxN);
+  const rOf = (w) => 5 + 15 * Math.sqrt(w / maxW);
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   return (
@@ -742,19 +752,24 @@ function PmCalScatter({ buckets }) {
               y1={y(b.wilsonLo)} y2={y(b.wilsonHi)}
               stroke="rgba(229,225,241,0.28)" strokeWidth="1"/>
           ))}
-          {/* bucket bubbles — sized by n, colored by edge sign */}
-          {pts.map((b, k) => {
-            const edge = b.winRate - b.avgImplied;
-            const c = edge >= 0 ? PM_CAL_GOOD : PM_CAL_UNDER;
-            const active = hover === k;
-            return (
-              <g key={k} onMouseEnter={() => setHover(k)} style={{ cursor: 'pointer' }}>
-                <circle cx={x(b.avgImplied)} cy={y(b.winRate)} r={rOf(b.n)}
-                  fill={c} fillOpacity={active ? 0.5 : 0.28}
-                  stroke={c} strokeWidth={active ? 1.75 : 1}/>
-              </g>
-            );
-          })}
+          {/* bucket bubbles — sized by gross P&L, colored by edge sign. Painted
+              biggest first so a dominant bucket can't bury a small one and take
+              its hover target with it. */}
+          {pts.map((b, k) => k)
+            .sort((a, k) => wOf(pts[k]) - wOf(pts[a]))
+            .map(k => {
+              const b = pts[k];
+              const edge = b.winRate - b.avgImplied;
+              const c = edge >= 0 ? PM_CAL_GOOD : PM_CAL_UNDER;
+              const active = hover === k;
+              return (
+                <g key={k} onMouseEnter={() => setHover(k)} style={{ cursor: 'pointer' }}>
+                  <circle cx={x(b.avgImplied)} cy={y(b.winRate)} r={rOf(wOf(b))}
+                    fill={c} fillOpacity={active ? 0.5 : 0.28}
+                    stroke={c} strokeWidth={active ? 1.75 : 1}/>
+                </g>
+              );
+            })}
         </svg>
 
         {/* axis labels — x = implied (priced) odds, y = actual win rate */}
@@ -789,6 +804,13 @@ function PmCalScatter({ buckets }) {
               top: `${(y(b.winRate) / VH) * 100}%`,
             }}>
               <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} positions{b.pushes ? ` · ${b.pushes} push` : ''}</div>
+              <div className="cmb-tt-row">staked<span className="cmb-tt-num">{pmUSD(b.volume, true)}</span></div>
+              {b.grossPnl != null && (
+                <div className="cmb-tt-row">$ moved<span className="cmb-tt-num">{pmUSD(b.grossPnl, true)}</span></div>
+              )}
+              {b.realizedPnl != null && (
+                <div className="cmb-tt-row">net P&L<span className={`cmb-tt-num ${b.realizedPnl >= 0 ? 'pos' : 'neg'}`}>{pmUSD(b.realizedPnl, true)}</span></div>
+              )}
               <div className="cmb-tt-row">won<span className="cmb-tt-num">{pmPct1(b.winRate)}</span></div>
               <div className="cmb-tt-row">priced<span className="cmb-tt-num">{pmPct1(b.avgImplied)}</span></div>
               <div className="cmb-tt-row">edge<span className={`cmb-tt-num ${edge >= 0 ? 'pos' : 'neg'}`}>{(edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp'}</span></div>
@@ -800,7 +822,7 @@ function PmCalScatter({ buckets }) {
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_TEAL }}/>fair (45°)</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_GOOD }}/>won &gt; priced</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_UNDER }}/>won &lt; priced</span>
-        <span className="sz-dim">bubble = # positions · bar = 95% ci</span>
+        <span className="sz-dim">bubble = $ moved (win + loss) · bar = 95% ci</span>
       </div>
     </div>
   );
