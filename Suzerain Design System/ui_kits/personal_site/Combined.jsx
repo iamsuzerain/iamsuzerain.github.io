@@ -266,7 +266,7 @@ function cmbBenchDollars(benchSeries, notional, start, end) {
   return closes.map((c, i) => notional * ((i < firstIdx ? base : c) / base - 1));
 }
 
-function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory) {
+function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory, pmNavHistory) {
   const today = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
@@ -312,7 +312,38 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
   const transfersThrough = (day) => (pmTransfers || [])
     .filter(t => t && t.date && cmbEpochDay(t.date) <= day)
     .reduce((sum, t) => sum + (t.amount || 0), 0);
-  const baseAt = (day) => navAt(day) + transfersThrough(day);
+
+  // The Polymarket half of the base, preferring its real NAV.
+  //
+  // The transfers ledger values money sent to Polymarket at what was sent,
+  // forever, so base(D) = true capital(D) − PM cumulative P&L(D). At today's
+  // −12.5k on a 969k base that is 1.3% and invisible, but a +100k swing would
+  // put the base ~10% under true capital: the SPX line understated by 10% of
+  // its move, vol and drawdown inflated ~1.1x, and the gap between adjacent
+  // quarter bases blown out to 100k.
+  //
+  // Real NAV only exists from 2026-07-15 (polymarket-breakdown-history.json),
+  // so windows starting before that keep the ledger. The two conventions differ
+  // by PM's running P&L at the boundary, which is why this is a floor and not a
+  // forward-fill: extrapolating today's NAV backwards would invent capital that
+  // was never there. Windows convert to the honest basis one at a time as the
+  // series grows past their start date.
+  const pmNavByDay = new Map();
+  for (const r of ((pmNavHistory && pmNavHistory.rows) || [])) {
+    if (r && r.d && r.nav != null) pmNavByDay.set(cmbEpochDay(r.d), r.nav);
+  }
+  const pmNavDays = [...pmNavByDay.keys()].sort((a, b) => a - b);
+  const pmFloor = pmNavDays.length ? pmNavDays[0] : null;
+  const pmCapitalAt = (day) => {
+    if (pmFloor == null || day < pmFloor) return transfersThrough(day);
+    let lo = 0, hi = pmNavDays.length - 1, best = 0;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (pmNavDays[mid] <= day) { best = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return pmNavByDay.get(pmNavDays[best]);
+  };
+  const baseAt = (day) => navAt(day) + pmCapitalAt(day);
   const notional = baseAt(start);
   const bench = [];
   if (benchmarks && notional) {
@@ -1124,6 +1155,15 @@ function Combined({ setView }) {
 
       // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
       // before the Flex window so the MAX range keeps charting aged-out markers.
+      // Daily Polymarket NAV, recorded from 2026-07-15 onward. Lets the capital
+      // base use PM's real value instead of transfers-at-cost for any window
+      // starting inside the recorded span (see pmCapitalAt).
+      let pmNavHistory = null;
+      try {
+        const nRes = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
+        if (nRes.ok) pmNavHistory = await nRes.json();
+      } catch {}
+
       let pnlHistory = null;
       try {
         const hRes = await fetch('data/nav-history.json', { cache: 'no-store' });
@@ -1143,7 +1183,7 @@ function Combined({ setView }) {
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
       const ibkrDate = (portfolio.generatedAt || '').slice(0, 10) || null;
 
-      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory);
+      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
       if (ibkrNav != null && polyNav != null) {
