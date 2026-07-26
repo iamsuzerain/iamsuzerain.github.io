@@ -147,25 +147,41 @@ function cmbCaptionBody(entry) {
   );
 }
 
-// IBKR cumulative $ P&L. The TWR curve (perfSeries) gives the *shape*; we anchor
-// the endpoint to pnl["1y"].abs — IBKR's authoritative deposit-adjusted dollar P&L
-// (ChangeInNAV) — so this matches the Portfolio tab exactly. Without anchoring,
-// startNAV * TWR drifts from the headline once there are cash flows.
+// IBKR cumulative $ P&L, anchored so the endpoint equals pnl["1y"].abs — IBKR's
+// authoritative deposit-adjusted dollar figure (ChangeInNAV), which the Portfolio
+// tab headlines.
+//
+// Source order matters. pnlSeries is the true daily cumulative *dollar* P&L and
+// is what we want; perfSeries (TWR) is only a fallback for snapshots that
+// predate it. TWR is scale-free by construction, so turning it into dollars with
+// a single multiplier silently assumes the account was one size all year. It
+// wasn't — 642k to 727k with 242k moved out to Polymarket — and that misprices
+// every intra-year segment: q4 25 read $57.7k against a true $63.6k, because a
+// constant factor values 1% of TWR at ~$5.8k when the account was really ~$680k
+// through that quarter.
+//
+// Both sources still get scaled to the pnl["1y"].abs endpoint, but on pnlSeries
+// that is a uniform ~0.6% nudge (the flows IBKR's ChangeInNAV counts differ from
+// the CashTransaction sum by $2k) rather than a reshaping of the curve.
 function cmbIbkrPoints(portfolio, pnlHistory) {
   const nav = portfolio.navSeries || [];
   const perf = portfolio.perfSeries || [];
+  const pnlS = portfolio.pnlSeries || [];
   if (!nav.length) return [];
   const startNAV = nav[0].v;
   const oneY = portfolio.pnl && portfolio.pnl['1y'] ? portfolio.pnl['1y'].abs : null;
 
-  const shape = (perf.length === nav.length && perf.length)
-    ? perf.map(p => ({ d: p.d, v: p.v }))
-    : nav.map(p => ({ d: p.d, v: startNAV ? (p.v - startNAV) / startNAV : 0 }));
+  const inDollars = pnlS.length === nav.length && pnlS.length > 0;
+  const shape = inDollars
+    ? pnlS.map(p => ({ d: p.d, v: p.v }))
+    : (perf.length === nav.length && perf.length)
+      ? perf.map(p => ({ d: p.d, v: p.v }))
+      : nav.map(p => ({ d: p.d, v: startNAV ? (p.v - startNAV) / startNAV : 0 }));
 
   const last = shape[shape.length - 1].v;
   const toDollars = (oneY != null && last)
     ? (v) => oneY * (v / last)
-    : (v) => startNAV * v;
+    : inDollars ? (v) => v : (v) => startNAV * v;
 
   const trailing = shape.map(p => ({ day: cmbEpochDay(p.d), v: toDollars(p.v) }));
 
