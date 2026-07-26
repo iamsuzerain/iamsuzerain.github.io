@@ -1140,6 +1140,14 @@ function ContributionBars({ rows, limit = 12 }) {
 // Categories whose |P&L| is under this fraction of the largest bar render as a
 // 1px speck next to the zero line — plot only material movers, like the
 // contribution chart above. The table (portfolio.json) keeps every class.
+//
+// Both this and the contribution panel are fixed at 12mo and deliberately do
+// NOT follow the range selector: IBKR's MTM performance summary is one total
+// per symbol for the whole statement window, with no dates on the rows, so
+// there is nothing to slice. Snapshot-differencing doesn't rescue it either —
+// the window is trailing, so two snapshots differ by the month gained *and*
+// the month aged off. Making these range-aware needs dated MTM rows out of the
+// Flex query (or attribution rebuilt from trades), not a UI change.
 const AC_BAR_FLOOR = 0.01;
 
 function AssetClassBars({ rows }) {
@@ -1346,8 +1354,8 @@ function Portfolio() {
       {d.byAssetClass && d.byAssetClass.length > 0 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">attribution · by instrument type</span>
-            <span className="pf-panel-meta">mark-to-market p&l per asset class</span>
+            <span className="pf-panel-title">attribution · by instrument type · 12mo</span>
+            <span className="pf-panel-meta">mark-to-market p&l per asset class · fixed 12mo, not the range above</span>
           </div>
           <AssetClassBars rows={d.byAssetClass}/>
         </div>
@@ -1357,7 +1365,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">contribution to return · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per holding</span>
+            <span className="pf-panel-meta">mark-to-market p&l per holding · fixed 12mo, not the range above</span>
           </div>
           <ContributionBars rows={d.contribution}/>
         </div>
