@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T01:16:26Z",
+  "generatedAt": "2026-07-26T08:41:30Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,9 +45,9 @@
       "wins": 206,
       "pushes": 7,
       "hitRate": 0.7491,
-      "volume": 1092118.63,
-      "realizedPnl": -14633.16,
-      "roi": -0.0134
+      "volume": 1092275.67,
+      "realizedPnl": -14790.21,
+      "roi": -0.0135
     }
   },
   "buckets": {
@@ -271,11 +271,11 @@
         "wins": 5,
         "pushes": 0,
         "winRate": 0.5,
-        "avgImplied": 0.2352,
-        "volume": 3862.14,
-        "realizedPnl": -604.79,
-        "grossPnl": 2008.77,
-        "winRateByVolume": 0.4497,
+        "avgImplied": 0.2413,
+        "volume": 4019.18,
+        "realizedPnl": -761.84,
+        "grossPnl": 2165.82,
+        "winRateByVolume": 0.4321,
         "wilsonLo": 0.2366,
         "wilsonHi": 0.7634
       },
@@ -612,23 +612,23 @@
     "other": {
       "combined": {
         "n": 34,
-        "volume": 118468.75,
-        "realizedPnl": 1682.28,
-        "roi": 0.0142,
+        "volume": 118625.79,
+        "realizedPnl": 1525.23,
+        "roi": 0.0129,
         "hitRate": 0.7576,
-        "avgImplied": 0.7578,
-        "edge": -0.0002,
-        "top1Share": 0.1314
+        "avgImplied": 0.7596,
+        "edge": -0.002,
+        "top1Share": 0.1274
       },
       "exit": {
         "n": 34,
-        "volume": 118468.75,
-        "realizedPnl": 1682.28,
-        "roi": 0.0142,
+        "volume": 118625.79,
+        "realizedPnl": 1525.23,
+        "roi": 0.0129,
         "hitRate": 0.7576,
-        "avgImplied": 0.7578,
-        "edge": -0.0002,
-        "top1Share": 0.1314
+        "avgImplied": 0.7596,
+        "edge": -0.002,
+        "top1Share": 0.1274
       }
     },
     "politics": {
