@@ -64,11 +64,13 @@ The aesthetic takes cues from **lo-fi cyberpunk illustration**: rain-slick Tokyo
 **Violet** (primary scale — the voice of the brand)
 - `50 #f3f0ff` … `300 #b9a0ff` · **`400 #a78bfa` PRIMARY** · `500 #8b5cf6` · `700 #6d28d9` · `900 #2e1065`
 
-**Magenta** (heat — used sparingly, for hover/selection/cursor)
+**Magenta** (data only — never interaction)
 - `300 #ff8de4` · **`400 #ff4fd8` HOT** · `500 #e11d87`
+- On the personal site, pink means *drawn P&L* and nothing else: `--mark-pos` (gains) against `--mark-neg` violet (losses). Hover, selection and focus are all violet. A pink pixel is data, never "you can click this".
 
 **Foreground** (text)
-- `#f5f0ff` primary · `#c4b5d4` secondary · `#8a7ba1` tertiary · `#5a4d72` disabled · `#3d334f` divider
+- `#f5f0ff` primary · `#c4b5d4` secondary · `#a99bc0` tertiary · `#8b7aa8` quietest · `#3d334f` divider
+- Both caption tiers clear 4.5:1 on glass (7.2:1 / 4.8:1) — they carry 10–11px uppercase labels over the city photo. `#3d334f` is a divider colour and must never be used for text.
 
 _Warm white fg over cool violet ink — prevents the page feeling clinical or Matrix-green._
 

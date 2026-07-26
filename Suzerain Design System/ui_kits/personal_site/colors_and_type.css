@@ -4,6 +4,11 @@
    ============================================================ */
 
 /* ---------- Fonts ---------- */
+/* An @import can't start downloading until this stylesheet has itself arrived,
+   so the hero paints in a fallback face and then jumps. index.html preloads
+   both faces with <link rel="preconnect"> + <link rel="stylesheet"> in the head
+   to kill that jump; these imports stay for the preview/*.html cards, which
+   load this file on its own. Same URLs, so the browser fetches once. */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap');
 
@@ -34,11 +39,16 @@
   --magenta-600: #be185d;
 
   /* ---------- Color: Neutral (foreground) ---------- */
+  /* The caption tiers carry 10-11px uppercase text sitting on glass over the
+     city photo, so both have to clear 4.5:1 against the panel (~#14101f). The
+     old pair measured 4.8:1 / 2.4:1 — fg-4 failed, and lifting it alone would
+     have collapsed it into fg-3. Both moved up a rung instead: the gap between
+     the two tiers is preserved and both are legible. */
   --fg-1: #f5f0ff;       /* primary text — warm white */
   --fg-2: #c4b5d4;       /* secondary */
-  --fg-3: #8a7ba1;       /* tertiary / captions */
-  --fg-4: #5a4d72;       /* disabled / hints */
-  --fg-dim: #3d334f;     /* dividers on dark */
+  --fg-3: #a99bc0;       /* tertiary / captions — 7.2:1 */
+  --fg-4: #8b7aa8;       /* quietest labels — 4.8:1 */
+  --fg-dim: #3d334f;     /* dividers on dark — never text */
 
   /* ---------- Semantic ---------- */
   --accent: var(--violet-400);
@@ -60,6 +70,17 @@
   --pos: #7dd3a8;      /* gains — same green as --ok */
   --neg: #ff6b9d;      /* losses — the red actually used across the P&L views */
   --fg-hero: #ece6f5;  /* warm white for text sitting directly on the city photo */
+
+  /* ---------- Marks (drawn P&L: bars, fills, chart strokes) ---------- */
+  /* Deliberately NOT --pos/--neg. Those colour the numbers; these colour the
+     shapes, and the site has always drawn gains pink and losses violet. Pink
+     lives here and nowhere else — interaction is violet (see --link-hover), so
+     a pink pixel on the page always means "this is data".
+     Direction is easy to invert by accident: pos is PINK, neg is VIOLET. */
+  --mark-pos: #ff4fd8;
+  --mark-neg: #a78bfa;
+  --mark-pos-soft: rgba(255,79,216,0.55);
+  --mark-neg-soft: rgba(167,139,250,0.55);
 
   /* ---------- Selection & focus ---------- */
   --selection-bg: var(--magenta-400);
@@ -107,8 +128,13 @@
   --s-10: 128px;
 
   /* ---------- Radii ---------- */
+  /* The personal site uses exactly two: --r-1 for every cornered surface
+     (panels, cards, badges, menus, buttons, code) and --r-pill for the few
+     capsules. It had drifted to five hardcoded values — 2/3/4/5/999 — which
+     reads as sloppy where a badge sits inside a panel inside a menu. The
+     larger steps stay defined for other kits in the design system. */
   --r-0: 0;
-  --r-1: 2px;
+  --r-1: 3px;
   --r-2: 4px;
   --r-3: 8px;
   --r-4: 12px;
@@ -249,6 +275,19 @@ a:hover {
 a:focus-visible {
   outline: 1px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+/* Everything else that takes focus. The site is built almost entirely from
+   <button>s with transparent backgrounds — nav items, range switches, the
+   quarter picker, the clickable stat tiles — and none of them showed any
+   focus state at all, so tabbing through was invisible. */
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+[role="option"]:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
 }
 
 hr {
