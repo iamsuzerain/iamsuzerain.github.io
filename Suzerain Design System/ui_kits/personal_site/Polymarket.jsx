@@ -806,7 +806,7 @@ function PmCalScatter({ buckets }) {
               <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} positions{b.pushes ? ` · ${b.pushes} push` : ''}</div>
               <div className="cmb-tt-row">staked<span className="cmb-tt-num">{pmUSD(b.volume, true)}</span></div>
               {b.grossPnl != null && (
-                <div className="cmb-tt-row">$ moved<span className="cmb-tt-num">{pmUSD(b.grossPnl, true)}</span></div>
+                <div className="cmb-tt-row">gross P&L<span className="cmb-tt-num">{pmUSD(b.grossPnl, true)}</span></div>
               )}
               {b.realizedPnl != null && (
                 <div className="cmb-tt-row">net P&L<span className={`cmb-tt-num ${b.realizedPnl >= 0 ? 'pos' : 'neg'}`}>{pmUSD(b.realizedPnl, true)}</span></div>
@@ -822,7 +822,7 @@ function PmCalScatter({ buckets }) {
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_TEAL }}/>fair (45°)</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_GOOD }}/>won &gt; priced</span>
         <span><i className="pf-bench-swatch" style={{ background: PM_CAL_UNDER }}/>won &lt; priced</span>
-        <span className="sz-dim">bubble = $ moved (win + loss) · bar = 95% ci</span>
+        <span className="sz-dim">bubble = gross P&L (win + loss) · bar = 95% ci</span>
       </div>
     </div>
   );
