@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T19:15:44Z",
+  "generatedAt": "2026-07-26T19:45:16Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,8 +45,8 @@
       "wins": 208,
       "pushes": 7,
       "hitRate": 0.7509,
-      "volume": 1100156.84,
-      "realizedPnl": -14559.23,
+      "volume": 1100196.48,
+      "realizedPnl": -14558.9,
       "roi": -0.0132
     }
   },
@@ -407,10 +407,10 @@
         "pushes": 3,
         "winRate": 0.8667,
         "avgImplied": 0.9945,
-        "volume": 183557.39,
-        "realizedPnl": 661.16,
-        "grossPnl": 675.62,
-        "winRateByVolume": 0.8403,
+        "volume": 183597.03,
+        "realizedPnl": 661.49,
+        "grossPnl": 675.95,
+        "winRateByVolume": 0.8404,
         "wilsonLo": 0.6212,
         "wilsonHi": 0.9626
       }
@@ -548,8 +548,8 @@
     "geopolitics": {
       "combined": {
         "n": 202,
-        "volume": 1307207.27,
-        "realizedPnl": 50498.22,
+        "volume": 1307246.91,
+        "realizedPnl": 50498.55,
         "roi": 0.0386,
         "hitRate": 0.8392,
         "avgImplied": 0.8623,
@@ -568,8 +568,8 @@
       },
       "exit": {
         "n": 78,
-        "volume": 549311.42,
-        "realizedPnl": 1494.76,
+        "volume": 549351.06,
+        "realizedPnl": 1495.09,
         "roi": 0.0027,
         "hitRate": 0.72,
         "avgImplied": 0.7965,
@@ -705,5 +705,11 @@
         "top1Share": 1.0
       }
     }
+  },
+  "openBook": {
+    "n": 52,
+    "cost": 227229.37,
+    "mark": 236648.57,
+    "unrealized": 9419.2
   }
 }

@@ -579,7 +579,7 @@ const PM_CAT_MIN_N = 25;    // below this the row is noise — dimmed, not dropp
 // movers (like the contribution-to-return chart); the table keeps the full tail.
 const PM_CAT_BAR_FLOOR = 0.01;
 
-function PmCategoryPanel({ byCategory }) {
+function PmCategoryPanel({ byCategory, openBook }) {
   const [sort, setSort] = usePmState('pnl');
   if (!byCategory) return null;
 
@@ -685,6 +685,23 @@ function PmCategoryPanel({ byCategory }) {
           </tbody>
         </table>
       </div>
+
+      {/* Scope. Every number above is a CLOSED lot — settled or exited — because
+          you can't score a forecast that hasn't resolved. The net therefore sits
+          below the headline trading P&L, which marks the open book too, and the
+          two being adjacent and unequal reads as a contradiction without this.
+          They reconcile: closed + open ≈ headline, the remainder being fees. */}
+      {openBook && (
+        <div className="pf-contrib-foot pm-cat-scope">
+          <span>closed lots only · settled or exited</span>
+          <span>
+            {openBook.n} open{' '}
+            <b className={openBook.unrealized >= 0 ? 'pos' : 'neg'}>
+              {openBook.unrealized >= 0 ? '+' : ''}{pmUSD(openBook.unrealized)}
+            </b>
+          </span>
+        </div>
+      )}
 
     </div>
   );
@@ -1109,7 +1126,7 @@ function Polymarket() {
         </div>
       )}
 
-      {cal && <PmCategoryPanel byCategory={cal.byCategory}/>}
+      {cal && <PmCategoryPanel byCategory={cal.byCategory} openBook={cal.openBook}/>}
 
       {cal && <PmCalibration cal={cal}/>}
 
