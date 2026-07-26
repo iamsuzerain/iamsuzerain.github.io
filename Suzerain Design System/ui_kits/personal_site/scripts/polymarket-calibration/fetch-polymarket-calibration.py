@@ -66,8 +66,14 @@ BUCKET_EDGES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.
 # has a `category` field but it is empty on every modern market, and the `events`
 # array embedded in a /markets response is stripped of its `tags`. So the join is
 # necessarily two hops: conditionId -> market.events[0].id -> event.tags[].label.
-# Note `closed=true` is mandatory on the /markets query — without it gamma
-# returns zero rows for a condition_ids filter.
+# `closed=true` is mandatory on the RESOLUTION query (step 3) — without it gamma
+# returns zero rows for a condition_ids filter. It is NOT safe on the category
+# query: positions exited while the market was still open match no closed row,
+# so they used to fail hop 1 and land in "other". That made "other" a slice of
+# the open book (100% exit lots, ~12% of exit stake) rather than a residual, and
+# it starved every real category's exit sub-series — the leg where sizing damage
+# shows. Hop 1 therefore runs twice, `closed=false` mopping up the first pass's
+# misses. Verified: the misses return an event on `closed=false`, 35/35.
 #
 # NOISE: tags describing HOW a market is priced or merchandised, not what it is
 # about. They must never decide a category — several price-ladder markets carry
@@ -81,6 +87,22 @@ NOISE_TAGS = {
 # Specific asset/topic tags are matched before broad umbrella tags, so a market
 # tagged both {Oil, Commodities, Finance} lands in commodities rather than a
 # generic finance bucket. Order within this list IS the precedence rule.
+#
+# DO NOT reorder casually — one bar's worth of P&L rides on two lines here.
+# `geopolitics` above `politics` is a deliberate choice, not incidental: 130 of
+# the 154 geopolitics markets (81% of its stake) carry BOTH tags — every Iran
+# ceasefire / Hormuz / airspace market is tagged `Politics` too. Both-tagged
+# markets are geopolitics; politics keeps only the politics-only ones (US/UK
+# elections, primaries, nominations), which is why the politics row shows no
+# geopolitics overlap — by construction it can't. Swapping the two lines moves
+# ~$48k: geopolitics +50.5k -> +2.4k, politics +18.3k -> +66.3k (2026-07-26).
+# The two together (+$68.8k) are the order-invariant figure if you ever need to
+# state this book's political P&L without leaning on the split.
+#
+# Corollary: a higher line still wins over both. Crude ladders tagged
+# `Geopolitics` go to commodities, "Fed Chair confirmed" tagged `Politics` goes
+# to macro, World Cup props tagged `Politics` go to sports. 21 markets, ~$1.6k
+# total, all correct on the merits — checked, not assumed.
 CATEGORY_TAGS = [
     ("commodities", {"Oil", "Commodities", "WTI", "Metals", "Gas", "Gold",
                      "Natural Gas", "Silver", "Copper"}),
@@ -229,29 +251,47 @@ def fetch_resolutions(sess, condition_ids):
     return winners
 
 
-def fetch_categories(sess, condition_ids):
-    """conditionId -> canonical category, via market -> event -> tags.
-
-    Two hops because gamma only carries tags on /events (see NOISE_TAGS above).
-    Markets that fail either hop are left uncategorized and surface as "other".
-    """
-    cond_event = {}
-    ids = list(condition_ids)
+def fetch_market_events(sess, ids, closed):
+    """conditionId -> primary event id, for one `closed` filter value."""
+    out = {}
     for i in range(0, len(ids), GAMMA_CHUNK):
         chunk = ids[i:i + GAMMA_CHUNK]
         params = ([("condition_ids", c) for c in chunk]
-                  + [("closed", "true"), ("limit", GAMMA_CHUNK)])
+                  + [("closed", closed), ("limit", GAMMA_CHUNK)])
         try:
             d = sess.get(GAMMA_URL, params=params, timeout=30).json()
         except Exception as e:
-            log("category markets chunk failed:", e)
+            log(f"category markets chunk failed (closed={closed}):", e)
             continue
         if not isinstance(d, list):
             continue
         for m in d:
             cond, evs = m.get("conditionId"), (m.get("events") or [])
             if cond and evs and evs[0].get("id"):
-                cond_event[cond] = str(evs[0]["id"])
+                out[cond] = str(evs[0]["id"])
+    return out
+
+
+def fetch_categories(sess, condition_ids):
+    """conditionId -> canonical category, via market -> event -> tags.
+
+    Two hops because gamma only carries tags on /events (see NOISE_TAGS above).
+    Hop 1 runs closed=true then closed=false over the misses, so markets still
+    open at the time of the exit get categorized too (see the `closed=true` note
+    above). Markets that fail either hop are left uncategorized -> "other".
+
+    Every market a hop-1 pass returns has so far matched at least one category
+    tag, so a non-empty "other" is a signal that this join is failing, not that
+    the taxonomy has a gap — check the hop counts in the log line below.
+    """
+    ids = list(condition_ids)
+    cond_event = fetch_market_events(sess, ids, "true")
+    n_closed = len(cond_event)
+    missing = [c for c in ids if c not in cond_event]
+    if missing:
+        cond_event.update(fetch_market_events(sess, missing, "false"))
+    log(f"hop 1: {n_closed} closed + {len(cond_event) - n_closed} open "
+        f"= {len(cond_event)}/{len(ids)} markets -> events")
 
     event_cat = {}
     eids = sorted(set(cond_event.values()))
@@ -270,8 +310,8 @@ def fetch_categories(sess, condition_ids):
             event_cat[str(ev.get("id"))] = categorize(labels)
 
     out = {c: event_cat[e] for c, e in cond_event.items() if e in event_cat}
-    log(f"categories: {len(cond_event)}/{len(ids)} markets -> events, "
-        f"{len(out)} categorized")
+    log(f"hop 2: {len(event_cat)}/{len(eids)} events tagged -> {len(out)} "
+        f"of {len(ids)} markets categorized")
     return out
 
 
