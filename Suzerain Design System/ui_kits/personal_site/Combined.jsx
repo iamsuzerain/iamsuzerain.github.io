@@ -266,16 +266,38 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
   // Rebase each to its value at the window start so the chart shows P&L over the year.
   const ibkrBase = ibkr[0], pmBase = pm[0];
 
-  // Benchmark notional = IBKR NAV at window start + IBKR→Polymarket transfers
-  // made *before* the window start (content.json pmTransfers). Transfers inside
-  // the window are already counted in startNAV; once the rolling window passes
-  // a transfer date the money leaves startNAV but is still part of the capital
-  // base, so the ledger adds it back. Only needs editing when money moves.
-  const startNAV = (portfolio.navSeries && portfolio.navSeries.length) ? portfolio.navSeries[0].v : 0;
-  const priorTransfers = (pmTransfers || [])
-    .filter(t => t && t.date && cmbEpochDay(t.date) <= start)
+  // Capital base on any given day = that day's real IBKR NAV + every
+  // IBKR→Polymarket transfer made on or before it (content.json pmTransfers).
+  // Money moved to Polymarket has left the IBKR NAV but is still capital you
+  // committed, so the ledger adds it back.
+  //
+  // It has to be the *actual* NAV, looked up per day, and never base + P&L:
+  // deposits and transfers move NAV without being P&L (pnl.abs is
+  // deposit-adjusted ChangeInNAV, by design), so back-deriving a level from a
+  // return series drifts by every cash flow in between. That bug had the 1y
+  // window claiming a $733k base against a real $642k.
+  const navByDay = new Map();
+  for (const r of ((pnlHistory && pnlHistory.rows) || [])) {
+    if (r && r.d && r.n != null) navByDay.set(cmbEpochDay(r.d), r.n);
+  }
+  for (const p of (portfolio.navSeries || [])) {   // recent Flex window wins
+    if (p && p.d) navByDay.set(cmbEpochDay(p.d), p.v);
+  }
+  const navDays = [...navByDay.keys()].sort((a, b) => a - b);
+  const navAt = (day) => {
+    if (!navDays.length) return 0;
+    let lo = 0, hi = navDays.length - 1, best = -1;
+    while (lo <= hi) {                              // last recorded day <= day
+      const mid = (lo + hi) >> 1;
+      if (navDays[mid] <= day) { best = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return navByDay.get(navDays[best === -1 ? 0 : best]);
+  };
+  const transfersThrough = (day) => (pmTransfers || [])
+    .filter(t => t && t.date && cmbEpochDay(t.date) <= day)
     .reduce((sum, t) => sum + (t.amount || 0), 0);
-  const notional = startNAV + priorTransfers;
+  const baseAt = (day) => navAt(day) + transfersThrough(day);
+  const notional = baseAt(start);
   const bench = [];
   if (benchmarks && notional) {
     for (const [key, b] of Object.entries(benchmarks)) {
@@ -297,6 +319,9 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
       v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase) + ramp).toFixed(2),
       ibkr: +(ibkr[k] - ibkrBase).toFixed(2),
       pm: +((pm[k] - pmBase) + ramp).toFixed(2),
+      // Real capital base that day, so a sub-window can read its own base off
+      // its first point instead of reconstructing one from returns.
+      base: +baseAt(day).toFixed(2),
     };
     for (const b of bench) pt[b.key] = +b.vals[k].toFixed(2);
     series.push(pt);
@@ -715,10 +740,14 @@ function cmbWindow(series, notional, range, benchmarks) {
   if (i < 0) i = 0;
   if (i > series.length - 2) i = series.length - 2;
   const s0 = series[i];
-  const winNotional = (notional || 0) + (s0.v || 0);
+  // The window's own capital base, carried per-point from real NAV. The old
+  // `notional + s0.v` reconstructed it from cumulative P&L, which silently
+  // added back every deposit and transfer since the series began.
+  const winNotional = s0.base != null ? s0.base : (notional || 0) + (s0.v || 0);
   const out = series.slice(i).map(p => {
     const q = { d: p.d };
     for (const k of ['v', 'ibkr', 'pm']) if (p[k] != null) q[k] = +(p[k] - s0[k]).toFixed(2);
+    if (p.base != null) q.base = p.base;
     return q;
   });
   const dates = out.map(p => p.d);
