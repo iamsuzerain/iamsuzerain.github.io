@@ -33,15 +33,28 @@ jobs:
           echo "first 300 bytes of result:"
           head -c 300 "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
 
+      # Rebuilt after the snapshot above, so it reads the fresh pnl series from
+      # disk rather than re-hitting the API. Recorded NAV always wins; only the
+      # days before betmoar started reporting balances are reconstructed.
+      - name: rebuild polymarket nav history
+        run: |
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-pnl/build-pm-nav-history.py" \
+            > /tmp/pm-nav-history.json
+          mv /tmp/pm-nav-history.json \
+            "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
+
       - name: commit + push if changed
         run: |
           git config user.name  "polymarket-pnl-bot"
           git config user.email "polymarket-pnl-bot@users.noreply.github.com"
-          if git diff --quiet "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"; then
+          if git diff --quiet \
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json" \
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"; then
             echo "no changes"
             exit 0
           fi
-          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json"
+          git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-pnl.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
           git commit -m "polymarket: refresh pnl snapshot $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
           # Rebase onto it, keeping our freshly generated data on conflict, then retry push.
