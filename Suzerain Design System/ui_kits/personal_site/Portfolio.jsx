@@ -637,8 +637,8 @@ function AllocDonut({ data }) {
         })}
         <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="JetBrains Mono, monospace"
           fontSize="9" fill="rgba(229,225,241,0.5)" letterSpacing="0.18em">ALLOC</text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fontFamily="Instrument Serif, serif"
-          fontSize="18" fill="#f5f0ff">{data.length}</text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fontFamily="JetBrains Mono, monospace"
+          fontSize="17" fill="#f5f0ff">{data.length}</text>
         <text x={cx} y={cy + 22} textAnchor="middle" fontFamily="JetBrains Mono, monospace"
           fontSize="8" fill="rgba(229,225,241,0.4)" letterSpacing="0.14em">SLICES</text>
       </svg>

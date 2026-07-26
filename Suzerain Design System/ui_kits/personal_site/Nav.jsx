@@ -1,7 +1,24 @@
 // Nav.jsx — horizontal mono nav
 const { useState: useNavState } = React;
 
+// The nav sticks at top:16px inside a stage padded 24px, so it detaches at 8px
+// of scroll. Past that it is floating over content instead of over the hero and
+// needs to firm up. React.* rather than the destructured hooks in Chrome.jsx —
+// the production build wraps each component in its own IIFE, so those aren't
+// in scope here even though they are when Babel runs the sources directly.
+function useStuck(threshold = 8) {
+  const [stuck, setStuck] = React.useState(false);
+  React.useEffect(() => {
+    const onScroll = () => setStuck(window.scrollY > threshold);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [threshold]);
+  return stuck;
+}
+
 function Nav({ view, setView }) {
+  const stuck = useStuck();
   const items = [
     { id: 'hero', label: 'home' },
     { id: 'combined', label: 'overview' },
@@ -11,7 +28,7 @@ function Nav({ view, setView }) {
     { id: 'about', label: 'about' },
   ];
   return (
-    <nav className="sz-nav">
+    <nav className={`sz-nav ${stuck ? 'sz-nav-stuck' : ''}`}>
       <button className="sz-brand" onClick={() => setView('hero')}>
         <svg width="22" height="22" viewBox="0 0 64 64" fill="none" aria-hidden>
           <defs>

@@ -11,11 +11,24 @@
 <title>suzerain</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3ClinearGradient%20id='ng'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%23c4b5fd'/%3E%3Cstop%20offset='0.5'%20stop-color='%23a78bfa'/%3E%3Cstop%20offset='1'%20stop-color='%23ff4fd8'/%3E%3C/linearGradient%3E%3CclipPath%20id='m'%3E%3Ccircle%20cx='32'%20cy='32'%20r='24'/%3E%3C/clipPath%3E%3C/defs%3E%3Ccircle%20cx='32'%20cy='32'%20r='24'%20stroke='%23a78bfa'%20stroke-width='1.5'%20fill='none'/%3E%3Cg%20clip-path='url%28%23m%29'%20transform='rotate%28-15%2032%2032%29'%3E%3Crect%20x='-8'%20y='-8'%20width='40'%20height='80'%20fill='url%28%23ng%29'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="alternate" type="application/rss+xml" title="suzerain — thoughts" href="feed.xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter+Tight:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="colors_and_type.css">
 <style>
   /* ========== Chrome ========== */
-  html, body { margin: 0; padding: 0; min-height: 100vh; background: var(--ink-1); overflow-x: hidden; }
-  .sz-chrome { position: relative; min-height: 100vh; overflow: hidden; }
+  /* overflow-x:clip, not hidden. `hidden` turns body into a scroll container,
+     and a sticky descendant sticks to its nearest scroll container — which is
+     why .sz-nav never stuck to the top of the window. `clip` suppresses the
+     same sideways overflow without creating that container. */
+  html, body { margin: 0; padding: 0; min-height: 100vh; background: var(--ink-1); overflow-x: clip; }
+  /* `clip`, not `hidden`. overflow:hidden makes this a scroll container, and a
+     sticky descendant sticks to its nearest scroll container — so .sz-nav has
+     never actually stuck; it scrolled away with the page. overflow:clip does
+     the same clipping without creating that container, so sticky works again.
+     The decorative layers inside are position:fixed and clip to the viewport
+     either way, so nothing else changes. */
+  .sz-chrome { position: relative; min-height: 100vh; overflow: clip; }
 
   /* base violet bloom — keep */
   .sz-grid {
@@ -110,7 +123,7 @@
       rgba(180,205,222,0.20) 60%,
       rgba(195,215,230,0.26) 85%,
       transparent 100%);
-    border-radius: 3px;
+    border-radius: var(--r-1);
     filter: blur(0.5px);
   }
   @keyframes sz-drip {
@@ -133,11 +146,23 @@
     .sz-glass-behind, .sz-trickle-wrap { animation: none; }
     .sz-cursor, .pf-dot { animation: none; }
     .sz-cursor-glow { display: none; }
+    .sz-view-in { animation: none; }
   }
 
   .sz-stage {
     position: relative; z-index: 4;
     max-width: 1080px; margin: 0 auto; padding: 24px 48px 96px;
+  }
+
+  /* View change. Hash routing swapped the whole page in a single frame, which
+     read as a reload rather than a change of screen. Keyed on the view name in
+     App.jsx so it replays on every route change. */
+  .sz-view-in {
+    animation: sz-view-in var(--dur-base) var(--ease-out);
+  }
+  @keyframes sz-view-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
   }
 
   /* ========== Nav ========== */
@@ -146,10 +171,21 @@
     padding: 14px 20px; margin-bottom: 80px;
     background: rgba(10,6,18,0.6);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--ink-4);
-    border-radius: 4px;
+    border-radius: var(--r-1);
     font-family: var(--font-mono); font-size: 13px;
     position: sticky; top: 16px; z-index: 10;
+    transition: background var(--dur-base) var(--ease-out),
+                border-color var(--dur-base) var(--ease-out),
+                box-shadow var(--dur-base) var(--ease-out);
+  }
+  /* Once it detaches from the top it is floating over table rows rather than
+     over the hero, and at 0.6 alpha the rows read straight through it. */
+  .sz-nav.sz-nav-stuck {
+    background: rgba(10,6,18,0.82);
+    border-color: rgba(167,139,250,0.30);
+    box-shadow: 0 10px 30px -12px rgba(0,0,0,0.95);
   }
   .sz-brand {
     display: flex; align-items: center; gap: 10px;
@@ -164,7 +200,7 @@
     color: var(--fg-2); padding: 4px 0;
     transition: color 120ms var(--ease-out);
   }
-  .sz-nav-item:hover { color: var(--magenta-400); }
+  .sz-nav-item:hover { color: var(--violet-400); }
   .sz-nav-item.active { color: var(--fg-1); }
   .sz-nav-arrow { color: var(--violet-400); }
   .sz-nav-meta {
@@ -174,7 +210,7 @@
 
   /* ========== Cursor ========== */
   .sz-cursor {
-    color: var(--magenta-400);
+    color: var(--violet-400);
     animation: sz-blink 1s steps(1, end) infinite;
     display: inline-block;
     margin-left: 2px;
@@ -206,10 +242,48 @@
     color: var(--fg-3); margin-top: 32px;
   }
 
+  /* ========== Surfaces ==========
+     One glass recipe, previously written out four times (.sz-prose, .pf-head,
+     .pf-stat, .pf-panel) with identical values — so every panel sat at exactly
+     the same depth and the stack read as flat rectangles rather than panes.
+     The selector list keeps the existing class names working; the rules below
+     now only carry their own layout.
+     The inset top line is the specular: real glass catches light along its top
+     edge, and it is what makes these read as panes. Keep it subtle — at higher
+     alpha it turns into a drawn border and the illusion goes. */
+  .sz-surface,
+  .sz-prose,
+  .pf-head,
+  .pf-stat,
+  .pf-panel {
+    background: rgba(10,6,18,0.45);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid rgba(167,139,250,0.14);
+    border-top-color: rgba(214,199,255,0.22);
+    border-radius: var(--r-1);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.07),
+      0 8px 24px -14px rgba(0,0,0,0.9);
+  }
+
+  /* The page header sits nearest the viewer — a touch more opaque, lit a
+     little harder, dropping a longer shadow. The only depth step on the page;
+     more than one and the hierarchy stops meaning anything. */
+  .sz-surface-raised,
+  .pf-head {
+    background: rgba(18,12,31,0.55);
+    border-color: rgba(167,139,250,0.20);
+    border-top-color: rgba(214,199,255,0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.09),
+      0 14px 34px -16px rgba(0,0,0,0.95);
+  }
+
   /* ========== Buttons ========== */
   .sz-btn {
     font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.06em;
-    padding: 10px 18px; border-radius: 4px; cursor: pointer;
+    padding: 10px 18px; border-radius: var(--r-1); cursor: pointer;
     border: 1px solid var(--ink-4); background: transparent; color: var(--fg-1);
     transition: all 160ms var(--ease-out);
   }
@@ -220,11 +294,11 @@
     border-color: var(--violet-400); font-weight: 500;
   }
   .sz-btn-primary:hover {
-    background: var(--magenta-400); border-color: var(--magenta-400);
+    background: var(--violet-400); border-color: var(--violet-400);
     color: var(--ink-0); box-shadow: 0 0 24px rgba(167,139,250,0.4);
   }
   .sz-btn-ghost { border-color: transparent; color: var(--violet-300); }
-  .sz-btn-ghost:hover { color: var(--magenta-400); border-color: transparent; }
+  .sz-btn-ghost:hover { color: var(--violet-400); border-color: transparent; }
 
   /* ========== Hero ========== */
   /* Hero + About sit directly over the city photo (no panel),
@@ -251,13 +325,13 @@
     background: rgba(0,0,0,0.35);
     border-color: rgba(236,230,245,0.18);
   }
-  /* Force-kill magenta everywhere by remapping the tokens to violet.
-     This automatically updates every hover, highlight, gradient, and selection. */
+  /* Interaction is violet. This used to be done by remapping --magenta-* to
+     violet on .sz-chrome, which silently turned nine rules into no-ops while
+     four hardcoded #ff4fd8 values slipped past the remap and stayed pink — so
+     pink survived on the page, just unpredictably. The remap is gone and those
+     rules now say violet outright. Pink lives only in --mark-* (drawn P&L), so
+     a pink pixel always means data, never "you can click this". */
   .sz-chrome {
-    --magenta-400: var(--violet-400);
-    --magenta-300: var(--violet-300);
-    --magenta-500: var(--violet-500);
-    --magenta-600: var(--violet-600);
     --link-hover: var(--violet-300);
     --selection-bg: var(--violet-400);
   }
@@ -296,9 +370,9 @@
   }
   .sz-post-body code {
     font-family: var(--font-mono); font-size: 0.9em;
-    background: rgba(0,0,0,0.35); padding: 1px 5px; border-radius: 3px;
+    background: rgba(0,0,0,0.35); padding: 1px 5px; border-radius: var(--r-1);
   }
-  .sz-post-body pre { background: rgba(0,0,0,0.35); padding: 14px; border-radius: 4px; overflow-x: auto; }
+  .sz-post-body pre { background: rgba(0,0,0,0.35); padding: 14px; border-radius: var(--r-1); overflow-x: auto; }
   .sz-post-body pre code { background: none; padding: 0; }
 
   .sz-hero { padding: 40px 0 60px; }
@@ -332,11 +406,6 @@
   /* ========== Prose / About ========== */
   .sz-prose {
     max-width: 680px;
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px;
     padding: 32px 36px;
   }
   .sz-prose p {
@@ -349,7 +418,7 @@
     font-family: var(--font-mono); font-size: 13px;
   }
   .sz-links a { color: var(--fg-2); }
-  .sz-links a:hover { color: var(--magenta-400); }
+  .sz-links a:hover { color: var(--violet-400); }
 
   /* ========== Log / Hero ========== */
   .sz-log {
@@ -363,7 +432,7 @@
     backdrop-filter: blur(16px) saturate(120%);
     -webkit-backdrop-filter: blur(16px) saturate(120%);
     border: 1px solid var(--ink-4);
-    border-radius: 4px;
+    border-radius: var(--r-1);
     padding: 32px 36px;
   }
   .sz-log-entry {
@@ -403,11 +472,7 @@
   .pf-head {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 40px; margin-bottom: 16px; flex-wrap: wrap;
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px; padding: 20px 22px;
+    padding: 20px 22px;
   }
   .pf-head .sz-h2 { margin-bottom: 8px; }
   .pf-currency {
@@ -425,7 +490,7 @@
     display: inline-flex; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: 11px;
     color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 8px 14px; border: 1px solid var(--ink-4); border-radius: 999px;
+    padding: 8px 14px; border: 1px solid var(--ink-4); border-radius: var(--r-pill);
     background: rgba(10,6,18,0.6);
     white-space: nowrap;
   }
@@ -440,11 +505,7 @@
     margin-bottom: 32px;
   }
   .pf-stat {
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px; padding: 16px 18px;
+    padding: 16px 18px;
     display: flex; flex-direction: column; gap: 4px;
   }
   .pf-stat-label {
@@ -509,7 +570,7 @@
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--fg-4);
     background: transparent; border: 1px solid var(--border-soft);
-    border-radius: 3px; padding: 3px 8px; cursor: pointer;
+    border-radius: var(--r-1); padding: 3px 8px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s;
   }
   .pf-range-btn:hover { color: var(--fg-2); border-color: rgba(167,139,250,0.35); }
@@ -524,7 +585,7 @@
     position: absolute; top: calc(100% + 5px); right: 0; z-index: 40;
     min-width: 150px; padding: 4px;
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 5px; box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+    border-radius: var(--r-1); box-shadow: 0 10px 28px rgba(0,0,0,0.55);
     display: flex; flex-direction: column; gap: 1px;
   }
   .pf-range-menu-head {
@@ -536,7 +597,7 @@
     display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--fg-3);
-    background: transparent; border: 0; border-radius: 3px;
+    background: transparent; border: 0; border-radius: var(--r-1);
     padding: 5px 8px; cursor: pointer; text-align: left;
     transition: color .15s, background .15s;
   }
@@ -548,17 +609,14 @@
   .cmb-risk-grid .pf-stat {
     background: transparent; border: none; border-radius: 0;
     -webkit-backdrop-filter: none; backdrop-filter: none;
+    box-shadow: none;   /* flat columns — no glass, so no lit edge either */
     padding: 2px 20px;
   }
   .cmb-risk-grid .pf-stat + .pf-stat { border-left: 1px solid var(--border-soft); }
   .cmb-risk-grid .pf-stat:first-child { padding-left: 0; }
 
   .pf-panel {
-    background: rgba(10,6,18,0.45);
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border: 1px solid rgba(167,139,250,0.14);
-    border-radius: 4px; padding: 20px 22px;
+    padding: 20px 22px;
     margin-bottom: 16px;
   }
   /* Column gap keeps the title and the meta apart in a narrow panel (the
@@ -601,8 +659,8 @@
   }
   /* Round only the outer tip; keep the edge at the zero line square so each bar
      sits flush against the center divider (a full radius leaves a notch there). */
-  .pf-contrib-bar.pos { background: linear-gradient(90deg, rgba(255,79,216,0.55), #ff4fd8); border-radius: 0 2px 2px 0; }
-  .pf-contrib-bar.neg { background: linear-gradient(270deg, rgba(167,139,250,0.55), #a78bfa); border-radius: 2px 0 0 2px; }
+  .pf-contrib-bar.pos { background: linear-gradient(90deg, var(--mark-pos-soft), var(--mark-pos)); border-radius: 0 2px 2px 0; }
+  .pf-contrib-bar.neg { background: linear-gradient(270deg, var(--mark-neg-soft), var(--mark-neg)); border-radius: 2px 0 0 2px; }
   .pf-contrib-val {
     font-family: var(--font-mono); font-size: 11px; text-align: right; letter-spacing: 0.02em;
   }
@@ -616,9 +674,15 @@
   }
 
   .pf-row {
-    display: grid; grid-template-columns: 280px 1fr; gap: 16px;
+    display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px;
     margin-bottom: 16px;
   }
+  /* Without this the positions panel is sized by the table's min-content — a
+     grid item's auto floor — so .pf-table-wrap grew to 482px inside a 339px
+     column, its overflow-x:auto never engaged, and the table ran off the page
+     to be clipped by body{overflow-x:hidden}. Zero the floor and the wrapper
+     scrolls internally the way it was always meant to. */
+  .pf-row > * { min-width: 0; }
   .pf-panel-alloc, .pf-panel-pos { margin-bottom: 0; }
   .pf-alloc { display: flex; flex-direction: column; align-items: center; gap: 16px; }
   .pf-donut { width: 160px; height: 160px; }
@@ -637,7 +701,7 @@
   /* Net-short bucket: the ring slice is hatched, this repeats it in words so
      direction never rests on the fill alone. */
   .pf-legend-short {
-    margin-left: 6px; padding: 1px 4px; border-radius: 2px;
+    margin-left: 6px; padding: 1px 4px; border-radius: var(--r-1);
     font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--fg-3); border: 1px solid var(--border);
   }
@@ -685,7 +749,7 @@
   .pf-type-badge {
     display: inline-block;
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
-    padding: 2px 6px; border-radius: 3px;
+    padding: 2px 6px; border-radius: var(--r-1);
     border: 1px solid rgba(167,139,250,0.35);
     color: rgba(167,139,250,0.85);
     white-space: nowrap;
@@ -712,11 +776,29 @@
   }
 
   @media (max-width: 760px) {
-    .pf-stats { grid-template-columns: repeat(2, 1fr); }
-    .cmb-risk-grid { grid-template-columns: repeat(2, 1fr); row-gap: 18px; }
+    /* 48px of gutter each side costs a 360px phone more than a quarter of its
+       width — and the tables shrunk below were being squeezed by the container,
+       not by their own type. */
+    .sz-stage { padding: 16px 18px 72px; }
+    /* Wide content can scroll sideways; the fade says so. Only on narrow
+       screens, where these actually overflow — on desktop it would dim a
+       column edge for no reason. */
+    .pf-table-wrap, .pm-cat-table-wrap {
+      -webkit-mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+      mask-image: linear-gradient(90deg, #000 0, #000 88%, transparent 100%);
+    }
+    /* A bare 1fr is minmax(auto, 1fr), and that auto floor is the min-content
+       width of an unbreakable "$312,567" at 30px — so the tiles refused to
+       shrink and the grid ran off the right edge of every phone. minmax(0,1fr)
+       lets the track shrink; the smaller value type keeps the number inside it
+       rather than just moving the clipping indoors. */
+    .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pf-stat { min-width: 0; }
+    .pf-stat-value { font-size: 22px; }
+    .cmb-risk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 18px; }
     .cmb-risk-grid .pf-stat { padding: 2px 16px; }
     .cmb-risk-grid .pf-stat:nth-child(odd) { padding-left: 0; border-left: none; }
-    .pf-row { grid-template-columns: 1fr; }
+    .pf-row { grid-template-columns: minmax(0, 1fr); }
     .sz-nav {
       gap: 12px; padding: 12px 14px; margin-bottom: 48px;
       flex-wrap: wrap; row-gap: 8px;
@@ -744,7 +826,7 @@
     display: inline-block;
     font-family: var(--font-mono); font-size: 10px;
     font-weight: 500; letter-spacing: 0.14em;
-    padding: 3px 8px; border-radius: 3px;
+    padding: 3px 8px; border-radius: var(--r-1);
     min-width: 36px; text-align: center;
   }
   .pm-side-yes {
@@ -784,7 +866,7 @@
   .pm-feed-time { color: var(--fg-4); letter-spacing: 0.04em; font-size: 11px; }
   .pm-feed-type {
     text-align: center; letter-spacing: 0.14em; font-size: 10px;
-    padding: 2px 6px; border-radius: 3px;
+    padding: 2px 6px; border-radius: var(--r-1);
   }
   .pm-feed-buy  { background: rgba(167,139,250,0.12); color: var(--violet-300); }
   .pm-feed-sell { background: rgba(167,139,250,0.1);  color: var(--violet-300); }
@@ -796,7 +878,7 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .pm-footer-deep a { color: var(--violet-300); text-decoration: none; }
-  .pm-footer-deep a:hover { color: var(--magenta-400); }
+  .pm-footer-deep a:hover { color: var(--violet-400); }
 
   /* Polymarket headline */
   .pm-headline .pos { color: var(--pos); }
@@ -809,7 +891,7 @@
     grid-template-columns: repeat(6, 1fr);
     gap: 1px;
     background: rgba(167,139,250,0.08);
-    border-radius: 3px;
+    border-radius: var(--r-1);
     overflow: hidden;
   }
   @media (max-width: 760px) {
@@ -834,7 +916,7 @@
   .pm-breakdown-src {
     color: var(--violet-300); text-decoration: none;
   }
-  .pm-breakdown-src:hover { color: var(--magenta-400); }
+  .pm-breakdown-src:hover { color: var(--violet-400); }
 
   /* Polymarket sparkline tooltip */
   .pm-chart-wrap { position: relative; }
@@ -875,7 +957,7 @@
     transform: translate(-50%, calc(-100% - 14px));
     background: rgba(12,8,20,0.95);
     border: 1px solid rgba(167,139,250,0.35);
-    border-radius: 4px;
+    border-radius: var(--r-1);
     padding: 6px 10px;
     font-family: var(--font-mono);
     pointer-events: none;
@@ -938,9 +1020,13 @@
   .cmb-deploy-val { color: var(--fg-1); font-size: 15px; letter-spacing: 0.01em; }
   .cmb-deploy-pct { color: var(--fg-4); font-size: 11px; }
   .cmb-deploy-track {
-    position: relative; height: 22px; border-radius: 4px; overflow: hidden;
+    position: relative; height: 22px; border-radius: var(--r-1); overflow: hidden;
     background: rgba(10,6,18,0.5); border: 1px solid rgba(167,139,250,0.14);
   }
+  /* Violet vs pink here encodes the venue, not direction — it is the one place
+     the two accents sit side by side meaning "IBKR" and "Polymarket". Not
+     --mark-pos/--mark-neg: a longer pink bar is not a gain. Left literal so it
+     doesn't get "corrected" to the P&L tokens later. */
   .cmb-deploy-fill { position: absolute; top: 0; bottom: 0; }
   .cmb-deploy-fill-ibkr {
     left: 0; background: linear-gradient(90deg, rgba(167,139,250,0.55), rgba(167,139,250,0.28));
@@ -978,23 +1064,23 @@
     transition: opacity 160ms var(--ease-out), fill 160ms var(--ease-out), stroke 160ms var(--ease-out);
   }
   .cmb-annot:hover .cmb-annot-sq { opacity: 0.9; }
-  .cmb-annot.active .cmb-annot-sq { opacity: 1; stroke: var(--magenta-400); }
+  .cmb-annot.active .cmb-annot-sq { opacity: 1; stroke: var(--violet-400); }
   .cmb-annot-cap {
     margin-top: 14px; padding: 12px 14px;
     border: 1px solid var(--ink-4); border-left: 2px solid var(--violet-400);
-    border-radius: 3px; background: rgba(167,139,250,0.04);
+    border-radius: var(--r-1); background: rgba(167,139,250,0.04);
   }
   .cmb-annot-cap-head {
     display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
   }
   .cmb-annot-nav {
     flex: none; width: 22px; height: 22px; line-height: 1;
-    background: transparent; border: 1px solid var(--ink-4); border-radius: 3px;
+    background: transparent; border: 1px solid var(--ink-4); border-radius: var(--r-1);
     color: var(--violet-300); font-family: var(--font-mono); font-size: 12px;
     cursor: pointer;
     transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out);
   }
-  .cmb-annot-nav:hover:not(:disabled) { border-color: var(--magenta-400); color: var(--magenta-400); }
+  .cmb-annot-nav:hover:not(:disabled) { border-color: var(--violet-400); color: var(--violet-400); }
   .cmb-annot-nav:disabled { opacity: 0.3; cursor: default; }
   .cmb-annot-cap-date {
     flex: 1; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;

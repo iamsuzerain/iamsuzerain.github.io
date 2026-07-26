@@ -37,10 +37,14 @@ function App() {
   const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
   const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined';
+  // The key restarts the animation on every route change — including
+  // thoughts/<slug> to thoughts/<other-slug>, which is the same view.
   return (
     <Chrome cursorGlow={view==='hero'} dim={dim}>
       <Nav view={view} setView={setView} />
-      {views[view]}
+      <div className="sz-view-in" key={`${view}/${route.param || ''}`}>
+        {views[view]}
+      </div>
     </Chrome>
   );
 }
