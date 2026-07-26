@@ -41,6 +41,14 @@ jobs:
           hist_path = data_dir / "polymarket-breakdown-history.json"
           hist = json.loads(hist_path.read_text()) if hist_path.exists() else {"rows": []}
           row = {"d": cur["generatedAt"], **cur["totals"]}
+          # Polymarket NAV (open positions + idle USDC) that day. The overview's
+          # capital base currently values transferred money at what was sent, so
+          # it misses every dollar Polymarket has since made or lost. Fixing that
+          # needs a NAV *series*, which only exists going forward — the snapshot
+          # has carried balances since 2026-07-15 but was never retained.
+          nav = (cur.get("balances") or {}).get("nav")
+          if nav is not None:
+              row["nav"] = nav
           rows = [r for r in hist.get("rows", []) if r.get("d") != row["d"]]
           rows.append(row)
           rows.sort(key=lambda r: r["d"])
