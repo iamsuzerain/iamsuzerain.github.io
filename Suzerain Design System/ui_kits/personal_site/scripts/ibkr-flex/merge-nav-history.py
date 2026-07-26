@@ -11,13 +11,20 @@ days that age out of the Flex window.
 
 Contract:
   nav-history.json = { "generatedAt": ISO8601,
-                       "rows": [{ "d": "YYYY-MM-DD", "v": float, "t": float }] }
+                       "rows": [{ "d": "YYYY-MM-DD", "v": float, "t": float,
+                                  "n": float }] }
   where v is cumulative deposit-adjusted $ P&L (drives the combined chart) and t
   is cumulative time-weighted return as a ratio (drives the IBKR chart), both on
   the *seed snapshot's* baseline (v = 0 and t = 0 at the earliest date recorded).
   v stitches additively; t stitches multiplicatively (returns chain). `t` is
   optional per row — rows seeded before it was tracked simply won't extend the
   TWR curve.
+
+  `n` is the account's actual NAV that day — an absolute level, not a rebased
+  series, so it stitches verbatim with no seam alignment. The overview needs it
+  because capital base cannot be recovered from P&L: deposits and transfers move
+  NAV without being P&L, so base + cumulative P&L drifts from the real number by
+  every flow since the baseline. Also optional per row.
 
 Usage:
   merge-nav-history.py [portfolio.json] [nav-history.json]
@@ -67,6 +74,8 @@ def merge(incoming: list[dict], existing: list[dict]) -> list[dict]:
         row = {"d": r["d"], "v": round(float(r["v"]), 2)}
         if r.get("t") is not None:
             row["t"] = round(float(r["t"]), 6)
+        if r.get("n") is not None:
+            row["n"] = round(float(r["n"]), 2)
         inc.append(row)
     inc.sort(key=lambda r: r["d"])
     if not inc:
@@ -90,6 +99,8 @@ def merge(incoming: list[dict], existing: list[dict]) -> list[dict]:
         row = {"d": r["d"], "v": round(r["v"] + v_off, 2)}    # incoming wins on overlap
         if "t" in r:
             row["t"] = round((1 + r["t"]) * t_factor - 1, 6) if t_factor is not None else r["t"]
+        if "n" in r:
+            row["n"] = r["n"]        # absolute level — no baseline to align to
         merged[r["d"]] = row
     return [merged[d] for d in sorted(merged)]
 
@@ -109,7 +120,8 @@ def main() -> int:
     # Pair each $ P&L point with the same day's TWR (perfSeries) so the history
     # carries both the combined chart's $ curve and the IBKR chart's TWR curve.
     twr = {r["d"]: r["v"] for r in ((portfolio or {}).get("perfSeries") or []) if r.get("d")}
-    incoming = [{"d": r["d"], "v": r["v"], "t": twr.get(r["d"])} for r in pnl]
+    navs = {r["d"]: r["v"] for r in ((portfolio or {}).get("navSeries") or []) if r.get("d")}
+    incoming = [{"d": r["d"], "v": r["v"], "t": twr.get(r["d"]), "n": navs.get(r["d"])} for r in pnl]
 
     history = load_json(history_path)
     existing = (history or {}).get("rows") or []

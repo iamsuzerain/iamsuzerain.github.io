@@ -54,7 +54,8 @@ def git(*args: str) -> str:
 
 
 def snapshot_rows(pf: dict) -> list[dict]:
-    """One portfolio.json -> [{d, v, t}] on that snapshot's own baseline."""
+    """One portfolio.json -> [{d, v, t, n}] on that snapshot's own baseline
+    (n is absolute NAV, which has no baseline)."""
     nav = pf.get("navSeries") or []
     perf = pf.get("perfSeries") or []
     if len(nav) < 2 or len(perf) != len(nav):
@@ -68,7 +69,8 @@ def snapshot_rows(pf: dict) -> list[dict]:
             hpr = (1 + perf[i]["v"]) / (1 + perf[i - 1]["v"]) - 1
             cum += nav[i - 1]["v"] * hpr
             vals.append(cum)
-    return [{"d": nav[i]["d"], "v": vals[i], "t": perf[i]["v"]} for i in range(len(nav))]
+    return [{"d": nav[i]["d"], "v": vals[i], "t": perf[i]["v"], "n": nav[i]["v"]}
+            for i in range(len(nav))]
 
 
 def main() -> int:
