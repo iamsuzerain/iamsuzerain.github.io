@@ -322,12 +322,14 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
   // its move, vol and drawdown inflated ~1.1x, and the gap between adjacent
   // quarter bases blown out to 100k.
   //
-  // Real NAV only exists from 2026-07-15 (polymarket-breakdown-history.json),
-  // so windows starting before that keep the ledger. The two conventions differ
-  // by PM's running P&L at the boundary, which is why this is a floor and not a
-  // forward-fill: extrapolating today's NAV backwards would invent capital that
-  // was never there. Windows convert to the honest basis one at a time as the
-  // series grows past their start date.
+  // polymarket-nav-history.json carries it back to the first transfer
+  // (2026-01-09): recorded NAV from 2026-07-15, and before that a value
+  // reconstructed by walking the oldest recorded day backwards through
+  // transfer / user-pnl / rewards deltas. Checked against the 12 days where
+  // both exist, that reconstruction is off by 838 on average (0.36%) versus
+  // 18,368 (8.2%) for the ledger it replaces. Earlier than the first transfer
+  // there is no honest figure — Polymarket was funded from outside the ledger —
+  // so those windows fall back to it and PM contributes nothing, as before.
   const pmNavByDay = new Map();
   for (const r of ((pmNavHistory && pmNavHistory.rows) || [])) {
     if (r && r.d && r.nav != null) pmNavByDay.set(cmbEpochDay(r.d), r.nav);
@@ -1155,12 +1157,13 @@ function Combined({ setView }) {
 
       // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
       // before the Flex window so the MAX range keeps charting aged-out markers.
-      // Daily Polymarket NAV, recorded from 2026-07-15 onward. Lets the capital
-      // base use PM's real value instead of transfers-at-cost for any window
-      // starting inside the recorded span (see pmCapitalAt).
+      // Daily Polymarket NAV back to the first transfer — recorded where it
+      // exists, reconstructed before that. Lets the capital base value the
+      // Polymarket side at what it is worth rather than what was sent to it
+      // (see pmCapitalAt).
       let pmNavHistory = null;
       try {
-        const nRes = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
+        const nRes = await fetch('data/polymarket-nav-history.json', { cache: 'no-store' });
         if (nRes.ok) pmNavHistory = await nRes.json();
       } catch {}
 
