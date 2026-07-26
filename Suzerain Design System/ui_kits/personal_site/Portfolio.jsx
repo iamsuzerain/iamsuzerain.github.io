@@ -1351,26 +1351,6 @@ function Portfolio() {
         </div>
       </div>
 
-      {d.byAssetClass && d.byAssetClass.length > 0 && (
-        <div className="pf-panel">
-          <div className="pf-panel-head">
-            <span className="pf-panel-title">attribution · by instrument type · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per asset class · fixed 12mo, not the range above</span>
-          </div>
-          <AssetClassBars rows={d.byAssetClass}/>
-        </div>
-      )}
-
-      {d.contribution && d.contribution.length > 0 && (
-        <div className="pf-panel">
-          <div className="pf-panel-head">
-            <span className="pf-panel-title">contribution to return · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per holding · fixed 12mo, not the range above</span>
-          </div>
-          <ContributionBars rows={d.contribution}/>
-        </div>
-      )}
-
       {/* Second-order risk analytics. These sit below the holdings panels rather
           than beside the headline chart: they interrogate the return series the
           chart already showed, so they read as footnotes to it, not as the lead.
@@ -1415,6 +1395,31 @@ function Portfolio() {
             <span className="pf-panel-meta">deepest {episodes.length}, peak to recovery</span>
           </div>
           <DrawdownTable episodes={episodes}/>
+        </div>
+      )}
+
+      {/* Last on the page because these two are the only panels that ignore the
+          range selector — IBKR's mark-to-market summary is one total per symbol
+          over the statement window, with no dates to slice (see AC_BAR_FLOOR).
+          Everything above re-reads the selected range, so parking the fixed-12mo
+          pair at the end keeps that run unbroken. */}
+      {d.byAssetClass && d.byAssetClass.length > 0 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">attribution · by instrument type · 12mo</span>
+            <span className="pf-panel-meta">mark-to-market p&l per asset class · fixed 12mo, not range-linked</span>
+          </div>
+          <AssetClassBars rows={d.byAssetClass}/>
+        </div>
+      )}
+
+      {d.contribution && d.contribution.length > 0 && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">contribution to return · 12mo</span>
+            <span className="pf-panel-meta">mark-to-market p&l per holding · fixed 12mo, not range-linked</span>
+          </div>
+          <ContributionBars rows={d.contribution}/>
         </div>
       )}
 
