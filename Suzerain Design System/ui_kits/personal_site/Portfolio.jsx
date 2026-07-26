@@ -99,8 +99,21 @@ function drawdownSeries(perf) {
 const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
+// A quarter key ("2025Q3") is a closed window and carries an end date; every
+// other range runs to the last point and returns null from pfRangeEnd.
+function pfRangeEnd(range) {
+  const b = window.szQuarterBounds && window.szQuarterBounds(range);
+  return b ? b.end : null;
+}
+
+function pfRangeLabel(range) {
+  return PF_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
+}
+
 function pfRangeCutoff(range, dates) {
   const last = dates[dates.length - 1];
+  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
+  if (qb) return qb.start;
   if (range === 'YTD') return last.slice(0, 4) + '-01-01';
   const months = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
   if (!months) return dates[0];
@@ -138,9 +151,17 @@ function pfWindow(navSeries, perfSeries, range) {
   let i = perfSeries.findIndex(p => p.d >= cutoff);
   if (i < 0) i = 0;
   if (i > perfSeries.length - 2) i = perfSeries.length - 2;  // keep >= 2 points
+  // A completed quarter also stops early; trailing ranges run to the end.
+  const endCut = pfRangeEnd(range);
+  let j = perfSeries.length - 1;
+  if (endCut) {
+    const over = perfSeries.findIndex(p => p.d > endCut);
+    if (over > 0) j = over - 1;
+  }
+  if (j < i + 1) j = Math.min(perfSeries.length - 1, i + 1);
   const base = perfSeries[i].v;
-  const perf = perfSeries.slice(i).map(p => ({ d: p.d, v: (1 + p.v) / (1 + base) - 1 }));
-  return { nav: navSeries.slice(i), perf };
+  const perf = perfSeries.slice(i, j + 1).map(p => ({ d: p.d, v: (1 + p.v) / (1 + base) - 1 }));
+  return { nav: navSeries.slice(i, j + 1), perf };
 }
 
 // Cumulative alpha: portfolio TWR minus the benchmark's rebased cumulative
@@ -1208,6 +1229,11 @@ function Portfolio() {
   // window; shorter ranges slice within the trailing year exactly as before.
   const ext = pfExtendHistory(d.navSeries, d.perfSeries, hist);
   const win = pfWindow(ext.nav, ext.perf, range);
+  // Completed quarters the (history-extended) curve covers end to end.
+  const quarters = (window.szQuarters && ext.perf && ext.perf.length)
+    ? window.szQuarters(ext.perf[0].d, ext.perf[ext.perf.length - 1].d)
+    : [];
+  const PfHistoryPicker = window.HistoryPicker;
   // Plain computations (not hooks) — these run after the early returns above, so a
   // useMemo here would violate the rules of hooks. Both are cheap.
   const winRisk = pfRiskWindow(win.perf) || risk;
@@ -1270,13 +1296,16 @@ function Portfolio() {
 
       <div className="pf-panel">
         <div className="pf-panel-head">
-          <span className="pf-panel-title">performance · {PF_RANGE_LABEL[range]}</span>
+          <span className="pf-panel-title">performance · {pfRangeLabel(range)}</span>
           <div className="pf-range">
             {PF_RANGES.map(r => (
               <button key={r} type="button"
                 className={`pf-range-btn${range === r ? ' active' : ''}`}
                 onClick={() => setRange(r)}>{r.toLowerCase()}</button>
             ))}
+            {PfHistoryPicker && (
+              <PfHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
+            )}
           </div>
         </div>
         <NavChart series={win.nav} perfSeries={win.perf} benchmarks={bench}/>
@@ -1374,7 +1403,7 @@ function Portfolio() {
       {episodes.length > 0 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">drawdown episodes · {PF_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-title">drawdown episodes · {pfRangeLabel(range)}</span>
             <span className="pf-panel-meta">deepest {episodes.length}, peak to recovery</span>
           </div>
           <DrawdownTable episodes={episodes}/>

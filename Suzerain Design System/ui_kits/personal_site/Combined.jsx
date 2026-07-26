@@ -698,7 +698,20 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
 const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
+// A quarter key ("2025Q3") is a closed window, so it carries an end date too;
+// every other range runs to today and returns null from cmbRangeEnd.
+function cmbRangeEnd(range) {
+  const b = window.szQuarterBounds && window.szQuarterBounds(range);
+  return b ? b.end : null;
+}
+
+function cmbRangeLabel(range) {
+  return CMB_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
+}
+
 function cmbRangeCutoff(range, last) {
+  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
+  if (qb) return qb.start;
   if (range === 'YTD') return last.slice(0, 4) + '-01-01';
   const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
   if (!m) return null;
@@ -739,12 +752,22 @@ function cmbWindow(series, notional, range, benchmarks) {
   let i = cutoff ? series.findIndex(p => p.d >= cutoff) : 0;
   if (i < 0) i = 0;
   if (i > series.length - 2) i = series.length - 2;
+  // Closed windows (a completed quarter) also stop early; trailing ranges run
+  // to the last point. Keep at least two points so every downstream chart and
+  // stat still has a series to work with.
+  const endCut = cmbRangeEnd(range);
+  let j = series.length - 1;
+  if (endCut) {
+    const over = series.findIndex(p => p.d > endCut);
+    if (over > 0) j = over - 1;
+  }
+  if (j < i + 1) j = Math.min(series.length - 1, i + 1);
   const s0 = series[i];
   // The window's own capital base, carried per-point from real NAV. The old
   // `notional + s0.v` reconstructed it from cumulative P&L, which silently
   // added back every deposit and transfer since the series began.
   const winNotional = s0.base != null ? s0.base : (notional || 0) + (s0.v || 0);
-  const out = series.slice(i).map(p => {
+  const out = series.slice(i, j + 1).map(p => {
     const q = { d: p.d };
     for (const k of ['v', 'ibkr', 'pm']) if (p[k] != null) q[k] = +(p[k] - s0[k]).toFixed(2);
     if (p.base != null) q.base = p.base;
@@ -1143,6 +1166,11 @@ function Combined({ setView }) {
   const pct1 = (v) => (v * 100).toFixed(1) + '%';
   // Range selector windows the chart, its strips, AND the risk panel.
   const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks);
+  // Completed quarters the combined series actually covers end to end.
+  const quarters = (window.szQuarters && data.series.length)
+    ? window.szQuarters(data.series[0].d, data.series[data.series.length - 1].d)
+    : [];
+  const HistoryPicker = window.HistoryPicker;
   const risk = cmbRisk(win.series, win.notional);
   // Shared risk panels, on the combined equity curve. The overview samples every
   // calendar day (prediction markets trade weekends), so vol annualizes on 365.
@@ -1159,8 +1187,8 @@ function Combined({ setView }) {
   const wSpxD = wLast.spx != null ? +(wLast.v - wLast.spx).toFixed(2) : null;
   const wSpxPts = (wSpxD != null && win.notional) ? (wSpxD / win.notional) * 100 : null;
   const pos = wTotal >= 0;
-  const rangeSub = range === '1Y' ? 'trailing 12mo' : CMB_RANGE_LABEL[range];
-  const rangeNote = data.bdExtra ? `${CMB_RANGE_LABEL[range]} · trading + rewards` : `${CMB_RANGE_LABEL[range]} trading`;
+  const rangeSub = range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range);
+  const rangeNote = data.bdExtra ? `${cmbRangeLabel(range)} · trading + rewards` : `${cmbRangeLabel(range)} trading`;
 
   return (
     <section className="pf-wrap cmb-view">
@@ -1169,7 +1197,7 @@ function Combined({ setView }) {
           <div className="sz-kicker">◆ overview · ibkr + polymarket</div>
           <h2 className="sz-h2 pm-headline">
             <span>{pos ? '+' : ''}{cmbUSD(wTotal)}</span>
-            <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${CMB_RANGE_LABEL[range]} pnl`}</span>
+            <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${cmbRangeLabel(range)} pnl`}</span>
           </h2>
           <div className="pf-sub">
             deposit-adjusted brokerage + prediction-market trading{data.bdExtra ? ' + rewards' : ''}, {rangeSub}
@@ -1191,13 +1219,16 @@ function Combined({ setView }) {
       {data.series.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">total pnl · {CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-title">total pnl · {cmbRangeLabel(range)}</span>
             <div className="pf-range">
               {CMB_RANGES.map(r => (
                 <button key={r} type="button"
                   className={`pf-range-btn${range === r ? ' active' : ''}`}
                   onClick={() => setRange(r)}>{r.toLowerCase()}</button>
               ))}
+              {HistoryPicker && (
+                <HistoryPicker quarters={quarters} value={range} onPick={setRange}/>
+              )}
             </div>
           </div>
           <CmbChart series={win.series} log={data.log} bench={data.bench}
@@ -1212,7 +1243,7 @@ function Combined({ setView }) {
       {risk && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
           <div className="cmb-risk-grid">
@@ -1238,7 +1269,7 @@ function Combined({ setView }) {
       {cmbMonthly(win.series).length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">monthly pnl · {CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-title">monthly pnl · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">ibkr · polymarket · total · vs spx</span>
           </div>
           <CmbMonthlyBars series={win.series}/>
@@ -1284,7 +1315,7 @@ function Combined({ setView }) {
       {cEpisodes.length > 0 && SZ.DrawdownTable && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">drawdown episodes · {CMB_RANGE_LABEL[range]}</span>
+            <span className="pf-panel-title">drawdown episodes · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">deepest {cEpisodes.length}, peak to recovery</span>
           </div>
           <SZ.DrawdownTable episodes={cEpisodes}/>

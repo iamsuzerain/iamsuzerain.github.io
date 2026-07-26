@@ -186,7 +186,95 @@ function Chrome({ children, cursorGlow = false, dim = false }) {
   );
 }
 
+// ---------- completed-quarter history (shared by the IBKR + overview charts) ----------
+// Only whole quarters are offered. A quarter the data only partly covers would
+// still print as "q2 25" and read as a full-quarter number, quietly understating
+// it — so a quarter has to be covered end to end to appear.
+const SZ_Q_RE = /^(\d{4})Q([1-4])$/;
+
+function szIsQuarter(key) { return SZ_Q_RE.test(key || ''); }
+
+function szQuarterLabel(key) {
+  const m = SZ_Q_RE.exec(key || '');
+  return m ? `q${m[2]} ${m[1].slice(2)}` : null;
+}
+
+function szQuarterBounds(key) {
+  const m = SZ_Q_RE.exec(key || '');
+  if (!m) return null;
+  const y = +m[1], q = +m[2], endMonth = q * 3;
+  const pad = (n) => String(n).padStart(2, '0');
+  // Day 0 of the following month is the last day of this one — leap years and
+  // 30/31-day months included, without a lookup table.
+  const lastDay = new Date(Date.UTC(y, endMonth, 0)).getUTCDate();
+  return {
+    key,
+    label: szQuarterLabel(key),
+    start: `${y}-${pad(endMonth - 2)}-01`,
+    end: `${y}-${pad(endMonth)}-${pad(lastDay)}`,
+  };
+}
+
+function szQuarters(firstDate, lastDate) {
+  if (!firstDate || !lastDate) return [];
+  const out = [];
+  for (let y = +firstDate.slice(0, 4); y <= +lastDate.slice(0, 4); y++) {
+    for (let q = 1; q <= 4; q++) {
+      const b = szQuarterBounds(`${y}Q${q}`);
+      if (b.start >= firstDate && b.end <= lastDate) out.push(b);
+    }
+  }
+  return out.reverse();   // newest first — the one you most likely want
+}
+
+// The "history" control that sits after MAX on a range selector.
+function HistoryPicker({ quarters, value, onPick }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (!quarters || !quarters.length) return null;
+  const picked = szIsQuarter(value);
+  return (
+    <div className="pf-range-history" ref={ref}>
+      <button type="button" className={`pf-range-btn${picked ? ' active' : ''}`}
+        aria-haspopup="listbox" aria-expanded={open}
+        onClick={() => setOpen(o => !o)}>
+        {picked ? szQuarterLabel(value) : 'history'} <span className="pf-range-caret">▾</span>
+      </button>
+      {open && (
+        <div className="pf-range-menu" role="listbox">
+          <div className="pf-range-menu-head">completed quarters</div>
+          {quarters.map(q => (
+            <button key={q.key} type="button" role="option" aria-selected={value === q.key}
+              className={`pf-range-menu-item${value === q.key ? ' active' : ''}`}
+              onClick={() => { onPick(q.key); setOpen(false); }}>
+              <span>{q.label}</span>
+              <span className="pf-range-menu-span">{q.start.slice(5)} → {q.end.slice(5)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 window.Chrome = Chrome;
 window.Cursor = Cursor;
 window.useDecode = useDecode;
 window.useCursor = useCursor;
+window.HistoryPicker = HistoryPicker;
+window.szQuarters = szQuarters;
+window.szIsQuarter = szIsQuarter;
+window.szQuarterLabel = szQuarterLabel;
+window.szQuarterBounds = szQuarterBounds;
