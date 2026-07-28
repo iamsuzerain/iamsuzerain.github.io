@@ -232,27 +232,63 @@ async function cmbFetchBdExtra() {
       const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
       if (r.ok) {
         const rw = await r.json();
-        if (rw.totals) return Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0);
+        if (rw.totals) {
+          return { total: Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0), rows: [] };
+        }
       }
     } catch {}
-    return 0;
+    return { total: 0, rows: [] };
   }
 
-  let baseline = null;
+  let rows = [];
   try {
     const r = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
     if (r.ok) {
       const hist = await r.json();
-      const cutoff = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
-      const rows = (hist.rows || []).filter(x => x.d && x.d <= cutoff);
-      if (rows.length) baseline = rows[rows.length - 1];
+      rows = (hist.rows || []).filter(x => x && x.d);
     }
   } catch {}
 
-  // Polymarket's user-pnl-api series (used as `pm` line) excludes trading fees,
-  // so subtract betmoar's implied `fees` here.
-  const delta = (k) => (current[k] || 0) - (baseline ? (baseline[k] || 0) : 0);
-  return delta('lp') + delta('yield') + delta('maker') + delta('sponsored') + delta('uma') - delta('fees');
+  // Lifetime total; cmbRewardsCurve does the windowing off the dated history.
+  // This used to subtract a 365d-old baseline row, but the history rarely
+  // reaches back that far, so the baseline was almost always null and the whole
+  // lifetime landed in the window regardless of when it was earned.
+  return { total: cmbBdNet(current), rows };
+}
+
+// Polymarket's user-pnl-api series (used as the `pm` line) excludes trading
+// fees, so betmoar's implied `fees` come off here.
+function cmbBdNet(r) {
+  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0) + (r.sponsored || 0) + (r.uma || 0) - (r.fees || 0);
+}
+
+// Cumulative all-source polymarket income at an epoch-day, on the *lifetime*
+// timeline. Actual values where the betmoar breakdown history reaches; before
+// its first row the remainder — everything earned before that cron started —
+// ramps evenly from the first polymarket data point to the seam. Building the
+// ramp on the lifetime span matters: ramping it across the window instead would
+// dump every pre-history dollar into the window no matter how old it was.
+// `total` anchors the present day so the chart still reconciles with the
+// all-sources headline when breakdown.json is fresher than the history file.
+function cmbRewardsCurve(rows, lifeStartDay, total, winStart, winEnd) {
+  if (!rows || !rows.length) {                 // no history — flat ramp, as before
+    const denom = Math.max(1, winEnd - winStart);
+    return (day) => total * ((Math.min(Math.max(day, winStart), winEnd) - winStart) / denom);
+  }
+  const pts = rows.map(r => ({ day: cmbEpochDay(r.d), v: cmbBdNet(r) })).sort((a, b) => a.day - b.day);
+  const seam = pts[0], tail = pts[pts.length - 1];
+  const preSpan = Math.max(1, seam.day - lifeStartDay);
+  return (day) => {
+    if (day <= lifeStartDay) return 0;
+    if (day < seam.day) return seam.v * ((day - lifeStartDay) / preSpan);
+    if (day > tail.day) {
+      const span = Math.max(1, winEnd - tail.day);
+      return tail.v + (total - tail.v) * ((Math.min(day, winEnd) - tail.day) / span);
+    }
+    let v = seam.v;
+    for (const p of pts) { if (p.day <= day) v = p.v; else break; }
+    return v;
+  };
 }
 
 // Benchmark $ line: IBKR starting NAV parked in the index for the window.
@@ -266,7 +302,7 @@ function cmbBenchDollars(benchSeries, notional, start, end) {
   return closes.map((c, i) => notional * ((i < firstIdx ? base : c) / base - 1));
 }
 
-function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory, pmNavHistory) {
+function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory) {
   const today = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
@@ -354,15 +390,20 @@ function cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistor
       if (vals) bench.push({ key, label: b.label, vals });
     }
   }
-  // Spread all-source polymarket income (maker/lp/yield/…) linearly across the
-  // window so the pm + total lines reconcile with the all-sources figure. Only
-  // applied when polymarket has data; intra-window points are estimates.
-  const extra = pmPts.length > 0 ? (bdExtra || 0) : 0;
-  const denom = Math.max(1, ibkr.length - 1);
+  // All-source polymarket income (maker/lp/yield/…) as a dated curve rather than
+  // a flat ramp, then rebased to the window start so the chart still reads as
+  // P&L earned over the window. Only applied when polymarket has data; points
+  // before the breakdown history begins are still estimates.
+  const hasPm = pmPts.length > 0;
+  const rewardsAt = cmbRewardsCurve(
+    (bd && bd.rows) || [], pmPts.length ? pmPts[0].day : start,
+    (bd && bd.total) || 0, start, today);
+  const rewardsBase = hasPm ? rewardsAt(start) : 0;
+  const extra = hasPm ? +(rewardsAt(today) - rewardsBase).toFixed(2) : 0;
   const series = [];
   for (let k = 0; k < ibkr.length; k++) {
     const day = start + k;
-    const ramp = extra * (k / denom);
+    const ramp = hasPm ? rewardsAt(day) - rewardsBase : 0;
     const pt = {
       d: cmbFromEpochDay(day),
       v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase) + ramp).toFixed(2),
@@ -1173,7 +1214,7 @@ function Combined({ setView }) {
         if (hRes.ok) pnlHistory = await hRes.json();
       } catch {}
 
-      const bdExtra = await cmbFetchBdExtra();
+      const bd = await cmbFetchBdExtra();   // { total, rows } — lifetime net + dated history
 
       // Current NAV split for the capital-deployment bar. IBKR NAV is on the
       // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
@@ -1186,7 +1227,7 @@ function Combined({ setView }) {
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
       const ibkrDate = (portfolio.generatedAt || '').slice(0, 10) || null;
 
-      const built = cmbBuild(portfolio, pmRows, bdExtra, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
+      const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
       if (ibkrNav != null && polyNav != null) {
