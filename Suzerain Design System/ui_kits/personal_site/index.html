@@ -566,6 +566,12 @@
   }
   /* range selector (1M / 3M / 6M / YTD / 1Y) */
   .pf-range { display: flex; gap: 4px; }
+  /* panel heads that carry a caption AND a range selector: keep both on the
+     right edge together rather than letting space-between strand the caption
+     in the middle of the head */
+  .pf-panel-head-right {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px;
+  }
   .pf-range-btn {
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--fg-4);

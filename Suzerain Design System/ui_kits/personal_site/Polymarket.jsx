@@ -326,10 +326,18 @@ function fmtDate(iso) {
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1];
   return `${mo} ${d}, ${y}`;
 }
-function fmtDateShort(iso) {
-  const [y, m] = iso.split('-').map(Number);
+// Span-aware x-axis label, same three modes the overview chart uses: 'day' ->
+// "Jun 12" (short windows, where every tick would otherwise read the same
+// month), 'month' -> "Jun" (within one year), 'monthyear' -> "Jun 26".
+function pmAxisLabel(iso, mode) {
+  const [y, m, d] = iso.split('-').map(Number);
   const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1];
+  if (mode === 'day') return `${mo} ${d}`;
+  if (mode === 'month') return mo;
   return `${mo} ${String(y).slice(2)}`;
+}
+function pmSpanDays(a, b) {
+  return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000);
 }
 function pmUSDCompact(n) {
   if (Math.abs(n) >= 1000) {
@@ -337,6 +345,107 @@ function pmUSDCompact(n) {
     return sign + '$' + (Math.abs(n) / 1000).toFixed(1) + 'k';
   }
   return '$' + Math.round(n);
+}
+
+// ---------- rewards curve ----------
+// Cumulative non-trading income ($ aligned to `dates`): real where the betmoar
+// breakdown history reaches, linearly ramped before it.
+//
+// The trading curve is a lifetime daily series but the rewards history only
+// starts once the betmoar cron did, so the two are joined at a seam the way
+// pfExtendHistory joins NAV history in Portfolio.jsx: actual dated values from
+// the seam forward, and the remainder — everything earned before the history
+// began — ramped across the earlier stretch. The old whole-timeline ramp put a
+// flat ~$5/day all the way back to the first trade, which understated a recent
+// market-making ramp-up by an order of magnitude on the short ranges.
+//
+// `total` (the live breakdown snapshot) anchors the last point, so the curve
+// still ends exactly on the lifetime-pnl headline even when breakdown.json is a
+// cron cycle fresher than the history file.
+function pmRewardsNet(r) {
+  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0) + (r.sponsored || 0) - (r.fees || 0);
+}
+
+function pmRewardsCurve(dates, hist, total) {
+  const n = dates.length;
+  const rows = (hist && hist.rows) || [];
+  // No history — every point is an estimate, exactly as before.
+  if (!rows.length || n < 2) return dates.map((_, i) => +(total * (i / Math.max(1, n - 1))).toFixed(2));
+
+  const seam = rows[0].d, seamV = pmRewardsNet(rows[0]);
+  const lastD = rows[rows.length - 1].d, lastV = pmRewardsNet(rows[rows.length - 1]);
+  const preCount = dates.filter(d => d < seam).length;
+
+  const out = new Array(n);
+  let j = 0, cur = seamV;
+  for (let i = 0; i < n; i++) {
+    if (dates[i] < seam) { out[i] = preCount ? seamV * (i / preCount) : 0; continue; }
+    while (j < rows.length && rows[j].d <= dates[i]) { cur = pmRewardsNet(rows[j]); j++; }
+    out[i] = cur;
+  }
+
+  // Tail past the last history row: ramp up to the live total.
+  if (total != null && Math.abs(total - lastV) > 0.5) {
+    const t = dates.findIndex(d => d > lastD);
+    if (t > 0) {
+      const a = t - 1, len = n - 1 - a;
+      for (let i = t; i < n; i++) out[i] = lastV + (total - lastV) * ((i - a) / len);
+    } else {
+      out[n - 1] = total;
+    }
+  }
+  return out.map(v => +v.toFixed(2));
+}
+
+// ---------- range windowing ----------
+// Same vocabulary (and the same completed-quarter picker) as the ibkr and
+// overview pages, so a range picked here spans what it spans there.
+const PM_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
+const PM_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'all-time' };
+
+// A quarter key ("2025Q3") is a closed window and carries an end date; every
+// other range runs to the last point and returns null here.
+function pmRangeEnd(range) {
+  const b = window.szQuarterBounds && window.szQuarterBounds(range);
+  return b ? b.end : null;
+}
+
+function pmRangeLabel(range) {
+  return PM_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
+}
+
+function pmRangeCutoff(range, last) {
+  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
+  if (qb) return qb.start;
+  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
+  const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
+  if (!m) return null;                       // MAX — no cutoff, start at the first point
+  const c = new Date(last + 'T00:00:00Z');
+  c.setUTCMonth(c.getUTCMonth() - m);
+  return c.toISOString().slice(0, 10);
+}
+
+// Slice the cumulative-pnl curve to a range and rebase it to the window start,
+// so "3mo" reads as the P&L earned in those three months rather than three
+// months of the lifetime curve. Cumulative dollars subtract cleanly (unlike the
+// ibkr page's TWR, which has to be re-compounded), so one subtraction per point
+// is the whole job — and it keeps peak/trough and the $0 line window-relative.
+function pmWindow(series, range) {
+  if (!series || series.length < 2) return series;
+  const last = series[series.length - 1].d;
+  const cutoff = pmRangeCutoff(range, last);
+  let i = cutoff ? series.findIndex(p => p.d >= cutoff) : 0;
+  if (i < 0) i = 0;
+  if (i > series.length - 2) i = series.length - 2;   // keep >= 2 points to plot
+  const endCut = pmRangeEnd(range);
+  let j = series.length - 1;
+  if (endCut) {
+    const over = series.findIndex(p => p.d > endCut);
+    if (over > 0) j = over - 1;
+  }
+  if (j < i + 1) j = Math.min(series.length - 1, i + 1);
+  const base = series[i].v;
+  return series.slice(i, j + 1).map(p => ({ ...p, v: +(p.v - base).toFixed(2) }));
 }
 
 function PmSpark({ series }) {
@@ -357,6 +466,9 @@ function PmSpark({ series }) {
 
   const tickEvery = Math.max(1, Math.floor(series.length / 6));
   const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const spanDays = pmSpanDays(series[0].d, series[series.length - 1].d);
+  const axisMode = spanDays <= 95 ? 'day'
+    : (series[0].d.slice(0, 4) === series[series.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
 
   const maxIdx = values.indexOf(max);
   const minIdx = values.indexOf(min);
@@ -428,7 +540,7 @@ function PmSpark({ series }) {
         {ticks.map((t, i) => (
           <span key={i}
             className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
-            style={{ left: `${(x(t.i) / W) * 100}%` }}>{fmtDateShort(t.d)}</span>
+            style={{ left: `${(x(t.i) / W) * 100}%` }}>{pmAxisLabel(t.d, axisMode)}</span>
         ))}
       </div>
 
@@ -1011,6 +1123,9 @@ function Polymarket() {
   const [err, setErr] = usePmState(null);
   const [cal, setCal] = usePmState(null);
   const [hist, setHist] = usePmState(null);
+  // Defaults to the trailing year like the ibkr and overview charts — the
+  // lifetime curve is still one click away under MAX.
+  const [range, setRange] = usePmState('1Y');
 
   usePmEffect(() => {
     let cancelled = false;
@@ -1075,15 +1190,25 @@ function Polymarket() {
     : 0;
   const totalPnl = lifetimePnl + bdExtra;
 
-  // Sparkline series: spread all-source income (bdExtra) linearly across the
-  // trading-pnl timeline so the curve ends at totalPnl and matches the headline.
-  // Linear = assumes rewards accrued evenly; intra-period points are estimates.
+  // Sparkline series: trading pnl plus the all-source income curve, so it ends
+  // at totalPnl and matches the headline. Dated from the breakdown history where
+  // that reaches; only the pre-history remainder is an even ramp.
+  const rewardsSeam = (hist && hist.rows && hist.rows.length) ? hist.rows[0].d : null;
   const sparkSeries = (pnlSeries && pnlSeries.length > 1 && bdExtra)
-    ? pnlSeries.map((p, i) => ({
-        ...p,
-        v: +(p.v + bdExtra * (i / (pnlSeries.length - 1))).toFixed(2),
-      }))
+    ? (() => {
+        const rw = pmRewardsCurve(pnlSeries.map(p => p.d), hist, bdExtra);
+        return pnlSeries.map((p, i) => ({ ...p, v: +(p.v + rw[i]).toFixed(2) }));
+      })()
     : pnlSeries;
+
+  // Chart window. Rewards are spread across the *lifetime* timeline before the
+  // slice, so a window shows the share of them that accrued inside it.
+  const winSeries = pmWindow(sparkSeries, range);
+  // Completed quarters the curve covers end to end, for the history picker.
+  const quarters = (window.szQuarters && pnlSeries && pnlSeries.length)
+    ? window.szQuarters(pnlSeries[0].d, pnlSeries[pnlSeries.length - 1].d)
+    : [];
+  const PmHistoryPicker = window.HistoryPicker;
 
   return (
     <section className="pf-wrap pm-view">
@@ -1117,12 +1242,26 @@ function Polymarket() {
       {pnlSeries && pnlSeries.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">cumulative pnl</span>
-            <span className="pf-panel-meta">
-              {bdExtra ? 'all sources · rewards spread linearly' : 'all-time · USDC'}
-            </span>
+            <span className="pf-panel-title">cumulative pnl · {pmRangeLabel(range)}</span>
+            <div className="pf-panel-head-right">
+              <span className="pf-panel-meta">
+                {!bdExtra ? 'trading only · USDC'
+                  : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
+                  : 'all sources · rewards spread linearly'}
+              </span>
+              <div className="pf-range">
+                {PM_RANGES.map(r => (
+                  <button key={r} type="button"
+                    className={`pf-range-btn${range === r ? ' active' : ''}`}
+                    onClick={() => setRange(r)}>{r.toLowerCase()}</button>
+                ))}
+                {PmHistoryPicker && (
+                  <PmHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
+                )}
+              </div>
+            </div>
           </div>
-          <PmSpark series={sparkSeries}/>
+          <PmSpark series={winSeries}/>
         </div>
       )}
 
