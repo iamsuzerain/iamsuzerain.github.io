@@ -208,9 +208,12 @@ function cmbIbkrPoints(portfolio, pnlHistory) {
   return trailing;
 }
 
-// Polymarket raw user-pnl rows: [{ t: unixSeconds, p: dollars }] → daily $ points.
+// Polymarket raw user-pnl rows: [{ t: unixSeconds, p: dollars }] → daily $ points,
+// on IBKR's "dated D = close of D" convention (szPmPointDay). The raw stamps are
+// day *boundaries*, so taking them at face value put the polymarket leg a day
+// ahead of the IBKR leg it gets summed with below.
 function cmbPmPoints(rows) {
-  return (rows || []).map(r => ({ day: Math.floor(r.t / 86400), v: r.p }));
+  return (rows || []).map(r => ({ day: window.szPmPointDay(r.t), v: r.p }));
 }
 
 // All-source polymarket income beyond trading (lp + maker + yield + sponsored +
@@ -245,11 +248,13 @@ async function cmbFetchBdExtra() {
     const r = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
     if (r.ok) {
       const hist = await r.json();
-      rows = (hist.rows || []).filter(x => x && x.d);
+      // Restate the scrape dates onto the close-of-day convention here, once, so
+      // everything downstream can read `.d` at face value.
+      rows = window.szPmDateSnapshotRows((hist.rows || []).filter(x => x && x.d));
     }
   } catch {}
 
-  // Lifetime total; cmbRewardsCurve does the windowing off the dated history.
+  // Lifetime total; szPmIncomeCurve does the windowing off the dated history.
   // This used to subtract a 365d-old baseline row, but the history rarely
   // reaches back that far, so the baseline was almost always null and the whole
   // lifetime landed in the window regardless of when it was earned.
@@ -257,39 +262,10 @@ async function cmbFetchBdExtra() {
 }
 
 // Polymarket's user-pnl-api series (used as the `pm` line) excludes trading
-// fees, so betmoar's implied `fees` come off here.
-function cmbBdNet(r) {
-  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0) + (r.sponsored || 0) + (r.uma || 0) - (r.fees || 0);
-}
-
-// Cumulative all-source polymarket income at an epoch-day, on the *lifetime*
-// timeline. Actual values where the betmoar breakdown history reaches; before
-// its first row the remainder — everything earned before that cron started —
-// ramps evenly from the first polymarket data point to the seam. Building the
-// ramp on the lifetime span matters: ramping it across the window instead would
-// dump every pre-history dollar into the window no matter how old it was.
-// `total` anchors the present day so the chart still reconciles with the
-// all-sources headline when breakdown.json is fresher than the history file.
-function cmbRewardsCurve(rows, lifeStartDay, total, winStart, winEnd) {
-  if (!rows || !rows.length) {                 // no history — flat ramp, as before
-    const denom = Math.max(1, winEnd - winStart);
-    return (day) => total * ((Math.min(Math.max(day, winStart), winEnd) - winStart) / denom);
-  }
-  const pts = rows.map(r => ({ day: cmbEpochDay(r.d), v: cmbBdNet(r) })).sort((a, b) => a.day - b.day);
-  const seam = pts[0], tail = pts[pts.length - 1];
-  const preSpan = Math.max(1, seam.day - lifeStartDay);
-  return (day) => {
-    if (day <= lifeStartDay) return 0;
-    if (day < seam.day) return seam.v * ((day - lifeStartDay) / preSpan);
-    if (day > tail.day) {
-      const span = Math.max(1, winEnd - tail.day);
-      return tail.v + (total - tail.v) * ((Math.min(day, winEnd) - tail.day) / span);
-    }
-    let v = seam.v;
-    for (const p of pts) { if (p.day <= day) v = p.v; else break; }
-    return v;
-  };
-}
+// fees, so betmoar's implied `fees` come off here. Shared with the polymarket
+// view (Chrome.jsx) — the two used to keep separate sums that disagreed on
+// whether `uma` counted.
+const cmbBdNet = (r) => window.szPmIncomeNet(r);
 
 // Benchmark $ line: IBKR starting NAV parked in the index for the window.
 // Approximate by construction — the real capital base moved during the year.
@@ -303,10 +279,23 @@ function cmbBenchDollars(benchSeries, notional, start, end) {
 }
 
 function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory) {
-  const today = Math.floor(Date.now() / CMB_DAY_MS);
+  const nowDay = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
   const pmPts = cmbPmPoints(pmRows);
+
+  // End the series on the last day either feed actually reports, not the wall
+  // clock. Padding forward to `now` used to push the trailing-range cutoff a day
+  // past the polymarket view's — same range name, window-start a day apart, and
+  // one day of polymarket P&L is four figures. Polymarket is fetched live so it
+  // is the fresher of the two; `max` therefore lands on the same last day the
+  // polymarket view sees, and clamping to `nowDay` keeps a future-dated file
+  // from projecting the axis forward.
+  const lastFeedDay = Math.max(
+    ibkrPts.length ? ibkrPts[ibkrPts.length - 1].day : -Infinity,
+    pmPts.length ? pmPts[pmPts.length - 1].day : -Infinity
+  );
+  const today = Number.isFinite(lastFeedDay) ? Math.min(lastFeedDay, nowDay) : nowDay;
 
   // Window = IBKR's actual trailing-year series start, so the IBKR endpoint isn't
   // clipped by rebasing and stays equal to pnl["1y"].abs.
@@ -366,6 +355,12 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // 18,368 (8.2%) for the ledger it replaces. Earlier than the first transfer
   // there is no honest figure — Polymarket was funded from outside the ledger —
   // so those windows fall back to it and PM contributes nothing, as before.
+  // Row dates arrive already restated to the snapshot convention (see the fetch
+  // site): the recorded rows are betmoar's `nav` off the same ~08:45 UTC scrape as
+  // the breakdown history, and the derived rows are walked back from them, so both
+  // carried the scrape's day rather than a closed one. Worth ~$2k/day against a
+  // ~$965k base — a 0.2% correction that matters for staying on one convention
+  // with the P&L legs, not for the base itself.
   const pmNavByDay = new Map();
   for (const r of ((pmNavHistory && pmNavHistory.rows) || [])) {
     if (r && r.d && r.nav != null) pmNavByDay.set(cmbEpochDay(r.d), r.nav);
@@ -394,10 +389,18 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // a flat ramp, then rebased to the window start so the chart still reads as
   // P&L earned over the window. Only applied when polymarket has data; points
   // before the breakdown history begins are still estimates.
+  //
+  // The anchor is szPnlLifeStartDay, not pmPts[0].day: the raw feed opens with a
+  // long flat stretch before the first trade (182 days as of writing), and using
+  // the raw first row stretched the pre-history ramp across it. That put a
+  // different slope on the ramp than the polymarket view's — which trims the
+  // flat run before charting — so the same pre-seam rewards split differently
+  // across the same 12mo boundary on the two pages.
   const hasPm = pmPts.length > 0;
-  const rewardsAt = cmbRewardsCurve(
-    (bd && bd.rows) || [], pmPts.length ? pmPts[0].day : start,
-    (bd && bd.total) || 0, start, today);
+  const rewardsAt = window.szPmIncomeCurve(
+    (bd && bd.rows) || [],
+    hasPm ? window.szPnlLifeStartDay(pmRows) : start,
+    (bd && bd.total) || 0, today);
   const rewardsBase = hasPm ? rewardsAt(start) : 0;
   const extra = hasPm ? +(rewardsAt(today) - rewardsBase).toFixed(2) : 0;
   const series = [];
@@ -788,26 +791,13 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
 const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
-// A quarter key ("2025Q3") is a closed window, so it carries an end date too;
-// every other range runs to today and returns null from cmbRangeEnd.
-function cmbRangeEnd(range) {
-  const b = window.szQuarterBounds && window.szQuarterBounds(range);
-  return b ? b.end : null;
-}
+// Windowing is shared with the polymarket view (Chrome.jsx) so a range picked
+// here spans exactly the days it spans there.
+const cmbRangeEnd = (range) => window.szRangeEnd(range);
+const cmbRangeCutoff = (range, last) => window.szRangeCutoff(range, last);
 
 function cmbRangeLabel(range) {
   return CMB_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
-}
-
-function cmbRangeCutoff(range, last) {
-  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
-  if (qb) return qb.start;
-  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
-  const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
-  if (!m) return null;
-  const c = new Date(last + 'T00:00:00Z');
-  c.setUTCMonth(c.getUTCMonth() - m);
-  return c.toISOString().slice(0, 10);
 }
 
 // Benchmark $ line for a window: forward-fill raw closes onto `dates`, base to the
@@ -1202,10 +1192,16 @@ function Combined({ setView }) {
       // exists, reconstructed before that. Lets the capital base value the
       // Polymarket side at what it is worth rather than what was sent to it
       // (see pmCapitalAt).
+      // Its rows ride the same ~08:45 UTC betmoar scrape, so they get the same
+      // date restatement as the breakdown history. nav-history.json below is IBKR
+      // and already on close-of-day — it is left alone.
       let pmNavHistory = null;
       try {
         const nRes = await fetch('data/polymarket-nav-history.json', { cache: 'no-store' });
-        if (nRes.ok) pmNavHistory = await nRes.json();
+        if (nRes.ok) {
+          const j = await nRes.json();
+          pmNavHistory = { ...j, rows: window.szPmDateSnapshotRows(j.rows) };
+        }
       } catch {}
 
       let pnlHistory = null;
@@ -1219,19 +1215,37 @@ function Combined({ setView }) {
       // Current NAV split for the capital-deployment bar. IBKR NAV is on the
       // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
       // betmoar breakdown snapshot. Bar renders only when both are present.
+      //
+      // Each side's "as of" comes from the day its number describes, not from the
+      // day its file was written — those differ by one, and the label used to read
+      // the later of the two. generatedAt says when the cron ran; the NAV it
+      // carries is a close from the day before. Same close-of-day convention as
+      // every other figure on the page.
       let polyNav = null, polyDate = null;
       try {
         const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
-        if (r.ok) { const bd = await r.json(); polyNav = bd.balances ? bd.balances.nav : null; polyDate = bd.generatedAt || null; }
+        if (r.ok) {
+          const bd = await r.json();
+          polyNav = bd.balances ? bd.balances.nav : null;
+          // betmoar's NAV is the live ~08:45 scrape, so it lands on the same
+          // completed day as the rest of that scrape's fields (szPmSnapshotDay).
+          const gen = (bd.generatedAt || '').slice(0, 10);
+          polyDate = gen ? window.szFromEpochDay(window.szPmSnapshotDay(gen)) : null;
+        }
       } catch {}
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
-      const ibkrDate = (portfolio.generatedAt || '').slice(0, 10) || null;
+      // account.nav is the last EquitySummary total — i.e. navSeries' final point,
+      // whose date is the close it represents. Verified equal, so read the date off
+      // the series rather than trusting the file's write time.
+      const navS = portfolio.navSeries || [];
+      const ibkrDate = navS.length ? navS[navS.length - 1].d
+        : ((portfolio.generatedAt || '').slice(0, 10) || null);
 
       const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
       if (ibkrNav != null && polyNav != null) {
-        // Both NAVs are daily-cron snapshots. Show the *older* input date so the
+        // Two feeds with different latencies. Show the *older* of the two so the
         // "as of" never overstates how fresh the bar is.
         const dates = [ibkrDate, polyDate].filter(Boolean);
         const asOf = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;

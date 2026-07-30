@@ -13,7 +13,7 @@ const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   : [window.SZ_ID.wallet];
 const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = 'Seutervoinen';
-const PM_CACHE_KEY = 'pm-cache-v8';  // v8: portfolio value now = snapshot NAV (positions + cash)
+const PM_CACHE_KEY = 'pm-cache-v9';  // v9: breakdown carries uma; shared income sum
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
@@ -52,15 +52,11 @@ function pmRel(iso) {
 }
 
 // ---------- live fetch + shape ----------
+// Shared with the overview, which anchors its rewards ramp on the same cut
+// (szPnlLifeStartDay) without trimming the series it charts.
 function pmTrimFlat(series) {
   if (!series.length) return series;
-  const base = series[0].p;
-  for (let i = 0; i < series.length; i++) {
-    if (Math.abs(series[i].p - base) > 0.001) {
-      return series.slice(Math.max(0, i - 1));
-    }
-  }
-  return series.slice(-1);
+  return series.slice(window.szPnlFirstMoveIndex(series));
 }
 // Plot-point ceiling shared with the overview (CMB_CHART_MAX_POINTS). Sized so
 // daily resolution survives ~11 years of history rather than reverting to
@@ -105,6 +101,7 @@ async function pmFetchBreakdown() {
           yield:     bd.totals.yield,
           maker:     bd.totals.maker,
           sponsored: bd.totals.sponsored,
+          uma:       bd.totals.uma,
           fees:      bd.totals.fees,
           // Full Polymarket NAV (open positions + idle USDC) from the daily
           // snapshot; used as portfolio value so it matches the overview's
@@ -128,6 +125,7 @@ async function pmFetchBreakdown() {
           yield:     0,
           maker:     Math.round(rw.totals.makerRebates || 0),
           sponsored: 0,
+          uma:       0,
           fees:      0,
           source:    'json',
         };
@@ -284,10 +282,16 @@ async function pmFetchAll() {
   // smoothPath costs ~1.6ms at 2000 points — well inside a frame even though
   // it is recomputed on every hover move.
   const sampled = pmDownsample(trimmed, PM_CHART_MAX_POINTS);
-  const pnlSeries = sampled.map(r => ({
-    d: new Date(r.t * 1000).toISOString().slice(0, 10),
+  // szPmPointDay, not the raw stamp's own date: the feed's daily points sit on
+  // 00:00 UTC boundaries, so stamp D is the close of D-1. Taking the stamp at face
+  // value labelled every point a day late and, because the live intraday tail is
+  // *not* a boundary, put the last two points on the same date.
+  // Deduped last: polymarket skips hourly tail updates often enough that two
+  // points can resolve to one day (see szDedupeByDate).
+  const pnlSeries = window.szDedupeByDate(sampled.map(r => ({
+    d: window.szFromEpochDay(window.szPmPointDay(r.t)),
     v: +r.p.toFixed(2),
-  }));
+  })));
 
   const activity = mergedActivity.slice(0, 15).map(a => ({
     t: new Date((a.timestamp || 0) * 1000).toISOString(),
@@ -362,39 +366,20 @@ function pmUSDCompact(n) {
 // `total` (the live breakdown snapshot) anchors the last point, so the curve
 // still ends exactly on the lifetime-pnl headline even when breakdown.json is a
 // cron cycle fresher than the history file.
-function pmRewardsNet(r) {
-  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0) + (r.sponsored || 0) - (r.fees || 0);
-}
+// Both the sum and the curve live in Chrome.jsx now, shared with the overview.
+// They were separate implementations that disagreed twice over: on whether `uma`
+// counted as income, and on where the pre-history ramp starts — this copy
+// measured it in *series points* from the trimmed first date, the overview in
+// *days* from the raw feed's first row, so identical inputs produced two
+// different 12mo figures.
+const pmRewardsNet = (r) => window.szPmIncomeNet(r);
 
-function pmRewardsCurve(dates, hist, total) {
+function pmRewardsCurve(dates, hist, total, lifeStartDay) {
   const n = dates.length;
-  const rows = (hist && hist.rows) || [];
-  // No history — every point is an estimate, exactly as before.
-  if (!rows.length || n < 2) return dates.map((_, i) => +(total * (i / Math.max(1, n - 1))).toFixed(2));
-
-  const seam = rows[0].d, seamV = pmRewardsNet(rows[0]);
-  const lastD = rows[rows.length - 1].d, lastV = pmRewardsNet(rows[rows.length - 1]);
-  const preCount = dates.filter(d => d < seam).length;
-
-  const out = new Array(n);
-  let j = 0, cur = seamV;
-  for (let i = 0; i < n; i++) {
-    if (dates[i] < seam) { out[i] = preCount ? seamV * (i / preCount) : 0; continue; }
-    while (j < rows.length && rows[j].d <= dates[i]) { cur = pmRewardsNet(rows[j]); j++; }
-    out[i] = cur;
-  }
-
-  // Tail past the last history row: ramp up to the live total.
-  if (total != null && Math.abs(total - lastV) > 0.5) {
-    const t = dates.findIndex(d => d > lastD);
-    if (t > 0) {
-      const a = t - 1, len = n - 1 - a;
-      for (let i = t; i < n; i++) out[i] = lastV + (total - lastV) * ((i - a) / len);
-    } else {
-      out[n - 1] = total;
-    }
-  }
-  return out.map(v => +v.toFixed(2));
+  if (!n) return [];
+  const endDay = window.szEpochDay(dates[n - 1]);
+  const at = window.szPmIncomeCurve((hist && hist.rows) || [], lifeStartDay, total, endDay);
+  return dates.map(d => +at(window.szEpochDay(d)).toFixed(2));
 }
 
 // ---------- range windowing ----------
@@ -403,26 +388,12 @@ function pmRewardsCurve(dates, hist, total) {
 const PM_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 const PM_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'all-time' };
 
-// A quarter key ("2025Q3") is a closed window and carries an end date; every
-// other range runs to the last point and returns null here.
-function pmRangeEnd(range) {
-  const b = window.szQuarterBounds && window.szQuarterBounds(range);
-  return b ? b.end : null;
-}
+// Both live in Chrome.jsx, shared with the overview.
+const pmRangeEnd = (range) => window.szRangeEnd(range);
+const pmRangeCutoff = (range, last) => window.szRangeCutoff(range, last);
 
 function pmRangeLabel(range) {
   return PM_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
-}
-
-function pmRangeCutoff(range, last) {
-  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
-  if (qb) return qb.start;
-  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
-  const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
-  if (!m) return null;                       // MAX — no cutoff, start at the first point
-  const c = new Date(last + 'T00:00:00Z');
-  c.setUTCMonth(c.getUTCMonth() - m);
-  return c.toISOString().slice(0, 10);
 }
 
 // Slice the cumulative-pnl curve to a range and rebase it to the window start,
@@ -1147,10 +1118,15 @@ function Polymarket() {
       .then(j => { if (!cancelled && j) setCal(j); })
       .catch(() => {});
     // Rewards-accrual history (betmoar breakdown daily cron). Best-effort; the
-    // panel renders only when the history file is present.
+    // panel renders only when the history file is present. Row dates are restated
+    // to close-of-day here so the income curve, the accrual chart and the "since"
+    // captions all read the same convention as the P&L series.
     fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
-      .then(j => { if (!cancelled && j) setHist(j); })
+      .then(j => {
+        if (cancelled || !j) return;
+        setHist({ ...j, rows: window.szPmDateSnapshotRows(j.rows) });
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -1182,21 +1158,23 @@ function Polymarket() {
     : summary.realizedPnl + summary.unrealizedPnl;
   // True realized = lifetime − unrealized (settled P&L across all markets, open + closed).
   const realizedTotal = lifetimePnl - summary.unrealizedPnl;
-  // All-source total = trading + LP + maker + yield + sponsored − fees.
+  // All-source total = trading + LP + maker + yield + sponsored + uma − fees.
   // pnlSeries (used as lifetimePnl) is gross of trading fees, so net them here.
-  const bdExtra = breakdown
-    ? (breakdown.lp || 0) + (breakdown.yield || 0) + (breakdown.maker || 0)
-      + (breakdown.sponsored || 0) - (breakdown.fees || 0)
-    : 0;
+  const bdExtra = pmRewardsNet(breakdown);
   const totalPnl = lifetimePnl + bdExtra;
 
   // Sparkline series: trading pnl plus the all-source income curve, so it ends
   // at totalPnl and matches the headline. Dated from the breakdown history where
   // that reaches; only the pre-history remainder is an even ramp.
+  //
+  // pnlSeries is already past pmTrimFlat, so its first date *is* the day the
+  // book started being P&L history — the same anchor szPnlLifeStartDay hands the
+  // overview off the raw feed.
   const rewardsSeam = (hist && hist.rows && hist.rows.length) ? hist.rows[0].d : null;
   const sparkSeries = (pnlSeries && pnlSeries.length > 1 && bdExtra)
     ? (() => {
-        const rw = pmRewardsCurve(pnlSeries.map(p => p.d), hist, bdExtra);
+        const rw = pmRewardsCurve(pnlSeries.map(p => p.d), hist, bdExtra,
+          window.szEpochDay(pnlSeries[0].d));
         return pnlSeries.map((p, i) => ({ ...p, v: +(p.v + rw[i]).toFixed(2) }));
       })()
     : pnlSeries;
