@@ -99,27 +99,19 @@ function drawdownSeries(perf) {
 const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
 const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
-// A quarter key ("2025Q3") is a closed window and carries an end date; every
-// other range runs to the last point and returns null from pfRangeEnd.
-function pfRangeEnd(range) {
-  const b = window.szQuarterBounds && window.szQuarterBounds(range);
-  return b ? b.end : null;
-}
+// Windowing is shared with the polymarket + overview views (Chrome.jsx), so a
+// range picked on any of the three spans the same days.
+const pfRangeEnd = (range) => window.szRangeEnd(range);
 
 function pfRangeLabel(range) {
   return PF_RANGE_LABEL[range] || (window.szQuarterLabel && window.szQuarterLabel(range)) || range;
 }
 
+// Unlike the other two callers, MAX resolves to the first date rather than null
+// — pfWindow feeds the result straight to findIndex.
 function pfRangeCutoff(range, dates) {
-  const last = dates[dates.length - 1];
-  const qb = window.szQuarterBounds && window.szQuarterBounds(range);
-  if (qb) return qb.start;
-  if (range === 'YTD') return last.slice(0, 4) + '-01-01';
-  const months = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
-  if (!months) return dates[0];
-  const c = new Date(last + 'T00:00:00Z');
-  c.setUTCMonth(c.getUTCMonth() - months);
-  return c.toISOString().slice(0, 10);
+  const cut = window.szRangeCutoff(range, dates[dates.length - 1]);
+  return cut == null ? dates[0] : cut;
 }
 
 // Prepend accumulated multi-year history (nav-history.json `t` = cumulative TWR)
