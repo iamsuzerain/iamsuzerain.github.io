@@ -649,7 +649,7 @@ function PmBreakdown({ bd, tradingPnl }) {
 //
 // The picking-vs-sizing story reads off two columns in the same units the
 // calibration headline already uses:
-//   edge/pos — won − priced on settled bets (pp), one vote per bet. Directional
+//   edge/pos — won − priced on resolved bets (pp), one vote per bet. Directional
 //              picking skill.
 //   roi      — realized P&L per dollar staked. The dollar-weighted outcome.
 // edge/pos ≈ 0 (fairly priced) beside a deeply negative roi = the picking was
@@ -735,15 +735,16 @@ function PmCategoryPanel({ byCategory, openBook }) {
               <th className="pf-num">staked</th>
               <th className="pf-num">edge/pos</th>
               <th className="pf-num">roi</th>
-              <th className="pf-num">settle</th>
-              <th className="pf-num">exit</th>
+              <th className="pf-num">resolved</th>
+              <th className="pf-num">swing</th>
               <th className="pf-num">top-1</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(r => {
-              // Picking edge is a settled-market concept (won vs priced); exit
-              // lots have no resolution truth, so read it from the settlement slice.
+              // Picking edge is a resolved-market concept (won vs priced); swing
+              // lots closed while the outcome was still live have no resolution
+              // truth, so read it from the resolved slice only.
               const edge = r.settle ? r.settle.edge : null;
               return (
                 <tr key={r.cat} className={r.c.n < PM_CAT_MIN_N ? 'pm-cat-thin-row' : ''}>
@@ -751,7 +752,7 @@ function PmCategoryPanel({ byCategory, openBook }) {
                   <td className="pf-num">{r.c.n}</td>
                   <td className="pf-num">{pmUSD(r.c.volume, true)}</td>
                   <td className={`pf-num ${edge == null ? '' : (edge >= 0 ? 'pos' : 'neg')}`}
-                    title={edge == null ? 'no settled bets in this type' : undefined}>
+                    title={edge == null ? 'no resolved bets in this type' : undefined}>
                     {edge != null ? (edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp' : '—'}
                   </td>
                   <td className={`pf-num ${r.c.roi >= 0 ? 'pos' : 'neg'}`}>{pmPct1(r.c.roi)}</td>
@@ -769,14 +770,14 @@ function PmCategoryPanel({ byCategory, openBook }) {
         </table>
       </div>
 
-      {/* Scope. Every number above is a CLOSED lot — settled or exited — because
+      {/* Scope. Every number above is a CLOSED lot — resolved or swing — because
           you can't score a forecast that hasn't resolved. The net therefore sits
           below the headline trading P&L, which marks the open book too, and the
           two being adjacent and unequal reads as a contradiction without this.
           They reconcile: closed + open ≈ headline, the remainder being fees. */}
       {openBook && (
         <div className="pf-contrib-foot pm-cat-scope">
-          <span>closed lots only · settled or exited</span>
+          <span>closed lots only · resolved or swing</span>
           <span>
             {openBook.n} open{' '}
             <b className={openBook.unrealized >= 0 ? 'pos' : 'neg'}>
@@ -793,10 +794,11 @@ function PmCategoryPanel({ byCategory, openBook }) {
 // ---------- calibration / hit-rate reliability diagram ----------
 // Win rate bucketed by implied entry odds. The 45° line is perfect calibration:
 // a point on it means the price was fair; above = the side won more often than it
-// was priced for (edge); below = overpaid. 'settlement' lots (shares held to
-// resolution) are the true calibration test. 'exit' lots (sold early, "win" =
-// closed in profit) are a hit-rate view whose wins sit above the diagonal by
-// construction — so the two are a toggle, never a blend. From the
+// was priced for (edge); below = overpaid. 'resolved' lots (outcome determined —
+// held to resolution, or sold at >=99.8c/<=0.2c into a market that resolved) are
+// the true calibration test. 'swing' lots (closed while the outcome was still
+// live, "win" = closed in profit) are a hit-rate view whose wins sit above the
+// diagonal by construction — so the two are a toggle, never a blend. From the
 // polymarket-calibration daily cron.
 const PM_CAL_TEAL = '#5eead4';   // the diagonal / reference
 const PM_CAL_GOOD = '#ff6ec4';   // won more than priced
