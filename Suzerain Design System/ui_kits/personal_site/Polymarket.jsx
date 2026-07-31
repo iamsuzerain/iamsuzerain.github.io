@@ -942,10 +942,10 @@ function PmCalibration({ cal }) {
         <span className="pf-panel-title">calibration · win rate vs implied odds</span>
         <div className="pf-range">
           <button type="button" className={`pf-range-btn${series === 'settlement' ? ' active' : ''}`}
-            onClick={() => setSeries('settlement')}>held</button>
+            onClick={() => setSeries('settlement')}>resolved</button>
           {hasExit && (
             <button type="button" className={`pf-range-btn${series === 'exit' ? ' active' : ''}`}
-              onClick={() => setSeries('exit')}>sold early</button>
+              onClick={() => setSeries('exit')}>swing trades</button>
           )}
         </div>
       </div>
@@ -966,7 +966,7 @@ function PmCalibration({ cal }) {
         <PmStat label="edge · per $"
           value={h.roi != null ? `${h.roi >= 0 ? '+' : ''}${(h.roi * 100).toFixed(1)}%` : '—'}
           tone={h.roi != null ? (h.roi >= 0 ? 'pos' : 'neg') : undefined}
-          kicker={`realized per $ staked · ${series === 'settlement' ? 'held to resolution' : 'early exits'}`}/>
+          kicker={`realized per $ staked · ${series === 'settlement' ? 'outcome determined' : 'closed while live'}`}/>
       </div>
 
       <PmCalScatter buckets={buckets}/>
@@ -974,8 +974,8 @@ function PmCalibration({ cal }) {
       <div className="pf-panel-head" style={{ marginTop: 4 }}>
         <span className="pf-panel-meta">
           {series === 'settlement'
-            ? 'positions held to resolution — the true calibration test'
-            : 'positions sold before resolution — win = closed in profit (a hit-rate view, not calibration)'}
+            ? 'positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved. the true calibration test'
+            : 'swing trades — closed while the outcome was still live, so there is no resolution truth. win = closed in profit (a hit-rate view, not calibration)'}
         </span>
       </div>
     </div>
