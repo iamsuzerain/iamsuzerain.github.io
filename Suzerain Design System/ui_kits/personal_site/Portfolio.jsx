@@ -525,8 +525,6 @@ function NavChart({ series, perfSeries, benchmarks }) {
             fill="none" stroke={o.style.color} strokeWidth="1.25"/>
         ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
-        <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="3.5" fill="#ff4fd8"/>
-        <circle cx={x(perf.length - 1)} cy={y(perf[perf.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
         {hovered && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -714,11 +712,15 @@ function DrawdownStrip({ perfSeries }) {
             <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
             <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
           </linearGradient>
+          <linearGradient id="pf-dd-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff8ad4"/>
+            <stop offset="100%" stopColor="#ff4fd8"/>
+          </linearGradient>
         </defs>
         <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
           stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
         <path d={area} fill="url(#pf-dd-fill)"/>
-        <path d={line} fill="none" stroke="rgba(255,110,196,0.75)" strokeWidth="1.25"/>
+        <path d={line} fill="none" stroke="url(#pf-dd-stroke)" strokeWidth="1.35"/>
         {hovered && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -786,11 +788,15 @@ function AlphaStrip({ alpha }) {
             <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
             <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
           </linearGradient>
+          <linearGradient id="pf-alpha-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#93c5fd"/>
+            <stop offset="100%" stopColor="#3b82f6"/>
+          </linearGradient>
         </defs>
         <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
           stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
         <path d={area} fill="url(#pf-alpha-fill)"/>
-        <path d={line} fill="none" stroke="rgba(96,165,250,0.85)" strokeWidth="1.25"/>
+        <path d={line} fill="none" stroke="url(#pf-alpha-stroke)" strokeWidth="1.35"/>
         {hovered && (
           <g>
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
@@ -970,6 +976,31 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, periods = 252 }) {
           preserveAspectRatio="none"
           onMouseMove={onMove} onMouseLeave={() => setHover(null)}
           onTouchStart={onMove} onTouchMove={onMove} onTouchEnd={() => setHover(null)}>
+          <defs>
+            {/* Horizontal for the same reason as the overview's correlation strip:
+                this axis is anchored at spec.zero, not at the data, so a metric
+                sitting far from its anchor gets squeezed into a sliver of the
+                height — beta is the default and anchors at 1, so a book running
+                beta near zero leaves the line ~8% of the plot tall, far too
+                little vertical travel for a value-keyed ramp to register.
+                Violet family rather than the pink one: this strip sits directly
+                under the P&L chart, and reusing that chart's gradient made the
+                two read as the same series. */}
+            <linearGradient id="pf-roll-stroke" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#c4b5fd"/>
+              <stop offset="100%" stopColor="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="pf-roll-fill" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.16"/>
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.16"/>
+            </linearGradient>
+          </defs>
+          {/* Guarded: a lookback that has not filled yet leaves `drawn` empty,
+              and closing an area path off a missing endpoint would throw. */}
+          {drawn.length > 1 && (
+            <path d={`${line} L${x(drawn[drawn.length - 1].i).toFixed(2)},${refY.toFixed(2)} L${x(drawn[0].i).toFixed(2)},${refY.toFixed(2)} Z`}
+              fill="url(#pf-roll-fill)"/>
+          )}
           <line x1={PAD_L} x2={W - PAD_R} y1={refY} y2={refY}
             stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
           {/* Where the lookback window finishes filling — left of it the metric
@@ -978,7 +1009,7 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, periods = 252 }) {
             <line x1={x(firstIdx)} x2={x(firstIdx)} y1={PAD_T} y2={H - PAD_B}
               stroke="rgba(167,139,250,0.22)" strokeDasharray="1 4"/>
           )}
-          <path d={line} fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth="1.25"/>
+          <path d={line} fill="none" stroke="url(#pf-roll-stroke)" strokeWidth="1.35"/>
           {hover != null && (
             <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
               stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
