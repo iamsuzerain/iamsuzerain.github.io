@@ -489,9 +489,6 @@ function PmSpark({ series }) {
         <path d={area} fill="url(#pm-fill)"/>
         <path d={line} fill="none" stroke="url(#pm-stroke)" strokeWidth="1.75"/>
 
-        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="3.5" fill="#ff4fd8"/>
-        <circle cx={x(series.length - 1)} cy={y(series[series.length - 1].v)} r="7" fill="#ff4fd8" opacity="0.25"/>
-
         <circle cx={x(maxIdx)} cy={y(max)} r="2.5" fill="#a78bfa" opacity="0.7"/>
         <circle cx={x(minIdx)} cy={y(min)} r="2.5" fill="#ff9ae8" opacity="0.7"/>
 
@@ -989,8 +986,11 @@ function PmCalibration({ cal }) {
 // breakdown history. These are steady positive streams, distinct from swingy
 // trading P&L. Each line is re-based to the first tracked day (see below), so
 // every source starts at 0 and shows what it has earned since tracking began.
+// Total carries the brand pink and the gradient stroke; lp takes the neutral
+// near-white total used to hold. The headline line should be the one wearing the
+// house colour — lp and maker are components of it, not peers.
 const PM_REWARD_PARTS = [
-  { key: 'lp', label: 'lp', color: '#ff4fd8' },
+  { key: 'lp', label: 'lp', color: '#f5f0ff' },
   { key: 'maker', label: 'maker', color: '#a78bfa' },
 ];
 // Total still counts every income stream (incl. the tiny yield/sponsored ones we
@@ -1012,7 +1012,10 @@ function PmRewardsChart({ rows }) {
       ...p,
       series: rows.map(r => ({ d: r.d, v: (r[p.key] || 0) - (first[p.key] || 0) })),
     })),
-    { key: 'total', label: 'total', color: '#f5f0ff',
+    // `stroke` overrides `color` for the line only — dots, legend swatch and
+    // tooltip text still need a flat colour a gradient url cannot provide.
+    { key: 'total', label: 'total', color: '#ff4fd8', stroke: 'url(#pm-rewards-stroke)',
+      fill: 'url(#pm-rewards-fill)', width: 1.9,
       series: rows.map(r => ({ d: r.d, v: pmRewardsTotal(r) - pmRewardsTotal(first) })) },
   ];
   const n = rows.length;
@@ -1050,17 +1053,34 @@ function PmRewardsChart({ rows }) {
         onTouchMove={onMove}
         onTouchEnd={() => setHover(null)}
       >
+        <defs>
+          {/* Same vertical ramp the main P&L charts use: pink where the line
+              runs high, violet where it runs low. */}
+          <linearGradient id="pm-rewards-stroke" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff4fd8"/>
+            <stop offset="100%" stopColor="#a78bfa"/>
+          </linearGradient>
+          <linearGradient id="pm-rewards-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff4fd8" stopOpacity="0.22"/>
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
         <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
           stroke="rgba(229,225,241,0.14)" strokeDasharray="3 5"/>
         {hover != null && (
           <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
             stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
         )}
-        {lines.map(l => (
-          <path key={l.key} d={path(l.series)} fill="none" stroke={l.color} strokeWidth="1.5"/>
+        {/* Area under the total only — one filled band, so the component lines
+            stay legible on top of it rather than three washes overlapping. */}
+        {lines.filter(l => l.fill).map(l => (
+          <path key={`${l.key}-fill`}
+            d={`${path(l.series)} L${x(n - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`}
+            fill={l.fill}/>
         ))}
         {lines.map(l => (
-          <circle key={l.key} cx={x(n - 1)} cy={y(l.series[n - 1].v)} r="3" fill={l.color}/>
+          <path key={l.key} d={path(l.series)} fill="none"
+            stroke={l.stroke || l.color} strokeWidth={l.width || 1.5}/>
         ))}
         {hover != null && lines.map(l => (
           <circle key={l.key} cx={x(hover)} cy={y(l.series[hover].v)} r="3.5"

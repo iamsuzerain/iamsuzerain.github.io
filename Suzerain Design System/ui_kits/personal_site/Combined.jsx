@@ -50,6 +50,13 @@ function cmbUSD(n) {
 function cmbSigned(n) {
   return (n >= 0 ? '+' : '') + cmbUSD(n);
 }
+// Correlations always carry a sign — an unsigned "0.03" reads as a magnitude and
+// loses the one bit that matters. U+2212 minus to match the display font's digits.
+function cmbCorrFmt(v) {
+  if (v == null || !isFinite(v)) return '—';
+  return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+}
+
 function cmbUSDk(n) {
   if (Math.abs(n) >= 1000) return (n < 0 ? '-' : '') + '$' + (Math.abs(n) / 1000).toFixed(1) + 'k';
   return '$' + Math.round(n);
@@ -444,6 +451,10 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     bench: bench.map(b => ({ key: b.key, label: b.label })),
     benchNotional: notional,
     vsSpx,
+    // Deliberately not range-windowed: the overlap is only ~144 sessions to
+    // begin with (Polymarket NAV history is the binding constraint), and slicing
+    // that to 1M would leave a correlation estimate that is pure noise.
+    corr: cmbCorrelation(pnlHistory, pmRows, pmNavHistory),
   };
 }
 
@@ -493,7 +504,6 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
   }
 
   const hp = hover != null ? series[hover] : null;
-  const lastPt = series[series.length - 1];
 
   return (
     <>
@@ -550,8 +560,6 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
 
         <path d={areaPath} fill="url(#cmb-nav-fill)"/>
         <path d={totalPath} fill="none" stroke="url(#cmb-nav-stroke)" strokeWidth="1.75"/>
-        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="3.5" fill="#ff4fd8"/>
-        <circle cx={x(series.length - 1)} cy={y(lastPt.v)} r="7" fill="#ff4fd8" opacity="0.25"/>
 
         {hp && (
           <g>
@@ -662,6 +670,102 @@ function cmbRisk(series, notional) {
   return { sharpe, vol, maxDD, beta, r2 };
 }
 
+// ---------- cross-book correlation: does polymarket diversify ibkr? ----------
+// Deliberately NOT computed off data.series. That series is calendar-daily
+// (cmbSampleDaily forward-fills), so weekends enter as a flat IBKR day against a
+// live Polymarket one — a run of (0, x) pairs that drags any correlation toward
+// zero and understates IBKR vol. This walks IBKR's real sessions instead and
+// compounds Polymarket's P&L across each non-trading gap into the next session,
+// so both legs always describe the same calendar span.
+//
+// Both legs are flow-adjusted, which is the whole game here: IBKR comes off
+// cumulative TWR (`t`), so deposits and IBKR→Polymarket transfers are not
+// performance, and Polymarket is d(user-pnl)/NAV rather than d(NAV) — its NAV
+// went $3k → $241k over this window almost entirely on transfers.
+//
+// Scope is deliberately narrow: the correlation and its rolling track, nothing
+// else. This briefly also carried combined vol/Sharpe and a diversification
+// decomposition; both restated what the risk panel above already owns, and
+// having a second Sharpe on the page — on a different grid, window and
+// annualization — cost more in confusion than it paid in insight. The value
+// here is drift detection, not a competing performance number.
+const CMB_CORR_ROLL = 60;
+
+function cmbCorrPearson(a, b) {
+  const n = a.length;
+  if (n < 3) return null;
+  let ma = 0, mb = 0;
+  for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i]; }
+  ma /= n; mb /= n;
+  let cov = 0, va = 0, vb = 0;
+  for (let i = 0; i < n; i++) {
+    const da = a[i] - ma, db = b[i] - mb;
+    cov += da * db; va += da * da; vb += db * db;
+  }
+  return (va > 0 && vb > 0) ? cov / Math.sqrt(va * vb) : null;
+}
+
+function cmbCorrelation(pnlHistory, pmRows, pmNavHistory) {
+  const hist = ((pnlHistory && pnlHistory.rows) || []).filter(r => r && r.d && r.t != null);
+  const navRows = ((pmNavHistory && pmNavHistory.rows) || []).filter(r => r && r.d && r.nav != null);
+  if (hist.length < 30 || navRows.length < 30) return null;
+
+  // IBKR sessions → daily TWR return.
+  const ibDays = [], ibRet = new Map();
+  for (let i = 1; i < hist.length; i++) {
+    const prev = 1 + hist[i - 1].t, cur = 1 + hist[i].t;
+    if (prev <= 0) continue;
+    ibRet.set(hist[i].d, cur / prev - 1);
+    ibDays.push(hist[i].d);
+  }
+  ibDays.sort();
+
+  // Polymarket cumulative user-pnl, on the same close-of-day convention the rest
+  // of the view uses (szPmPointDay — the raw stamps are day boundaries).
+  const pmCum = new Map();
+  for (const r of (pmRows || [])) {
+    if (!r || r.t == null || r.p == null) continue;
+    pmCum.set(cmbFromEpochDay(window.szPmPointDay(r.t)), r.p);   // last wins within a day
+  }
+  const pmDays = [...pmCum.keys()].sort();
+  if (pmDays.length < 30) return null;
+  const pmDelta = [];
+  for (let i = 1; i < pmDays.length; i++) {
+    pmDelta.push({ d: pmDays[i], v: pmCum.get(pmDays[i]) - pmCum.get(pmDays[i - 1]) });
+  }
+
+  // pmNavHistory rows are already restated by the loader, so read `d` at face value.
+  const pmNav = new Map();
+  for (const r of navRows) pmNav.set(r.d, r.nav);
+
+  // Pair up: for each IBKR session, Polymarket's P&L since the previous one.
+  const rows = [];
+  let ptr = 0, prev = null;
+  for (const d of ibDays) {
+    if (prev === null) { prev = d; continue; }
+    while (ptr < pmDelta.length && pmDelta[ptr].d <= prev) ptr++;
+    let dollars = 0, seen = 0, scan = ptr;
+    while (scan < pmDelta.length && pmDelta[scan].d <= d) { dollars += pmDelta[scan].v; seen++; scan++; }
+    const base = pmNav.get(prev);
+    if (seen && base > 0) rows.push({ d, ib: ibRet.get(d), pm: dollars / base });
+    prev = d;
+  }
+  if (rows.length < 40) return null;
+
+  const ib = rows.map(r => r.ib), pm = rows.map(r => r.pm);
+  const n = rows.length;
+  const r = cmbCorrPearson(ib, pm);
+  if (r == null) return null;
+
+  const roll = [];
+  for (let i = CMB_CORR_ROLL; i <= n; i++) {
+    const v = cmbCorrPearson(ib.slice(i - CMB_CORR_ROLL, i), pm.slice(i - CMB_CORR_ROLL, i));
+    if (v != null) roll.push({ d: rows[i - 1].d, v });
+  }
+
+  return { r, roll };
+}
+
 // ---------- adapters onto the shared risk panels (window.SZ_RISK) ----------
 // Portfolio.jsx owns the distribution / rolling / capture / drawdown-episode
 // panels and expects a perfSeries: { d, v } with v a cumulative return *ratio*.
@@ -756,11 +860,15 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
               <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
               <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
             </linearGradient>
+            <linearGradient id="cmb-dd-stroke" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ff8ad4"/>
+              <stop offset="100%" stopColor="#ff4fd8"/>
+            </linearGradient>
           </defs>
           <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
             stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
           <path d={area} fill="url(#cmb-dd-fill)"/>
-          <path d={line} fill="none" stroke="rgba(255,110,196,0.75)" strokeWidth="1.25"/>
+          <path d={line} fill="none" stroke="url(#cmb-dd-stroke)" strokeWidth="1.35"/>
           {(markers || []).map((m, k) => m.i < dd.length && (
             <CmbAnnotDot key={k} cx={x(m.i)} cy={y(dd[m.i].v)}
               active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
@@ -780,6 +888,113 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
           }}>
             <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
             <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{pct(hovered.v)}</div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ---------- rolling cross-book correlation strip ----------
+// Fixed ±0.5 floor on the domain. Auto-scaling to the data would zoom a series
+// that lives inside ±0.2 into a mountain range and make noise read as regime
+// change — the honest picture here is a line sitting on zero, so the axis has to
+// stay wide enough to show that. Domain only grows if the data leaves the floor.
+// Single neutral line, no pos/neg tinting: low correlation is the *good* outcome
+// here, and the site's green/pink polarity would say the opposite.
+function CmbCorrStrip({ roll }) {
+  const svgRef = useCmbRef(null);
+  const [hover, setHover] = useCmbState(null);
+  if (!roll || roll.length < 2) return null;
+
+  const peak = Math.max(0.5, ...roll.map(p => Math.abs(p.v)));
+  const dom = Math.min(1, Math.ceil(peak * 4) / 4);
+  const W = 920, H = 76, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 14;
+  const x = (i) => PAD_L + (i / (roll.length - 1)) * (W - PAD_L - PAD_R);
+  const y = (v) => PAD_T + (1 - (v + dom) / (2 * dom)) * (H - PAD_T - PAD_B);
+  const line = roll.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  // Filled to the zero line rather than the floor: this series crosses zero, so
+  // an area anchored at the bottom would read as a level when it is a deviation.
+  const area = line + ` L${x(roll.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const fmt = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+
+  function onMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
+    setHover(Math.max(0, Math.min(roll.length - 1, Math.round(t * (roll.length - 1)))));
+  }
+  const hovered = hover != null ? roll[hover] : null;
+
+  return (
+    <>
+      <div className="pf-strip-head">
+        <span className="pf-strip-label">ibkr ↔ polymarket · rolling {CMB_CORR_ROLL}-session correlation</span>
+        <span className="pf-strip-meta">
+          band ±{dom.toFixed(2)} · now {fmt(roll[roll.length - 1].v)}
+        </span>
+      </div>
+      <div className="pm-chart-wrap">
+        <svg
+          ref={svgRef}
+          className="pf-navchart"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          onMouseMove={onMove}
+          onMouseLeave={() => setHover(null)}
+          onTouchStart={onMove}
+          onTouchMove={onMove}
+          onTouchEnd={() => setHover(null)}
+        >
+          <defs>
+            {/* Horizontal, unlike every other chart here, and deliberately so.
+                A vertical ramp keys colour to value, which needs vertical travel
+                to be visible — this series lives inside ±0.2 of a ±0.5 band, so
+                the whole pink→violet range compressed into ~13px and read as one
+                flat tone. Running it left→right across the full 920px guarantees
+                the ramp shows however flat the line goes.
+                It also drops a problem the vertical version carried: with colour
+                keyed to value, pink marked *higher* correlation — the worse
+                outcome, and the inverse of what pink means on the P&L charts.
+                Keyed to time instead, it makes no claim at all. */}
+            <linearGradient id="cmb-corr-stroke" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#a78bfa"/>
+              <stop offset="100%" stopColor="#ff4fd8"/>
+            </linearGradient>
+            <linearGradient id="cmb-corr-fill" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.18"/>
+              <stop offset="100%" stopColor="#ff4fd8" stopOpacity="0.18"/>
+            </linearGradient>
+          </defs>
+          {/* ±0.25 guides, so the eye can judge how flat "flat" is */}
+          {[dom / 2, -dom / 2].map((g, k) => (
+            <line key={k} x1={PAD_L} x2={W - PAD_R} y1={y(g)} y2={y(g)}
+              stroke="rgba(229,225,241,0.07)"/>
+          ))}
+          <path d={area} fill="url(#cmb-corr-fill)"/>
+          <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
+            stroke="rgba(229,225,241,0.22)" strokeDasharray="3 5"/>
+          <path d={line} fill="none" stroke="url(#cmb-corr-stroke)" strokeWidth="1.4"
+            strokeLinejoin="round" strokeLinecap="round"/>
+          {hovered && (
+            <g>
+              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
+                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill={CMB_C_TOTAL}
+                stroke="#f5f0ff" strokeWidth="1.5"/>
+            </g>
+          )}
+        </svg>
+        {hovered && (
+          <div className="pm-tooltip cmb-tooltip" style={{
+            left: `${(x(hover) / W) * 100}%`,
+            top: `${(y(hovered.v) / H) * 100}%`,
+          }}>
+            <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
+            <div className="pm-tt-val">{fmt(hovered.v)}</div>
           </div>
         )}
       </div>
@@ -921,11 +1136,15 @@ function CmbAlphaStrip({ series, markers, cur, onPick }) {
               <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
               <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
             </linearGradient>
+            <linearGradient id="cmb-alpha-stroke" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#93c5fd"/>
+              <stop offset="100%" stopColor="#3b82f6"/>
+            </linearGradient>
           </defs>
           <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
             stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
           <path d={area} fill="url(#cmb-alpha-fill)"/>
-          <path d={line} fill="none" stroke="rgba(96,165,250,0.85)" strokeWidth="1.25"/>
+          <path d={line} fill="none" stroke="url(#cmb-alpha-stroke)" strokeWidth="1.35"/>
           {(markers || []).map((m, k) => m.i < alpha.length && (
             <CmbAnnotDot key={k} cx={x(m.i)} cy={y(alpha[m.i].v)}
               active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
@@ -1360,13 +1579,20 @@ function Combined({ setView }) {
             <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
-          <div className="cmb-risk-grid">
+          <div className={`cmb-risk-grid${data.corr ? ' cmb-risk-grid-5' : ''}`}>
             <CmbStat label="sharpe"  value={risk.sharpe != null ? risk.sharpe.toFixed(2) : '—'} note="risk-adjusted · rf 0"/>
             <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
             <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
               note={risk.beta != null && risk.r2 != null ? `vs spx · r² ${risk.r2.toFixed(2)}` : 'vs spx'}/>
+            {/* Full overlap, not the selected range — at 1M this would be ~21
+                sessions and the estimate would be noise. Its own note carries the
+                window so the tile stays honest next to four range-scoped ones. */}
+            {data.corr && (
+              <CmbStat label="ibkr ↔ pm" value={cmbCorrFmt(data.corr.r)} note="book corr · daily"/>
+            )}
           </div>
+          {data.corr && data.corr.roll.length > 1 && <CmbCorrStrip roll={data.corr.roll}/>}
         </div>
       )}
 

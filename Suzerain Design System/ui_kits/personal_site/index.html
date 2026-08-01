@@ -620,6 +620,18 @@
   }
   .cmb-risk-grid .pf-stat + .pf-stat { border-left: 1px solid var(--border-soft); }
   .cmb-risk-grid .pf-stat:first-child { padding-left: 0; }
+  /* Five columns once the correlation tile joins. Tighter padding and a smaller
+     value size keep "−0.00" and its longer kicker on one line at this width. */
+  .cmb-risk-grid-5 { grid-template-columns: repeat(5, 1fr); }
+  .cmb-risk-grid-5 .pf-stat { padding: 2px 14px; }
+  .cmb-risk-grid-5 .pf-stat-value { font-size: 26px; }
+  .cmb-risk-grid-5 .pf-stat-kicker { letter-spacing: 0.06em; }
+  /* Five across gets cramped before the 640px two-column rule takes over, so
+     drop to three in between. Below 640 the shared .cmb-risk-grid query wins. */
+  @media (max-width: 900px) {
+    .cmb-risk-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 18px; }
+    .cmb-risk-grid-5 .pf-stat:nth-child(3n+1) { padding-left: 0; border-left: none; }
+  }
 
   .pf-panel {
     padding: 20px 22px;
@@ -1068,6 +1080,7 @@
     color: var(--fg-4);
   }
   .cmb-deploy-foot b { color: var(--fg-2); font-weight: 500; }
+
 
   /* log event markers + caption on the overview chart */
   .cmb-annot { cursor: pointer; }
