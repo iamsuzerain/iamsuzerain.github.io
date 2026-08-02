@@ -401,6 +401,7 @@ function pmRangeLabel(range) {
 // months of the lifetime curve. Cumulative dollars subtract cleanly (unlike the
 // ibkr page's TWR, which has to be re-compounded), so one subtraction per point
 // is the whole job — and it keeps peak/trough and the $0 line window-relative.
+// MAX is the exception: see `base` below.
 function pmWindow(series, range) {
   if (!series || series.length < 2) return series;
   const last = series[series.length - 1].d;
@@ -415,7 +416,12 @@ function pmWindow(series, range) {
     if (over > 0) j = over - 1;
   }
   if (j < i + 1) j = Math.min(series.length - 1, i + 1);
-  const base = series[i].v;
+  // MAX is not a window — it is the lifetime curve, so it must end on the
+  // lifetime-pnl headline. Keyed on `cutoff` rather than i === 0: a 1Y or
+  // quarter window whose start predates the series also lands on i === 0, but
+  // there the opening value really was earned before the window and belongs
+  // subtracted away.
+  const base = cutoff ? series[i].v : 0;
   return series.slice(i, j + 1).map(p => ({ ...p, v: +(p.v - base).toFixed(2) }));
 }
 
