@@ -976,13 +976,13 @@ function PmCalibration({ cal }) {
 
       <PmCalScatter buckets={buckets}/>
 
-      <div className="pf-panel-head" style={{ marginTop: 4 }}>
-        <span className="pf-panel-meta">
-          {series === 'settlement'
-            ? 'positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved. the true calibration test'
-            : 'swing trades — closed while the outcome was still live, so there is no resolution truth. win = closed in profit (a hit-rate view, not calibration)'}
-        </span>
-      </div>
+      {series === 'settlement' && (
+        <div className="pf-panel-head" style={{ marginTop: 4 }}>
+          <span className="pf-panel-meta">
+            positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved. the true calibration test
+          </span>
+        </div>
+      )}
     </div>
   );
 }
