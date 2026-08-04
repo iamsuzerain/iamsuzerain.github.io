@@ -22,6 +22,10 @@
     "sub": "tracker live since 2026",
     "log": [
       {
+        "date": "2026-08-04",
+        "body": "Probably one of my weakest trading weeks of the year. Didn't recognize the oncoming train after FOMC caused a vanna push and somehow didn't realize how hard Trump would TACO despite it happening multiple times already. The icing on the cake is buying another oil long when I meant to close my position by selling and taking another nearly 3k beating for it. Considering stepping away for a moment to cool off before I try to repair the damage."
+      },
+      {
         "date": "2026-07-24",
         "body": "Shipped a max view on the P&L charts today. IBKR's Flex Query only hands back a trailing year, so the site now keeps its own history. From here the window just grows.",
         "link": {
