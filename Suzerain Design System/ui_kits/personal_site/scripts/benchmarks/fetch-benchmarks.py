@@ -33,6 +33,35 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STORE = os.path.normpath(os.path.join(HERE, '..', '..', 'data', 'benchmarks.json'))
 
 
+def patch_last_close(result, stamps, closes):
+    """Backfill a null close on the newest bar from meta.regularMarketPrice.
+
+    Yahoo can serve the most recent *completed* daily bar with close (and
+    adjclose) null while open/high/low/volume are populated and meta already
+    carries that session's official close. Skipped as missing, the series stalls
+    a day behind and every run rewrites only generatedAt — the failure looks like
+    a healthy refresh, so it goes unnoticed.
+
+    Only fires when the quote is not mid-session, so a live intraday tick is
+    never written as a close. Next run's fetch wins on overlap anyway (see
+    merge_series), so a value taken here is replaced once Yahoo fills the bar.
+    """
+    if not stamps or not closes or closes[-1] is not None:
+        return
+    meta = result.get('meta') or {}
+    price, quoted_at = meta.get('regularMarketPrice'), meta.get('regularMarketTime')
+    if price is None or quoted_at is None:
+        return
+    regular = ((meta.get('currentTradingPeriod') or {}).get('regular')) or {}
+    start, end = regular.get('start'), regular.get('end')
+    if start is not None and end is not None and start <= quoted_at < end:
+        return                                   # session still open: live tick
+    if (datetime.fromtimestamp(quoted_at, tz=timezone.utc).date()
+            != datetime.fromtimestamp(stamps[-1], tz=timezone.utc).date()):
+        return                                   # quote belongs to another day
+    closes[-1] = price
+
+
 def fetch_series(symbol):
     # 10y of daily closes: the largest Yahoo range that still returns daily
     # granularity (`max` downgrades to quarterly). A decade is a generous overlap
@@ -45,7 +74,8 @@ def fetch_series(symbol):
         payload = json.load(r)
     result = payload['chart']['result'][0]
     stamps = result['timestamp']
-    closes = result['indicators']['quote'][0]['close']
+    closes = list(result['indicators']['quote'][0]['close'])
+    patch_last_close(result, stamps, closes)
     series = []
     for t, c in zip(stamps, closes):
         if c is None:
