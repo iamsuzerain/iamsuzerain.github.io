@@ -358,7 +358,7 @@ function szRangeCutoff(range, last) {
 // this total but not the other was a divergence waiting on the first payout.
 function szPmIncomeNet(r) {
   if (!r) return 0;
-  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0)
+  return (r.lp || 0) + (r.yield || 0) + (r.maker || 0) + (r.taker || 0)
     + (r.sponsored || 0) + (r.uma || 0) - (r.fees || 0);
 }
 
