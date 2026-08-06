@@ -96,8 +96,8 @@ function drawdownSeries(perf) {
   });
 }
 
-const PF_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
-const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
+const PF_RANGES = ['1M', '3M', 'QTD', '6M', 'YTD', '1Y', 'MAX'];
+const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', 'QTD': 'qtd', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
 // Windowing is shared with the polymarket + overview views (Chrome.jsx), so a
 // range picked on any of the three spans the same days.

@@ -999,8 +999,8 @@ function CmbCorrStrip({ roll }) {
 }
 
 // ---------- range windowing ----------
-const CMB_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
-const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
+const CMB_RANGES = ['1M', '3M', 'QTD', '6M', 'YTD', '1Y', 'MAX'];
+const CMB_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', 'QTD': 'qtd', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
 // Windowing is shared with the polymarket view (Chrome.jsx) so a range picked
 // here spans exactly the days it spans there.

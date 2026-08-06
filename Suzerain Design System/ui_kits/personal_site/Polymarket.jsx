@@ -395,8 +395,8 @@ function pmRewardsCurve(dates, hist, total, lifeStartDay) {
 // ---------- range windowing ----------
 // Same vocabulary (and the same completed-quarter picker) as the ibkr and
 // overview pages, so a range picked here spans what it spans there.
-const PM_RANGES = ['1M', '3M', '6M', 'YTD', '1Y', 'MAX'];
-const PM_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'all-time' };
+const PM_RANGES = ['1M', '3M', 'QTD', '6M', 'YTD', '1Y', 'MAX'];
+const PM_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', 'QTD': 'qtd', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'all-time' };
 
 // Both live in Chrome.jsx, shared with the overview.
 const pmRangeEnd = (range) => window.szRangeEnd(range);

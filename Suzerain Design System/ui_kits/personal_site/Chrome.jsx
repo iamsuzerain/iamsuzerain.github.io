@@ -346,6 +346,13 @@ function szRangeCutoff(range, last) {
   const qb = szQuarterBounds(range);
   if (qb) return qb.start;
   if (range === 'YTD') return last.slice(0, 4) + '-01-01';
+  // QTD runs from the first day of the quarter `last` falls in. Built off the
+  // same bounds the history picker uses, so an open q3 and a completed q3 picked
+  // from that menu start on exactly the same day.
+  if (range === 'QTD') {
+    return szQuarterBounds(
+      `${last.slice(0, 4)}Q${Math.ceil(+last.slice(5, 7) / 3)}`).start;
+  }
   const m = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }[range];
   if (!m) return null;                     // MAX — no cutoff, start at the first point
   const c = new Date(last + 'T00:00:00Z');
