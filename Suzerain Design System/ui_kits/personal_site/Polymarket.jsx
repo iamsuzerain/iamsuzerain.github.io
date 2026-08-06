@@ -217,7 +217,51 @@ function pmMergeActivity(lists) {
   return all.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
-async function pmFetchAll() {
+// The wallet calls, all issued on one tick, split by what the view needs to
+// draw. positions/activity answer in ~0.3s. The pnl series does not: it is a
+// cold-cache computation on user-pnl-api, measured at 2-8s on the first call for
+// a wallet and ~0.08s on every call after, so gating the whole view on it meant
+// staring at a spinner while the positions sat fetched and idle.
+//
+// It also can't take the page down any more. pnl used to share the 10s abort
+// and reject into the same Promise.all as everything else, so a cold call
+// crossing that budget — 7.8s measured, uncomfortably close — put the view on
+// "couldn't reach polymarket" with nothing wrong but one slow endpoint.
+function pmFetchStreams() {
+  const timeout = (ms) => AbortSignal.timeout(ms);
+  // The breakdown snapshot is independent of the live wallet calls, so it goes
+  // out on the same tick rather than queueing behind them — one round trip of
+  // overlap instead of one appended to the end.
+  const breakdownP = pmFetchBreakdown();
+
+  const coreP = Promise.all(PM_WALLETS.map(async (w) => {
+    const [posRes, actRes] = await Promise.all([
+      fetch(pmPositionsUrl(w), { signal: timeout(10000) }),
+      fetch(pmActivityUrl(w), { signal: timeout(10000) }),
+    ]);
+    if (!posRes.ok) throw new Error('positions ' + posRes.status + ' (' + w.slice(0, 6) + ')');
+    const positions = await posRes.json();
+    const activity = actRes.ok ? await actRes.json() : [];
+    return { positions, activity };
+  }));
+
+  // Best-effort, and on a budget sized for the cold path rather than the warm
+  // one. A wallet that fails resolves empty: pmSumPnlSeries carries the others
+  // forward, and an all-empty result just leaves the chart unrendered.
+  const pnlP = Promise.all(PM_WALLETS.map(async (w) => {
+    try {
+      const r = await fetch(pmPnlUrl(w), { signal: timeout(25000) });
+      return r.ok ? await r.json() : [];
+    } catch { return []; }
+  }));
+
+  return { breakdownP, coreP, pnlP };
+}
+
+// `onPartial` gets the view as soon as positions land, carrying pnlPending so
+// the three P&L figures that need the series can hold rather than print the
+// open-position fallback and then visibly correct themselves a few seconds later.
+async function pmFetchAll(onPartial) {
   // Try cache first
   try {
     const raw = localStorage.getItem(PM_CACHE_KEY);
@@ -229,37 +273,32 @@ async function pmFetchAll() {
     }
   } catch {}
 
-  const timeout = () => AbortSignal.timeout(10000);
+  const { breakdownP, coreP, pnlP } = pmFetchStreams();
+  // pmFetchBreakdown resolves to null on any failure, so awaiting it alongside a
+  // fan-out that can throw never strands a rejection.
+  const [perWallet, breakdown] = await Promise.all([coreP, breakdownP]);
+  if (onPartial) onPartial(pmBuild(perWallet, null, breakdown));
 
-  // The breakdown snapshot is independent of the live wallet calls, so it goes
-  // out on the same tick rather than queueing behind them — one round trip of
-  // overlap instead of one appended to the end.
-  const breakdownP = pmFetchBreakdown();
+  const data = pmBuild(perWallet, await pnlP, breakdown);
+  // Only cache a payload with the series in it — a pnl-less one would otherwise
+  // suppress the chart for the whole TTL on every reload.
+  if (data.pnlSeries.length) {
+    try {
+      localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+    } catch {}
+  }
+  return data;
+}
 
-  // Fan out positions/pnl/activity per wallet, then merge.
-  const perWallet = await Promise.all(PM_WALLETS.map(async (w) => {
-    const [posRes, pnlRes, actRes] = await Promise.all([
-      fetch(pmPositionsUrl(w), { signal: timeout() }),
-      fetch(pmPnlUrl(w), { signal: timeout() }),
-      fetch(pmActivityUrl(w), { signal: timeout() }),
-    ]);
-    if (!posRes.ok) throw new Error('positions ' + posRes.status + ' (' + w.slice(0, 6) + ')');
-    if (!pnlRes.ok) throw new Error('pnl ' + pnlRes.status + ' (' + w.slice(0, 6) + ')');
-    const positions = await posRes.json();
-    const pnl = await pnlRes.json();
-    const activity = actRes.ok ? await actRes.json() : [];
-    return { positions, pnl, activity };
-  }));
-  // pmFetchBreakdown resolves to null on any failure, so awaiting it after the
-  // fan-out has possibly thrown can't strand a rejection.
-  const breakdown = await breakdownP;
-
+// `pnlLists` null means the series is still in flight; [] per wallet means it
+// was tried and came back empty.
+function pmBuild(perWallet, pnlLists, breakdown) {
   // Drop positions Polymarket has resolved — they still come back from the
   // positions endpoint with currentValue:0 but cashPnl carrying the loss, so
   // they'd otherwise appear as "open" with a $0 value.
   const openOnly = perWallet.map(x => (x.positions || []).filter(p => !p.redeemable));
   const mergedPositionsRaw = pmMergePositions(openOnly);
-  const summedPnl = pmSumPnlSeries(perWallet.map(x => x.pnl));
+  const summedPnl = pmSumPnlSeries(pnlLists || []);
   const mergedActivity = pmMergeActivity(perWallet.map(x => x.activity));
 
   const positions = mergedPositionsRaw.map(p => ({
@@ -312,7 +351,7 @@ async function pmFetchAll() {
     market: a.title || '',
   }));
 
-  const data = {
+  return {
     generatedAt: new Date().toISOString(),
     profile: { handle: PM_HANDLE, wallet: PM_PRIMARY, wallets: PM_WALLETS },
     summary: {
@@ -325,13 +364,9 @@ async function pmFetchAll() {
     breakdown,
     positions,
     pnlSeries,
+    pnlPending: pnlLists == null,
     activity,
   };
-
-  try {
-    localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
-  } catch {}
-  return data;
 }
 
 // ---------- PnL sparkline ----------
@@ -629,7 +664,7 @@ function PmBreakdown({ bd, tradingPnl }) {
     ? (bd.maker || 0) + (bd.taker || 0)
     : null;
   const rows = [
-    { key: 'trading',   label: 'trading',   val: Math.round(tradingPnl) },
+    { key: 'trading',   label: 'trading',   val: tradingPnl != null ? Math.round(tradingPnl) : null },
     { key: 'lp',        label: 'lp',        val: bd?.lp        != null ? bd.lp        : null },
     { key: 'rebates',   label: 'rebates',   val: rebates },
     { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
@@ -1154,7 +1189,7 @@ function Polymarket() {
 
   usePmEffect(() => {
     let cancelled = false;
-    pmFetchAll()
+    pmFetchAll(d => { if (!cancelled) setData(d); })
       .then(d => { if (!cancelled) setData(d); })
       .catch(e => {
         if (cancelled) return;
@@ -1201,6 +1236,9 @@ function Polymarket() {
   );
 
   const { profile, summary, pnlSeries, positions, activity, breakdown } = data;
+  // The pnl series is still in flight (see pmFetchStreams). Everything drawn
+  // from positions is already true; anything that needs the series holds.
+  const pnlPending = !!data.pnlPending;
   // Show the second wallet in the header pill (matches the profile/betmoar links below).
   const displayWallet = (profile.wallets && profile.wallets[1]) || profile.wallet;
   const updated = new Date(data.generatedAt);
@@ -1263,15 +1301,33 @@ function Polymarket() {
       </div>
 
       <div className="pf-stats">
-        <PmStat label="lifetime pnl" value={pmUSD(totalPnl)} tone={totalPnl >= 0 ? 'pos' : 'neg'} kicker="all sources"/>
+        <PmStat label="lifetime pnl"
+          value={pnlPending ? '—' : pmUSD(totalPnl)}
+          tone={pnlPending ? null : totalPnl >= 0 ? 'pos' : 'neg'}
+          kicker={pnlPending ? 'loading pnl series' : 'all sources'}/>
         <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'} kicker="open positions"/>
-        <PmStat label="realized pnl"   value={pmUSD(realizedTotal)}   tone={realizedTotal >= 0 ? 'pos' : 'neg'} kicker="settled · all markets"/>
+        <PmStat label="realized pnl"
+          value={pnlPending ? '—' : pmUSD(realizedTotal)}
+          tone={pnlPending ? null : realizedTotal >= 0 ? 'pos' : 'neg'}
+          kicker={pnlPending ? 'loading pnl series' : 'settled · all markets'}/>
         <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
       </div>
 
-      <PmBreakdown bd={breakdown} tradingPnl={lifetimePnl} />
+      <PmBreakdown bd={breakdown} tradingPnl={pnlPending ? null : lifetimePnl} />
 
-      {pnlSeries && pnlSeries.length > 1 && (
+      {/* Held open at the chart's own aspect ratio while the series is in
+          flight, so the panels below don't shift down when it lands. */}
+      {pnlPending && (
+        <div className="pf-panel">
+          <div className="pf-panel-head">
+            <span className="pf-panel-title">cumulative pnl</span>
+            <span className="pf-panel-meta">fetching series<Cursor /></span>
+          </div>
+          <div className="pm-chart-pending"/>
+        </div>
+      )}
+
+      {!pnlPending && pnlSeries && pnlSeries.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">cumulative pnl · {pmRangeLabel(range)}</span>

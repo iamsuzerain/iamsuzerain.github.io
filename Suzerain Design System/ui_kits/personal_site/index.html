@@ -947,6 +947,13 @@
 
   /* Polymarket sparkline tooltip */
   .pm-chart-wrap { position: relative; }
+  /* placeholder while the pnl series is in flight — same box PmSpark's
+     920x220 viewBox resolves to, so the swap doesn't move the page */
+  .pm-chart-pending {
+    aspect-ratio: 920 / 220;
+    border-radius: var(--r-1);
+    background: linear-gradient(180deg, rgba(167,139,250,0.05), rgba(167,139,250,0));
+  }
   .pm-chart-svg { display: block; cursor: crosshair; }
   .pf-navchart { touch-action: pan-y; }
 
