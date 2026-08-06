@@ -228,6 +228,11 @@ async function pmFetchAll() {
 
   const timeout = () => AbortSignal.timeout(10000);
 
+  // The breakdown snapshot is independent of the live wallet calls, so it goes
+  // out on the same tick rather than queueing behind them — one round trip of
+  // overlap instead of one appended to the end.
+  const breakdownP = pmFetchBreakdown();
+
   // Fan out positions/pnl/activity per wallet, then merge.
   const perWallet = await Promise.all(PM_WALLETS.map(async (w) => {
     const [posRes, pnlRes, actRes] = await Promise.all([
@@ -242,7 +247,9 @@ async function pmFetchAll() {
     const activity = actRes.ok ? await actRes.json() : [];
     return { positions, pnl, activity };
   }));
-  const breakdown = await pmFetchBreakdown();
+  // pmFetchBreakdown resolves to null on any failure, so awaiting it after the
+  // fan-out has possibly thrown can't strand a rejection.
+  const breakdown = await breakdownP;
 
   // Drop positions Polymarket has resolved — they still come back from the
   // positions endpoint with currentValue:0 but cashPnl carrying the loss, so

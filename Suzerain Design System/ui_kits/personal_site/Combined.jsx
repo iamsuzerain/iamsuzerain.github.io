@@ -223,43 +223,39 @@ function cmbPmPoints(rows) {
   return (rows || []).map(r => ({ day: window.szPmPointDay(r.t), v: r.p }));
 }
 
+// Best-effort JSON GET: resolves to null on any failure so a missing optional
+// feed never rejects the Promise.all that the loader fans out with.
+function cmbGetJson(url) {
+  return fetch(url, { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .catch(() => null);
+}
+
 // All-source polymarket income beyond trading (lp + maker + yield + sponsored +
 // uma), windowed to ~12mo. betmoar's totals are lifetime, so we diff against the
 // oldest history snapshot that's <= 365d ago. Without a baseline that old, we
 // use lifetime totals (correct as long as no rewards/fees pre-date the window).
 // betmoar breakdown is primary; CLOB rewards json is the fallback.
-async function cmbFetchBdExtra() {
-  let current = null;
-  try {
-    const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
-    if (r.ok) {
-      const bd = await r.json();
-      if (bd.totals) current = bd.totals;
-    }
-  } catch {}
+//
+// Takes the already-fetched breakdown + history payloads: the loader fetches
+// both in its parallel fan-out, and the breakdown is shared with the capital
+// -deployment bar rather than requested twice.
+async function cmbBdExtra(bd, hist) {
+  const current = (bd && bd.totals) ? bd.totals : null;
   if (!current) {
-    try {
-      const r = await fetch('data/polymarket-rewards.json', { cache: 'no-store' });
-      if (r.ok) {
-        const rw = await r.json();
-        if (rw.totals) {
-          return { total: Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0), rows: [] };
-        }
-      }
-    } catch {}
+    // Fallback only — left lazy so the common path never pays for it.
+    const rw = await cmbGetJson('data/polymarket-rewards.json');
+    if (rw && rw.totals) {
+      return { total: Math.round(rw.totals.makerRebates || 0) + Math.round(rw.totals.liquidityRewards || 0), rows: [] };
+    }
     return { total: 0, rows: [] };
   }
 
-  let rows = [];
-  try {
-    const r = await fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' });
-    if (r.ok) {
-      const hist = await r.json();
-      // Restate the scrape dates onto the close-of-day convention here, once, so
-      // everything downstream can read `.d` at face value.
-      rows = window.szPmDateSnapshotRows((hist.rows || []).filter(x => x && x.d));
-    }
-  } catch {}
+  // Restate the scrape dates onto the close-of-day convention here, once, so
+  // everything downstream can read `.d` at face value.
+  const rows = hist
+    ? window.szPmDateSnapshotRows((hist.rows || []).filter(x => x && x.d))
+    : [];
 
   // Lifetime total; szPmIncomeCurve does the windowing off the dated history.
   // This used to subtract a 365d-old baseline row, but the history rarely
@@ -1362,48 +1358,49 @@ function Combined({ setView }) {
   useCmbEffect(() => {
     let cancelled = false;
     async function load() {
-      const pRes = await fetch('data/portfolio.json', { cache: 'no-store' });
+      // Every feed below is independent, so they all go out on the same tick.
+      // This used to be a sequential await-chain: ten round trips end to end,
+      // which on a slow link is most of the time spent on "merging feeds".
+      // Only the two genuine fallbacks (pnl snapshot, clob rewards) stay lazy —
+      // they fire only when their primary comes back empty.
+      const pPromise    = fetch('data/portfolio.json', { cache: 'no-store' });
+      const pmPromise   = Promise.all(
+        CMB_WALLETS.map(w =>
+          fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(10000) })
+            .then(r => r.ok ? r.json() : [])
+            .then(j => Array.isArray(j) ? j : [])
+            .catch(() => [])
+        )
+      );
+      const contentP    = cmbGetJson('data/content.json');
+      const benchP      = cmbGetJson('data/benchmarks.json');
+      const pmNavP      = cmbGetJson('data/polymarket-nav-history.json');
+      const navHistP    = cmbGetJson('data/nav-history.json');
+      const breakdownP  = cmbGetJson('data/polymarket-breakdown.json');
+      const bdHistP     = cmbGetJson('data/polymarket-breakdown-history.json');
+
+      const pRes = await pPromise;
       if (!pRes.ok) throw new Error('portfolio ' + pRes.status);
       const portfolio = await pRes.json();
 
-      // Polymarket: try live API per wallet (summed), fall back to the daily snapshot cron.
+      // Polymarket: live API per wallet (summed), fall back to the daily snapshot cron.
       let pmRows = [];
-      try {
-        const perWallet = await Promise.all(
-          CMB_WALLETS.map(w =>
-            fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(10000) })
-              .then(r => r.ok ? r.json() : [])
-              .then(j => Array.isArray(j) ? j : [])
-          )
-        );
-        const summed = cmbSumPnlSeries(perWallet);
-        if (summed.length) pmRows = summed;
-      } catch {}
+      const summed = cmbSumPnlSeries(await pmPromise);
+      if (summed.length) pmRows = summed;
       if (!pmRows.length) {
-        try {
-          const sRes = await fetch('data/polymarket-pnl.json', { cache: 'no-store' });
-          if (sRes.ok) { const snap = await sRes.json(); pmRows = snap.rows || []; }
-        } catch {}
+        const snap = await cmbGetJson('data/polymarket-pnl.json');
+        if (snap) pmRows = snap.rows || [];
       }
 
       // Dated log entries → chart annotations; pmTransfers is the manually
       // maintained ledger of IBKR→Polymarket moves (used for the benchmark notional).
-      let log = [], pmTransfers = [];
-      try {
-        const cRes = await fetch('data/content.json', { cache: 'no-store' });
-        if (cRes.ok) {
-          const content = await cRes.json();
-          log = (content.home && content.home.log) || [];
-          pmTransfers = content.pmTransfers || [];
-        }
-      } catch {}
+      const content = await contentP;
+      const log = (content && content.home && content.home.log) || [];
+      const pmTransfers = (content && content.pmTransfers) || [];
 
       // Benchmark overlay is best-effort; the chart renders fine without it.
-      let benchmarks = null;
-      try {
-        const bRes = await fetch('data/benchmarks.json', { cache: 'no-store' });
-        if (bRes.ok) { const bj = await bRes.json(); benchmarks = bj.benchmarks || null; }
-      } catch {}
+      const bj = await benchP;
+      const benchmarks = (bj && bj.benchmarks) || null;
 
       // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
       // before the Flex window so the MAX range keeps charting aged-out markers.
@@ -1414,22 +1411,15 @@ function Combined({ setView }) {
       // Its rows ride the same ~08:45 UTC betmoar scrape, so they get the same
       // date restatement as the breakdown history. nav-history.json below is IBKR
       // and already on close-of-day — it is left alone.
-      let pmNavHistory = null;
-      try {
-        const nRes = await fetch('data/polymarket-nav-history.json', { cache: 'no-store' });
-        if (nRes.ok) {
-          const j = await nRes.json();
-          pmNavHistory = { ...j, rows: window.szPmDateSnapshotRows(j.rows) };
-        }
-      } catch {}
+      const navJson = await pmNavP;
+      const pmNavHistory = navJson
+        ? { ...navJson, rows: window.szPmDateSnapshotRows(navJson.rows) }
+        : null;
 
-      let pnlHistory = null;
-      try {
-        const hRes = await fetch('data/nav-history.json', { cache: 'no-store' });
-        if (hRes.ok) pnlHistory = await hRes.json();
-      } catch {}
+      const pnlHistory = await navHistP;
 
-      const bd = await cmbFetchBdExtra();   // { total, rows } — lifetime net + dated history
+      const breakdown = await breakdownP;
+      const bd = await cmbBdExtra(breakdown, await bdHistP);  // { total, rows } — lifetime net + dated history
 
       // Current NAV split for the capital-deployment bar. IBKR NAV is on the
       // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
@@ -1441,17 +1431,13 @@ function Combined({ setView }) {
       // carries is a close from the day before. Same close-of-day convention as
       // every other figure on the page.
       let polyNav = null, polyDate = null;
-      try {
-        const r = await fetch('data/polymarket-breakdown.json', { cache: 'no-store' });
-        if (r.ok) {
-          const bd = await r.json();
-          polyNav = bd.balances ? bd.balances.nav : null;
-          // betmoar's NAV is the live ~08:45 scrape, so it lands on the same
-          // completed day as the rest of that scrape's fields (szPmSnapshotDay).
-          const gen = (bd.generatedAt || '').slice(0, 10);
-          polyDate = gen ? window.szFromEpochDay(window.szPmSnapshotDay(gen)) : null;
-        }
-      } catch {}
+      if (breakdown) {
+        polyNav = breakdown.balances ? breakdown.balances.nav : null;
+        // betmoar's NAV is the live ~08:45 scrape, so it lands on the same
+        // completed day as the rest of that scrape's fields (szPmSnapshotDay).
+        const gen = (breakdown.generatedAt || '').slice(0, 10);
+        polyDate = gen ? window.szFromEpochDay(window.szPmSnapshotDay(gen)) : null;
+      }
       const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
       // account.nav is the last EquitySummary total — i.e. navSeries' final point,
       // whose date is the close it represents. Verified equal, so read the date off
