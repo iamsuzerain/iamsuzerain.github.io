@@ -103,3 +103,11 @@ jobs:
       - name: deploy to pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Default is 600000 (10 min), which is exactly where this kept dying:
+          # GitHub's Pages backend sits in deployment_in_progress well past it,
+          # and on timeout the action *cancels* a deployment that may have been
+          # about to land. Seen on both the legacy branch builder and this
+          # artifact path, so it is the backend, not the publishing method —
+          # 2026-08-06 had three of them, each clearing on a plain retry.
+          timeout: 1200000
