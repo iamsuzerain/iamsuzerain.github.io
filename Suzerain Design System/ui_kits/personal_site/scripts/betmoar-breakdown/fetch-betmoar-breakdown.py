@@ -2,7 +2,7 @@
 """
 fetch-betmoar-breakdown.py
 Calls the Betmoar Next.js server action to get the profit breakdown
-(Trading, LP, Yield, Maker, Sponsored, UMA). Outputs JSON to stdout.
+(Trading, LP, Yield, Maker, Taker, Sponsored, UMA). Outputs JSON to stdout.
 
 Usage:
   python3 fetch-betmoar-breakdown.py > data/polymarket-breakdown.json
@@ -102,8 +102,8 @@ def main():
     def dollars(val):
         return round(val) if val else 0
 
-    def sum_field(key):
-        return dollars(sum((s.get(key) or 0) for s in per_wallet))
+    def sum_field(*keys):
+        return dollars(sum((s.get(k) or 0) for s in per_wallet for k in keys))
 
     # Betmoar's `overallPNL` is the only field that nets out Polymarket trading
     # fees; the Polymarket user-pnl-api series and `tradingProfit` both ignore
@@ -116,6 +116,8 @@ def main():
             + (s.get("makerRebates")   or 0)
             + (s.get("yieldRewards")   or 0)
             + (s.get("sponsoredRewards") or 0)
+            + (s.get("takerRebates")   or 0)
+            + (s.get("takerBackpay")   or 0)
             + (s.get("umaPnl")         or 0)
             + (s.get("refunds")        or 0)
         )
@@ -130,6 +132,10 @@ def main():
             "lp":        sum_field("lpRewards"),
             "yield":     sum_field("yieldRewards"),
             "maker":     sum_field("makerRebates"),
+            # Taker-side fee rebates, plus the backpay betmoar reports separately
+            # when Polymarket settles a rebate period late. Same fee-rebate stream
+            # as `maker`, so the site charts the two together.
+            "taker":     sum_field("takerRebates", "takerBackpay"),
             "sponsored": sum_field("sponsoredRewards"),
             "uma":       sum_field("umaPnl"),
             "fees":      dollars(sum(implied_fees(s) for s in per_wallet)),

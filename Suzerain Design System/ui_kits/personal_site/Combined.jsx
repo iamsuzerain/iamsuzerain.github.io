@@ -231,8 +231,8 @@ function cmbGetJson(url) {
     .catch(() => null);
 }
 
-// All-source polymarket income beyond trading (lp + maker + yield + sponsored +
-// uma), windowed to ~12mo. betmoar's totals are lifetime, so we diff against the
+// All-source polymarket income beyond trading (lp + maker/taker rebates + yield
+// + sponsored + uma), windowed to ~12mo. betmoar's totals are lifetime, so we diff against the
 // oldest history snapshot that's <= 365d ago. Without a baseline that old, we
 // use lifetime totals (correct as long as no rewards/fees pre-date the window).
 // betmoar breakdown is primary; CLOB rewards json is the fallback.

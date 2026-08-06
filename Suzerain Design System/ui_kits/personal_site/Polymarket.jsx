@@ -82,10 +82,11 @@ function pmParseBetmoar(html) {
   const lp       = extract('\\bLP\\b');
   const yld      = extract('Yield');
   const maker    = extract('Maker');
+  const taker    = extract('Taker');
   const sponsored = extract('Sponsored');
   const uma      = extract('\\bUMA\\b');
   if (trading == null && lp == null && maker == null) return null;
-  return { trading, lp, yield: yld, maker, sponsored, uma, source: 'betmoar' };
+  return { trading, lp, yield: yld, maker, taker, sponsored, uma, source: 'betmoar' };
 }
 
 async function pmFetchBreakdown() {
@@ -100,6 +101,7 @@ async function pmFetchBreakdown() {
           lp:        bd.totals.lp,
           yield:     bd.totals.yield,
           maker:     bd.totals.maker,
+          taker:     bd.totals.taker,
           sponsored: bd.totals.sponsored,
           uma:       bd.totals.uma,
           fees:      bd.totals.fees,
@@ -124,6 +126,7 @@ async function pmFetchBreakdown() {
           lp:        Math.round(rw.totals.liquidityRewards || 0),
           yield:     0,
           maker:     Math.round(rw.totals.makerRebates || 0),
+          taker:     0,
           sponsored: 0,
           uma:       0,
           fees:      0,
@@ -619,10 +622,16 @@ function PmStat({ label, value, change, kicker, tone }) {
 
 // ---------- earnings breakdown row ----------
 function PmBreakdown({ bd, tradingPnl }) {
+  // maker + taker rebates share a cell rather than taking one each: the grid is
+  // six columns wide (three on mobile), and taker is a two-figure stream next to
+  // a four-figure one — not worth a seventh column and a reflowed layout.
+  const rebates = bd?.maker != null || bd?.taker != null
+    ? (bd.maker || 0) + (bd.taker || 0)
+    : null;
   const rows = [
     { key: 'trading',   label: 'trading',   val: Math.round(tradingPnl) },
     { key: 'lp',        label: 'lp',        val: bd?.lp        != null ? bd.lp        : null },
-    { key: 'maker',     label: 'maker',     val: bd?.maker     != null ? bd.maker     : null },
+    { key: 'rebates',   label: 'rebates',   val: rebates },
     { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
     { key: 'sponsored', label: 'sponsored', val: bd?.sponsored != null ? bd.sponsored : null },
     { key: 'fees',      label: 'fees',      val: bd?.fees      != null ? -bd.fees     : null },
@@ -995,21 +1004,29 @@ function PmCalibration({ cal }) {
 }
 
 // ---------- Rewards accrual (market-making income over time) ----------
-// One line per income source (lp / maker / yield / sponsored) from the betmoar
-// breakdown history. These are steady positive streams, distinct from swingy
-// trading P&L. Each line is re-based to the first tracked day (see below), so
-// every source starts at 0 and shows what it has earned since tracking began.
-// Total carries the brand pink and the gradient stroke; lp takes the neutral
-// near-white total used to hold. The headline line should be the one wearing the
-// house colour — lp and maker are components of it, not peers.
+// Two lines, each grouping the betmoar breakdown's income fields by the activity
+// that earned them, over the breakdown history. These are steady positive
+// streams, distinct from swingy trading P&L. Each line is re-based to the first
+// tracked day (see below), so every group starts at 0 and shows what it has
+// earned since tracking began. Total carries the brand pink and the gradient
+// stroke; lp takes the neutral near-white total used to hold. The headline line
+// should be the one wearing the house colour — the groups are components of it,
+// not peers.
 const PM_REWARD_PARTS = [
-  { key: 'lp', label: 'lp', color: '#f5f0ff' },
-  { key: 'maker', label: 'maker', color: '#a78bfa' },
+  // Sponsored rewards are liquidity rewards a market's sponsor funds rather than
+  // Polymarket — same quoting that earns `lp`, so they ride the same line.
+  { key: 'lp', label: 'lp', color: '#f5f0ff', fields: ['lp', 'sponsored'] },
+  // Both sides of the fee rebate: maker rebates plus taker rebates (and the
+  // backpay betmoar reports when a rebate period settles late). "maker" stopped
+  // being the honest label once the taker side was in there.
+  { key: 'rebates', label: 'rebates', color: '#a78bfa', fields: ['maker', 'taker'] },
 ];
-// Total still counts every income stream (incl. the tiny yield/sponsored ones we
-// no longer chart on their own), so it sits just above lp + maker.
+const pmRewardPart = (r, fields) => fields.reduce((s, f) => s + (r[f] || 0), 0);
+// Total still counts every income stream (incl. the tiny yield one we no longer
+// chart on its own), so it sits just above lp + rebates.
 function pmRewardsTotal(r) {
-  return (r.lp || 0) + (r.maker || 0) + (r.yield || 0) + (r.sponsored || 0);
+  return (r.lp || 0) + (r.maker || 0) + (r.taker || 0)
+    + (r.yield || 0) + (r.sponsored || 0);
 }
 function PmRewardsChart({ rows }) {
   const svgRef = usePmRef(null);
@@ -1023,7 +1040,9 @@ function PmRewardsChart({ rows }) {
   const lines = [
     ...PM_REWARD_PARTS.map(p => ({
       ...p,
-      series: rows.map(r => ({ d: r.d, v: (r[p.key] || 0) - (first[p.key] || 0) })),
+      series: rows.map(r => ({
+        d: r.d, v: pmRewardPart(r, p.fields) - pmRewardPart(first, p.fields),
+      })),
     })),
     // `stroke` overrides `color` for the line only — dots, legend swatch and
     // tooltip text still need a flat colour a gradient url cannot provide.
@@ -1193,7 +1212,7 @@ function Polymarket() {
     : summary.realizedPnl + summary.unrealizedPnl;
   // True realized = lifetime − unrealized (settled P&L across all markets, open + closed).
   const realizedTotal = lifetimePnl - summary.unrealizedPnl;
-  // All-source total = trading + LP + maker + yield + sponsored + uma − fees.
+  // All-source total = trading + LP + rebates + yield + sponsored + uma − fees.
   // pnlSeries (used as lifetimePnl) is gross of trading fees, so net them here.
   const bdExtra = pmRewardsNet(breakdown);
   const totalPnl = lifetimePnl + bdExtra;
@@ -1304,7 +1323,7 @@ function Polymarket() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">rewards accrual · market-making income</span>
-            <span className="pf-panel-meta">lp · maker · total · since {hist.rows[0].d}</span>
+            <span className="pf-panel-meta">lp · rebates · total · since {hist.rows[0].d}</span>
           </div>
           <PmRewardsChart rows={hist.rows}/>
         </div>
