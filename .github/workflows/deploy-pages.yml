@@ -8,12 +8,28 @@ on:
     types: [completed]
   workflow_dispatch: {}
 
+# contents:read to check out; pages+id-token to hand the built site straight to
+# the Pages deployment API. `contents: write` was only ever needed to force-push
+# the gh-pages branch, which nothing does now.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+# Four refresh crons can land within seconds of each other, and two deployments
+# racing is how 2026-08-06 ended up with one build cancelled and its neighbour
+# timing out. Newest wins; an in-flight deploy is allowed to finish rather than
+# being cancelled halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,9 +88,18 @@ jobs:
           open('feed.xml', 'w', encoding='utf-8').write(feed)
           PYEOF
 
-      - name: deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      # Straight to Pages as an artifact. This used to force-push the built site
+      # to a gh-pages branch and wait for GitHub's legacy branch builder to
+      # publish it — a second, invisible hop that failed on its own schedule: on
+      # 2026-08-06 it sat in deployment_in_progress past its 10-minute timeout
+      # three times running while `deploy-pages` itself reported success, so the
+      # site served six-hour-old content with nothing to show anything was wrong.
+      # No branch, no Jekyll, and a failure here fails this workflow.
+      - name: upload site artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: "Suzerain Design System/ui_kits/personal_site"
-          force_orphan: true
+          path: "Suzerain Design System/ui_kits/personal_site"
+
+      - name: deploy to pages
+        id: deployment
+        uses: actions/deploy-pages@v4
