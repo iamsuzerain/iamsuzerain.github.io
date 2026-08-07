@@ -953,9 +953,11 @@ function PmCalScatter({ buckets }) {
               <line x1={x(0)} x2={x(1)} y1={y(t)} y2={y(t)} stroke="rgba(229,225,241,0.07)"/>
             </g>
           ))}
-          {/* perfect-calibration diagonal */}
+          {/* perfect-calibration diagonal — solid, matching the normal reference
+              on the return histogram. Same duty-cycle correction: a 4/4 dash was
+              half ink, so opacity drops to keep the weight it had. */}
           <line x1={x(0)} y1={y(0)} x2={x(1)} y2={y(1)}
-            stroke={PM_CAL_TEAL} strokeWidth="1" strokeDasharray="4 4" opacity="0.6"/>
+            stroke={PM_CAL_TEAL} strokeWidth="1" opacity="0.45"/>
           {/* wilson error bars */}
           {pts.map((b, k) => (
             <line key={'e' + k} x1={x(b.avgImplied)} x2={x(b.avgImplied)}

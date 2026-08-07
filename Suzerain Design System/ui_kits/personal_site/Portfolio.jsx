@@ -96,6 +96,12 @@ function drawdownSeries(perf) {
   });
 }
 
+// Drawn-mark polarity. Mirrors --mark-pos / --mark-neg in colors_and_type.css:
+// gains are PINK and losses are VIOLET on shapes, which is the opposite of the
+// green/red that --pos/--neg give the numbers. Easy to invert by accident.
+const PF_MARK_POS = '#ff4fd8';
+const PF_MARK_NEG = '#a78bfa';
+
 const PF_RANGES = ['1M', '3M', 'QTD', '6M', 'YTD', '1Y', 'MAX'];
 const PF_RANGE_LABEL = { '1M': '1mo', '3M': '3mo', 'QTD': 'qtd', '6M': '6mo', 'YTD': 'ytd', '1Y': '12mo', 'MAX': 'max' };
 
@@ -848,27 +854,29 @@ function ReturnDistribution({ perfSeries }) {
       <div className="pm-chart-wrap">
         <svg viewBox={`0 0 ${W} ${H}`} className="pf-navchart" preserveAspectRatio="none"
           onMouseLeave={() => setHover(null)}>
-          <defs>
-            {/* Diverging pair matches .pf-contrib-bar.pos/.neg and the nav-chart
-                stroke: pink is the positive/high side, violet the negative/low
-                side. Same convention across every chart on the page. */}
-            <linearGradient id="pf-hist-pos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff4fd8" stopOpacity="0.85"/>
-              <stop offset="100%" stopColor="#ff4fd8" stopOpacity="0.35"/>
-            </linearGradient>
-            <linearGradient id="pf-hist-neg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.85"/>
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.35"/>
-            </linearGradient>
-          </defs>
           <line x1={PAD_L} x2={W - PAD_R} y1={base} y2={base} stroke="rgba(229,225,241,0.18)"/>
+          {/* Hollow outlined bins: 1px stroke over a 0.13 wash, square corners —
+              the same skin as the monthly-pnl columns and .pf-contrib-bar. The
+              diverging pair is unchanged: pink is the positive/high side, violet
+              the negative/low side, matching .pf-contrib-bar.pos/.neg. */}
           {bins.map((b, i) => {
             const h = base - y(b.count);
+            const c = b.lo < 0 ? PF_MARK_NEG : PF_MARK_POS;
+            const cw = Math.max(1, bw - 2);          // 2px surface gap between bins
+            const bx = x(i) + (bw - cw) / 2;
+            // An empty bin keeps a cap on the baseline instead of vanishing —
+            // "no sessions landed here" is information, and the tails are where
+            // the whole chart is interesting.
+            if (h < 0.6) return (
+              <line key={i} x1={bx} x2={bx + cw} y1={base} y2={base}
+                stroke={c} strokeWidth="1" strokeOpacity="0.5"/>
+            );
             return (
               <rect key={i}
-                x={x(i) + 0.75} width={Math.max(0.5, bw - 1.5)}
-                y={y(b.count)} height={Math.max(0, h)}
-                fill={b.lo < 0 ? 'url(#pf-hist-neg)' : 'url(#pf-hist-pos)'}
+                x={bx} width={cw} y={y(b.count)} height={h}
+                fill={c} fillOpacity="0.13"
+                stroke={c} strokeWidth="1" strokeOpacity="0.8"
+                shapeRendering="crispEdges"
                 opacity={hover == null || hover === i ? 1 : 0.45}
                 onMouseEnter={() => setHover(i)}
               />
@@ -879,8 +887,13 @@ function ReturnDistribution({ perfSeries }) {
             <rect key={`h${i}`} x={x(i)} y={PAD_T} width={bw} height={H - PAD_T - PAD_B}
               fill="transparent" onMouseEnter={() => setHover(i)}/>
           ))}
-          <path d={normPath} fill="none" stroke="rgba(94,234,212,0.7)"
-            strokeWidth="1.25" strokeDasharray="3 3"/>
+          {/* Normal reference, same mean and sd. Solid, not dashed: teal against
+              the pink/violet bins and a curve against rectangles already say
+              "this is the model, not the data", so the dashes were only adding
+              texture. A 3/3 dash is a 50% duty cycle, so going solid doubles the
+              ink — the weight comes back down via opacity instead. */}
+          <path d={normPath} fill="none" stroke="rgba(94,234,212,0.55)"
+            strokeWidth="1.25"/>
           <line x1={zeroX} x2={zeroX} y1={PAD_T} y2={base}
             stroke="rgba(229,225,241,0.28)" strokeDasharray="2 3"/>
         </svg>
