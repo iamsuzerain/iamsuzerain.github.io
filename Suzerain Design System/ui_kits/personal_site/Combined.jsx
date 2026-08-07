@@ -1364,12 +1364,18 @@ function Combined({ setView }) {
       // Only the two genuine fallbacks (pnl snapshot, clob rewards) stay lazy —
       // they fire only when their primary comes back empty.
       const pPromise    = fetch('data/portfolio.json', { cache: 'no-store' });
+      // `null` for a wallet whose call failed, so the sum below can tell that
+      // apart from a wallet with no history. Summing a failed wallet as zero
+      // silently drops its entire book out of the polymarket curve — the two
+      // wallets currently sit at roughly -$34k and +$34k, so either one going
+      // missing moves the combined line by tens of thousands of dollars and
+      // nothing on the page says the feed was short.
       const pmPromise   = Promise.all(
         CMB_WALLETS.map(w =>
           fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(10000) })
-            .then(r => r.ok ? r.json() : [])
-            .then(j => Array.isArray(j) ? j : [])
-            .catch(() => [])
+            .then(r => r.ok ? r.json() : null)
+            .then(j => Array.isArray(j) ? j : null)
+            .catch(() => null)
         )
       );
       const contentP    = cmbGetJson('data/content.json');
@@ -1383,10 +1389,13 @@ function Combined({ setView }) {
       if (!pRes.ok) throw new Error('portfolio ' + pRes.status);
       const portfolio = await pRes.json();
 
-      // Polymarket: live API per wallet (summed), fall back to the daily snapshot cron.
+      // Polymarket: live API per wallet (summed), fall back to the daily snapshot
+      // cron. All-or-nothing: a partial live answer is discarded rather than
+      // charted, because the snapshot is summed across every wallet or not
+      // written at all, which makes it the more truthful of the two.
       let pmRows = [];
-      const summed = cmbSumPnlSeries(await pmPromise);
-      if (summed.length) pmRows = summed;
+      const pmLists = await pmPromise;
+      if (!pmLists.some(l => l == null)) pmRows = cmbSumPnlSeries(pmLists);
       if (!pmRows.length) {
         const snap = await cmbGetJson('data/polymarket-pnl.json');
         if (snap) pmRows = snap.rows || [];
