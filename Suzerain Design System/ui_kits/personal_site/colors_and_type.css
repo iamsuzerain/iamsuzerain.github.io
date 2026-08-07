@@ -81,6 +81,14 @@
   --mark-neg: #a78bfa;
   --mark-pos-soft: rgba(255,79,216,0.55);
   --mark-neg-soft: rgba(167,139,250,0.55);
+  /* Outlined-bar wash. Every magnitude bar on the site — monthly-pnl columns,
+     return histogram, attribution rows, the deployment rope — is a 1px stroke
+     in the mark colour over this fill. The fill is what carries visual weight,
+     so keeping it that low is what lets several bars share a row without the
+     page reading as a wall of solid slabs. Tuned here, once.
+     SVG charts hard-code the same 0.13 as fill-opacity; keep them in step. */
+  --mark-pos-wash: rgba(255,79,216,0.13);
+  --mark-neg-wash: rgba(167,139,250,0.13);
 
   /* ---------- Selection & focus ---------- */
   --selection-bg: var(--magenta-400);

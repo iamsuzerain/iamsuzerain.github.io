@@ -1246,14 +1246,22 @@ function cmbMonthly(series) {
   return out;
 }
 
-// Rendered as hairline stem + dot (lollipop), not filled bars, to sit with the
-// site's thin-stroke / dot-marker language. Marks are light enough that colors
-// stay full-solid — so white reads white, not gray.
+// Outlined columns: 1px stroke over a 0.13 fill, square corners. Everything
+// else on the page draws data as a hairline (1px @ 0.3 on the nav chart) or a
+// translucent gradient, so an opaque saturated rect with rx="1" — a radius a
+// quarter of the bar's width — read as extruded gel next to it. The fill is
+// what carries visual weight; keeping it at 0.13 is what lets three columns
+// per month stay lighter than the two solid ones this replaced.
+//
+// spx sits BETWEEN the books, not after them: each book is then adjacent to
+// the benchmark it's judged against. `total` isn't drawn at all — it's the sum
+// of the two books, so as a third bar it was the answer printed beside its own
+// working, and it set the vertical scale while adding nothing. It lives in the
+// hover tooltip instead.
 const CMB_BAR_META = [
-  { key: 'ibkr',  label: 'ibkr',       color: '#a78bfa' },
-  { key: 'pm',    label: 'polymarket', color: '#ff4fd8' },
-  { key: 'total', label: 'total',      color: '#f5f0ff' },
-  { key: 'spx',   label: 'spx',        color: '#5eead4' },
+  { key: 'ibkr', label: 'ibkr',       color: CMB_C_IBKR },
+  { key: 'spx',  label: 'spx',        color: CMB_BENCH.spx },
+  { key: 'pm',   label: 'polymarket', color: CMB_C_PM },
 ];
 
 function CmbMonthlyBars({ series }) {
@@ -1265,14 +1273,23 @@ function CmbMonthlyBars({ series }) {
   const bars = CMB_BAR_META.filter(b => b.key !== 'spx' || hasSpx);
   const nb = bars.length;
   const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 22;
-  const maxAbs = Math.max(...months.flatMap(m => bars.map(b => Math.abs(m[b.key] || 0))), 1);
+
+  // Fit the range to what's actually drawn rather than pinning zero to the
+  // vertical centre with a symmetric ±maxAbs. The books are lopsided (a
+  // trailing year runs roughly -43k..+79k), so forced symmetry left a third of
+  // the plot permanently empty and shortened every column to pay for it.
+  const vals = months.flatMap(m => bars.map(b => m[b.key]).filter(v => v != null));
+  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const pad = (hi - lo) * 0.08 || 1;
+  const y0 = lo - pad, y1 = hi + pad;
+  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const zeroY = y(0);
+
   const slot = (W - PAD_L - PAD_R) / months.length;
-  const step = Math.max(4, Math.min(10, (slot * 0.6) / nb));
-  const bw = Math.max(2, Math.min(4, step * 0.6));   // thin bar width
-  const midY = PAD_T + (H - PAD_T - PAD_B) / 2;
-  const scale = ((H - PAD_T - PAD_B) / 2) / maxAbs;
+  const step = Math.max(6, Math.min(11, (slot * 0.62) / nb));
+  const bw = Math.max(3, Math.min(9, step * 0.8));
   const cx = (i) => PAD_L + slot * (i + 0.5);
-  const stemX = (i, j) => cx(i) + (j - (nb - 1) / 2) * step;
+  const barX = (i, j) => cx(i) + (j - (nb - 1) / 2) * step;
 
   function onMove(e) {
     const svg = svgRef.current;
@@ -1300,23 +1317,43 @@ function CmbMonthlyBars({ series }) {
         onTouchMove={onMove}
         onTouchEnd={() => setHover(null)}
       >
-        <line x1={PAD_L} x2={W - PAD_R} y1={midY} y2={midY}
+        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
           stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+
+        {/* Faint rule at each year boundary — a bare run of month abbreviations
+            with two januaries in view can't say which year it's in. */}
+        {months.map((m, i) => (i > 0 && m.ym.slice(5, 7) === '01') && (
+          <line key={`yr-${m.ym}`} x1={(cx(i) + cx(i - 1)) / 2} x2={(cx(i) + cx(i - 1)) / 2}
+            y1={PAD_T - 6} y2={H - PAD_B + 2} stroke="rgba(229,225,241,0.10)"/>
+        ))}
+
+        {hover != null && (
+          <rect x={cx(hover) - slot / 2} y={PAD_T - 8} width={slot} height={H - PAD_T - PAD_B + 12}
+            fill={CMB_C_IBKR} opacity="0.07"/>
+        )}
+
         {months.map((m, i) => (
-          <g key={m.ym} opacity={hover == null || hover === i ? 1 : 0.3}>
+          <g key={m.ym} opacity={hover == null || hover === i ? 1 : 0.35}>
             {bars.map((b, j) => {
               const v = m[b.key];
-              if (v == null) return null;
-              const x = stemX(i, j);
-              const h = Math.max(0.5, Math.abs(v) * scale);
-              // spx is a benchmark, not a book — mute its solid fill so it reads
-              // as a passive reference behind the violet/pink books rather than
-              // competing as a fourth series.
+              if (v == null || v === 0) return null;
+              const x = barX(i, j), yv = y(v);
+              const h = Math.abs(yv - zeroY);
+              // Sub-pixel months keep their cap on the zero line instead of
+              // vanishing or being floored to a fake minimum height — an
+              // outline can lose its body and still read as itself. (The old
+              // Math.max(0.5, …) drew these as a half-pixel fuzz along the
+              // axis that looked like rendering dirt.)
+              if (h < 0.6) return (
+                <line key={b.key} x1={x - bw / 2} x2={x + bw / 2} y1={zeroY} y2={zeroY}
+                  stroke={b.color} strokeWidth="1" strokeOpacity="0.5"/>
+              );
               return (
                 <rect key={b.key}
-                  x={x - bw / 2} y={v >= 0 ? midY - h : midY}
-                  width={bw} height={h} rx="1"
-                  fill={b.color} fillOpacity={b.key === 'spx' ? 0.5 : 1}/>
+                  x={x - bw / 2} y={Math.min(zeroY, yv)} width={bw} height={h}
+                  fill={b.color} fillOpacity="0.13"
+                  stroke={b.color} strokeWidth="1" strokeOpacity="0.8"
+                  shapeRendering="crispEdges"/>
               );
             })}
           </g>
@@ -1324,17 +1361,21 @@ function CmbMonthlyBars({ series }) {
       </svg>
       <div className="pf-axis-x">
         {months.map((m, i) => (
-          <span key={m.ym} style={{ left: `${(cx(i) / W) * 100}%` }}>{mLabel(m.ym)}</span>
+          <span key={m.ym} style={{ left: `${(cx(i) / W) * 100}%` }}>
+            {m.ym.slice(5, 7) === '01' ? `${mLabel(m.ym)} ${m.ym.slice(2, 4)}` : mLabel(m.ym)}
+          </span>
         ))}
       </div>
       {hovered && (
         <div className="pm-tooltip" style={{ left: `${(cx(hover) / W) * 100}%`, top: '6%' }}>
           <div className="pm-tt-date">{hovered.ym}</div>
-          <div className="pf-tt-bench" style={{ color: '#a78bfa' }}>ibkr {cmbSigned(hovered.ibkr)}</div>
-          <div className="pf-tt-bench" style={{ color: '#ff4fd8' }}>poly {cmbSigned(hovered.pm)}</div>
+          {/* Rows follow the on-chart column order so the tooltip reads left
+              to right the same way the marks do. */}
+          <div className="pf-tt-bench" style={{ color: CMB_C_IBKR }}>ibkr {cmbSigned(hovered.ibkr)}</div>
           {hovered.spx != null && (
-            <div className="pf-tt-bench" style={{ color: '#5eead4' }}>spx {cmbSigned(hovered.spx)}</div>
+            <div className="pf-tt-bench" style={{ color: CMB_BENCH.spx }}>spx {cmbSigned(hovered.spx)}</div>
           )}
+          <div className="pf-tt-bench" style={{ color: CMB_C_PM }}>poly {cmbSigned(hovered.pm)}</div>
           <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {cmbSigned(hovered.total)}</div>
         </div>
       )}
@@ -1342,7 +1383,7 @@ function CmbMonthlyBars({ series }) {
     <div className="pf-bench-legend">
       {bars.map(b => (
         <span key={b.key}>
-          <i className="pf-bench-swatch" style={{ background: b.color, opacity: b.key === 'spx' ? 0.5 : 1 }}/>{b.label}
+          <i className="pf-bench-swatch" style={{ background: b.color }}/>{b.label}
         </span>
       ))}
     </div>
@@ -1605,7 +1646,7 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">monthly pnl · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">ibkr · polymarket · total · vs spx</span>
+            <span className="pf-panel-meta">ibkr · spx · polymarket</span>
           </div>
           <CmbMonthlyBars series={win.series}/>
         </div>

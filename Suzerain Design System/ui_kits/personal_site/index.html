@@ -660,27 +660,41 @@
   .pf-navchart { width: 100%; height: auto; display: block; }
 
   /* contribution-to-return diverging bars */
-  .pf-contrib { display: flex; flex-direction: column; gap: 7px; }
+  /* Rows are flush, not spaced: the bars stack edge to edge so the panel reads
+     as one diverging chart instead of a list of marks floating on their own
+     lines. Three things make that work — no gap on the column, a track that
+     stretches to the full row box rather than sitting centred inside it, and a
+     -1px overlap so two adjacent 1px borders collapse to a single hairline
+     instead of doubling into a 2px seam. */
+  .pf-contrib { display: flex; flex-direction: column; }
   .pf-contrib-row {
     display: grid; grid-template-columns: 64px 1fr 96px;
     align-items: center; gap: 12px;
+    height: 20px;
   }
+  .pf-contrib-row + .pf-contrib-row { margin-top: -1px; }
   .pf-contrib-sym {
     font-family: var(--font-mono); font-size: 12px; color: var(--fg-2);
     letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .pf-contrib-track { position: relative; height: 14px; }
+  .pf-contrib-track { position: relative; align-self: stretch; }
+  /* Bleeds 1px past the track top and bottom so the dividers on stacked rows
+     join into one continuous zero line down the panel. */
   .pf-contrib-center {
     position: absolute; left: 50%; top: -1px; bottom: -1px;
     width: 1px; background: rgba(229,225,241,0.18);
   }
+  /* Hollow outlined bars: 1px stroke over the wash, square corners — the same
+     skin as the monthly-pnl columns and the return histogram. No radius, since
+     a radius on a short bar is most of the bar (that's what made the old
+     monthly capsules read as extruded gel). box-sizing keeps a 1px-wide bar
+     from doubling into a 2px blob once it has borders. */
   .pf-contrib-bar {
     position: absolute; top: 0; height: 100%; min-width: 1px;
+    box-sizing: border-box; border: 1px solid; border-radius: 0;
   }
-  /* Round only the outer tip; keep the edge at the zero line square so each bar
-     sits flush against the center divider (a full radius leaves a notch there). */
-  .pf-contrib-bar.pos { background: linear-gradient(90deg, var(--mark-pos-soft), var(--mark-pos)); border-radius: 0 2px 2px 0; }
-  .pf-contrib-bar.neg { background: linear-gradient(270deg, var(--mark-neg-soft), var(--mark-neg)); border-radius: 2px 0 0 2px; }
+  .pf-contrib-bar.pos { background: var(--mark-pos-wash); border-color: var(--mark-pos); }
+  .pf-contrib-bar.neg { background: var(--mark-neg-wash); border-color: var(--mark-neg); }
   .pf-contrib-val {
     font-family: var(--font-mono); font-size: 11px; text-align: right; letter-spacing: 0.02em;
   }
@@ -1061,12 +1075,19 @@
      the two accents sit side by side meaning "IBKR" and "Polymarket". Not
      --mark-pos/--mark-neg: a longer pink bar is not a gain. Left literal so it
      doesn't get "corrected" to the P&L tokens later. */
-  .cmb-deploy-fill { position: absolute; top: 0; bottom: 0; }
+  /* Adopts the 1px outline from the other bars, but NOT their 0.13 wash. This
+     is a 100%-stacked proportion, not a magnitude bar: the whole track is
+     always full, so the reading is "which territory is bigger" and that comes
+     entirely from filled area. At 0.13 the two sides vanish and the rope reads
+     as an empty progress track. Flat 0.30 keeps the share legible while
+     dropping the gradients, which is what actually made it look different from
+     everything else. */
+  .cmb-deploy-fill { position: absolute; top: 0; bottom: 0; box-sizing: border-box; }
   .cmb-deploy-fill-ibkr {
-    left: 0; background: linear-gradient(90deg, rgba(167,139,250,0.55), rgba(167,139,250,0.28));
+    left: 0; background: rgba(167,139,250,0.30); border: 1px solid rgba(167,139,250,0.85);
   }
   .cmb-deploy-fill-poly {
-    background: linear-gradient(90deg, rgba(255,79,216,0.28), rgba(255,79,216,0.55));
+    background: rgba(255,79,216,0.30); border: 1px solid rgba(255,79,216,0.85);
   }
   .cmb-deploy-center {
     position: absolute; left: 50%; top: -1px; bottom: -1px; width: 1px;
