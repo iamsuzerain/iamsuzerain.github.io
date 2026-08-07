@@ -894,8 +894,11 @@ function ReturnDistribution({ perfSeries }) {
               ink — the weight comes back down via opacity instead. */}
           <path d={normPath} fill="none" stroke="rgba(94,234,212,0.55)"
             strokeWidth="1.25"/>
-          <line x1={zeroX} x2={zeroX} y1={PAD_T} y2={base}
-            stroke="rgba(229,225,241,0.28)" strokeDasharray="2 3"/>
+          {/* No rule at zero. The bins already change colour there — violet to
+              the left, pink to the right — so the split is drawn by the data
+              itself, and the 0% tick sits under the axis. A dashed line on top
+              of that was a third marker for the same fact, and it cut through
+              the tallest bin. */}
         </svg>
         <div className="pf-axis-x">
           <span className="start" style={{ left: '0%' }}>{fmtPctBare(bins[0].lo, 1)}</span>

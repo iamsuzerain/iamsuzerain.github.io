@@ -662,17 +662,22 @@
   /* contribution-to-return diverging bars */
   /* Rows are flush, not spaced: the bars stack edge to edge so the panel reads
      as one diverging chart instead of a list of marks floating on their own
-     lines. Three things make that work — no gap on the column, a track that
-     stretches to the full row box rather than sitting centred inside it, and a
-     -1px overlap so two adjacent 1px borders collapse to a single hairline
-     instead of doubling into a 2px seam. */
+     lines. No gap on the column, and a track that stretches to the full row box
+     rather than sitting centred inside it.
+     The row pitch MUST stay an even, 4-divisible number of CSS pixels. Adjacent
+     borders are collapsed by over-extending the bar (see .pf-contrib-bar), not
+     by a negative row margin — a -1px margin made the pitch 19px, which is
+     fractional in device pixels at both common Windows display scalings
+     (19 x 1.25 = 23.75, 19 x 1.5 = 28.5). Every row then landed on a different
+     subpixel phase, so half the 1px borders antialiased across two device rows
+     at half strength and the bars looked like they were different heights.
+     At 20px: 25 and 30 device px, integral, every row identical. */
   .pf-contrib { display: flex; flex-direction: column; }
   .pf-contrib-row {
     display: grid; grid-template-columns: 64px 1fr 96px;
     align-items: center; gap: 12px;
     height: 20px;
   }
-  .pf-contrib-row + .pf-contrib-row { margin-top: -1px; }
   .pf-contrib-sym {
     font-family: var(--font-mono); font-size: 12px; color: var(--fg-2);
     letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -689,8 +694,12 @@
      a radius on a short bar is most of the bar (that's what made the old
      monthly capsules read as extruded gel). box-sizing keeps a 1px-wide bar
      from doubling into a 2px blob once it has borders. */
+  /* Runs 1px past the bottom of its track so its bottom border lands exactly on
+     the next row's top border and the two collapse into a single hairline. Doing
+     it here instead of with a negative row margin keeps the row pitch a whole
+     20px — see the note on .pf-contrib-row. */
   .pf-contrib-bar {
-    position: absolute; top: 0; height: 100%; min-width: 1px;
+    position: absolute; top: 0; height: calc(100% + 1px); min-width: 1px;
     box-sizing: border-box; border: 1px solid; border-radius: 0;
   }
   .pf-contrib-bar.pos { background: var(--mark-pos-wash); border-color: var(--mark-pos); }
