@@ -24,6 +24,7 @@ function Nav({ view, setView }) {
     { id: 'combined', label: 'overview' },
     { id: 'portfolio', label: 'ibkr' },
     { id: 'polymarket', label: 'polymarket' },
+    { id: 'politics', label: 'politics' },
     { id: 'thoughts', label: 'thoughts' },
     { id: 'about', label: 'about' },
   ];
