@@ -31,12 +31,13 @@ function App() {
     portfolio: <Portfolio/>,
     polymarket: <Polymarket/>,
     combined: <Combined setView={setView}/>,
+    politics: <Politics scope={route.param}/>,
     about: <About/>,
     thoughts: <Writing slug={route.param}/>,
   };
   const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
-  const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined';
+  const dim = view === 'portfolio' || view === 'polymarket' || view === 'combined' || view === 'politics';
   // The key restarts the animation on every route change — including
   // thoughts/<slug> to thoughts/<other-slug>, which is the same view.
   return (
