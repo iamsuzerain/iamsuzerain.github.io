@@ -7,6 +7,12 @@ const {
   useRef: useCmbRef,
 } = React;
 
+// Monotone cubic spline, borrowed from the IBKR tab (Portfolio.jsx) so both
+// books' charts carry the same rounded curve. Falls back to straight segments
+// if that file somehow isn't loaded — a jagged chart beats a blank one.
+const smoothPath = window.szSmoothPath || ((xs, ys) =>
+  xs.map((v, i) => `${i === 0 ? 'M' : 'L'}${v.toFixed(2)},${ys[i].toFixed(2)}`).join(' '));
+
 const CMB_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   ? window.SZ_ID.wallets
   : [window.SZ_ID.wallet];
@@ -476,8 +482,12 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
   const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
+  // Monotone cubic spline (smoothPath, shared with the IBKR tab) rather than
+  // straight segments: same curve family on both books' charts, and monotone
+  // means the fitted curve never overshoots a turning point, so the area fill
+  // can't bulge past a peak the data never reached.
   const linePath = (key) =>
-    series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p[key]).toFixed(2)}`).join(' ');
+    smoothPath(series.map((_, i) => x(i)), series.map(p => y(p[key])));
   const totalPath = linePath('v');
   const areaPath = totalPath + ` L${x(series.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
   const zeroY = y(0);
@@ -799,7 +809,7 @@ function CmbAnnotDot({ cx, cy, active, onClick, size = 5 }) {
 // ---------- combined underwater (drawdown) strip ----------
 // Drawdown is a portfolio-level idea, so we rebuild an equity curve from the
 // window-start capital base (benchNotional) plus cumulative combined P&L, then
-// measure the % decline from its running peak. Straight-line to match CmbChart.
+// measure the % decline from its running peak. Splined to match CmbChart.
 function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
@@ -818,7 +828,7 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
   const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 6, PAD_B = 12;
   const x = (i) => PAD_L + (i / (dd.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - min) / (0 - min || 1)) * (H - PAD_T - PAD_B);
-  const line = dd.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const line = smoothPath(dd.map((_, i) => x(i)), dd.map(p => y(p.v)));
   const area = line + ` L${x(dd.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
 
   function onMove(e) {
@@ -908,7 +918,7 @@ function CmbCorrStrip({ roll }) {
   const W = 920, H = 76, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 14;
   const x = (i) => PAD_L + (i / (roll.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v + dom) / (2 * dom)) * (H - PAD_T - PAD_B);
-  const line = roll.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const line = smoothPath(roll.map((_, i) => x(i)), roll.map(p => y(p.v)));
   // Filled to the zero line rather than the floor: this series crosses zero, so
   // an area anchored at the bottom would read as a level when it is a deviation.
   const area = line + ` L${x(roll.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
@@ -1093,7 +1103,7 @@ function CmbAlphaStrip({ series, markers, cur, onPick }) {
   const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
   const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
-  const line = alpha.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
+  const line = smoothPath(alpha.map((_, i) => x(i)), alpha.map(p => y(p.v)));
   const zeroY = y(0);
   const area = line + ` L${x(alpha.length - 1).toFixed(2)},${zeroY.toFixed(2)} L${x(0).toFixed(2)},${zeroY.toFixed(2)} Z`;
 

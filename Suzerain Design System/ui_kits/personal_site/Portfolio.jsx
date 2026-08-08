@@ -1483,3 +1483,7 @@ window.SZ_RISK = {
   pfMoments,
   pfDailyReturns,
 };
+
+// The curve shape itself, so the overview's charts smooth the same way these do
+// rather than keeping a second copy of the spline that can drift from this one.
+window.szSmoothPath = smoothPath;
