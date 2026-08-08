@@ -3,391 +3,69 @@
   "note": "Sympathies, not projections.",
   "_schema": {
     "key": "match a feature by name (as spelled in geo-world.json / geo-us.json) or by its numeric id",
-    "races": "[{ office, next, pick, enthusiasm, note, tier? }] — one entry per contest",
+    "races": "[{ office, next, pick, enthusiasm, note?, tier?, rank? }] — one entry per contest",
     "office": "what's being contested — free text; the tier is read off it",
     "tier": "optional override: executive | legislature | governor. Otherwise inferred from the office name",
     "rank": "optional number that overrides the computed rank outright — last resort when the office keywords sort a race wrongly",
     "next": "ISO date of the election, or null if unscheduled",
     "pick": "who i'd support — free text. 'none' is a real answer",
     "enthusiasm": "enthusiastic | qualified | tactical",
-    "note": "one line, why",
-    "past": "[{ date, office, pick, enthusiasm, note }] — earlier reads, oldest first",
-    "_priority": "Soonest race leads — it colours the map and heads the overlay. Rank only settles a shared date: executive (president/PM/chancellor) > legislature > governor. Within the legislature, the US ranks senate above house; parliamentary systems rank the lower house (commons/bundestag/lok sabha) above the upper.",
-    "logged": "ISO date the endorsement was made — stamped by scripts/politics/stamp-logged.py when the pick changes, not hand-written. Changing enthusiasm on the same pick leaves it alone"
+    "note": "one line, why — optional",
+    "past": "[{ date, office, pick, enthusiasm, note }] — earlier reads, oldest first. A held race lands in the history on its own; entries here are for saying something the standing entry did not",
+    "logged": "ISO date the endorsement was made — stamped by scripts/politics/stamp-logged.py when the pick changes, not hand-written. Changing enthusiasm on the same pick leaves it alone",
+    "_priority": "Soonest race leads — it colours the map and heads the overlay. Rank only settles a shared date: executive (president/PM/chancellor) > legislature > governor. Within the legislature, the US ranks senate above house; parliamentary systems rank the lower house (commons/bundestag/lok sabha) above the upper."
   },
   "world": {
-    "United States of America": {
-      "races": [
-        {
-          "office": "president",
-          "next": "2028-11-07",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-07-28",
-          "note": "PLACEHOLDER — field isn't set; revisit after the midterms."
-        },
-        {
-          "office": "senate",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "tactical",
-          "logged": "2026-06-11",
-          "note": "PLACEHOLDER — replace with your own read."
-        },
-        {
-          "office": "house of representatives",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-04-02",
-          "note": "PLACEHOLDER — same date as the senate race."
-        }
-      ],
-      "past": [
-        {
-          "date": "2020-11-03",
-          "office": "president",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER — what you thought at the time."
-        },
-        {
-          "date": "2024-11-05",
-          "office": "president",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER — what you thought at the time."
-        }
-      ]
-    },
-    "United Kingdom": {
-      "races": [
-        {
-          "office": "house of commons",
-          "next": "2029-08-15",
-          "pick": "tbd",
-          "enthusiasm": "tactical",
-          "logged": "2026-08-07",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2019-12-12",
-          "office": "house of commons",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
-        },
-        {
-          "date": "2024-07-04",
-          "office": "house of commons",
-          "pick": "tbd",
-          "enthusiasm": "tactical",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "France": {
-      "races": [
-        {
-          "office": "president",
-          "next": "2027-04-11",
-          "pick": "tbd",
-          "enthusiasm": "tactical",
-          "logged": "2025-11-30",
-          "note": "PLACEHOLDER — replace with your own read."
-        },
-        {
-          "office": "national assembly",
-          "next": "2027-06-13",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2025-09-08",
-          "note": "PLACEHOLDER — legislative follows the presidential."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-04-24",
-          "office": "president",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Germany": {
-      "races": [
-        {
-          "office": "bundestag",
-          "next": "2029-09-23",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-08-01",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2021-09-26",
-          "office": "bundestag",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        },
-        {
-          "date": "2025-02-23",
-          "office": "bundestag",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Canada": {
-      "races": [
-        {
-          "office": "house of commons",
-          "next": "2029-10-15",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-05-22",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2021-09-20",
-          "office": "house of commons",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        },
-        {
-          "date": "2025-04-28",
-          "office": "house of commons",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Japan": {
-      "races": [
-        {
-          "office": "house of representatives",
-          "next": null,
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-07-28",
-          "note": "PLACEHOLDER — dissolution-dependent, no fixed date."
-        }
-      ]
-    },
-    "Australia": {
-      "races": [
-        {
-          "office": "house of representatives",
-          "next": "2028-05-20",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-06-11",
-          "note": "PLACEHOLDER — replace with your own read."
-        },
-        {
-          "office": "senate",
-          "next": "2028-05-20",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-04-02",
-          "note": "PLACEHOLDER — half-senate runs with the house."
-        }
-      ],
-      "past": [
-        {
-          "date": "2025-05-03",
-          "office": "house of representatives",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
     "Brazil": {
       "races": [
         {
           "office": "president",
           "next": "2026-10-04",
-          "pick": "none",
+          "pick": "Lula",
           "enthusiasm": "tactical",
-          "logged": "2026-01-19",
-          "note": "PLACEHOLDER — 'none' where there's no one you'd back."
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "United States of America": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Democrats",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
         },
         {
-          "office": "chamber of deputies",
-          "next": "2026-10-04",
-          "pick": "tbd",
+          "office": "house of representatives",
+          "next": "2026-11-03",
+          "pick": "Democrats",
           "enthusiasm": "qualified",
-          "logged": "2025-11-30",
-          "note": "PLACEHOLDER — same day as the presidential."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-10-30",
-          "office": "president",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "India": {
-      "races": [
-        {
-          "office": "lok sabha",
-          "next": "2029-04-15",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2025-09-08",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2024-06-01",
-          "office": "lok sabha",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Poland": {
-      "races": [
-        {
-          "office": "sejm",
-          "next": "2027-10-15",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-08-01",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2023-10-15",
-          "office": "sejm",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
+          "logged": "2026-08-07"
         }
       ]
     }
   },
   "us": {
+    "Arizona": {
+      "races": [
+        {
+          "office": "governor",
+          "next": "2026-11-03",
+          "pick": "Hobbs",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
     "California": {
       "races": [
         {
           "office": "governor",
           "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-05-22",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-11-08",
-          "office": "governor",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Texas": {
-      "races": [
-        {
-          "office": "governor",
-          "next": "2026-11-03",
-          "pick": "none",
+          "pick": "Becerra",
           "enthusiasm": "tactical",
-          "logged": "2026-07-28",
-          "note": "PLACEHOLDER — replace with your own read."
-        },
-        {
-          "office": "senate",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "tactical",
-          "logged": "2026-06-11",
-          "note": "PLACEHOLDER — same ballot as the governor's race."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-11-08",
-          "office": "governor",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "New York": {
-      "races": [
-        {
-          "office": "governor",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-04-02",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-11-08",
-          "office": "governor",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        }
-      ]
-    },
-    "Florida": {
-      "races": [
-        {
-          "office": "governor",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-01-19",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ]
-    },
-    "Pennsylvania": {
-      "races": [
-        {
-          "office": "senate",
-          "next": "2028-11-07",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2025-11-30",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-11-08",
-          "office": "senate",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
+          "logged": "2026-08-07"
         }
       ]
     },
@@ -396,75 +74,27 @@
         {
           "office": "senate",
           "next": "2026-11-03",
-          "pick": "tbd",
+          "pick": "Ossoff",
+          "enthusiasm": "enthusiastic",
+          "logged": "2026-08-07"
+        },
+        {
+          "office": "governor",
+          "next": "2026-11-03",
+          "pick": "Bottoms",
           "enthusiasm": "tactical",
-          "logged": "2025-09-08",
-          "note": "PLACEHOLDER — senate outranks the governor's race on the same ballot."
-        },
-        {
-          "office": "governor",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-08-01",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
-        {
-          "date": "2020-11-03",
-          "office": "senate",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
-        },
-        {
-          "date": "2022-11-08",
-          "office": "senate",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
+          "logged": "2026-08-07"
         }
       ]
     },
-    "Arizona": {
+    "New York": {
       "races": [
         {
           "office": "governor",
           "next": "2026-11-03",
-          "pick": "tbd",
+          "pick": "Hochul",
           "enthusiasm": "qualified",
-          "logged": "2026-05-22",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ]
-    },
-    "Michigan": {
-      "races": [
-        {
-          "office": "senate",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-07-28",
-          "note": "PLACEHOLDER — replace with your own read."
-        },
-        {
-          "office": "governor",
-          "next": "2026-11-03",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "logged": "2026-06-11",
-          "note": "PLACEHOLDER — same ballot."
-        }
-      ],
-      "past": [
-        {
-          "date": "2022-11-08",
-          "office": "governor",
-          "pick": "tbd",
-          "enthusiasm": "enthusiastic",
-          "note": "PLACEHOLDER."
+          "logged": "2026-08-07"
         }
       ]
     },
@@ -473,31 +103,27 @@
         {
           "office": "governor",
           "next": "2026-11-03",
-          "pick": "none",
+          "pick": "Acton",
           "enthusiasm": "tactical",
-          "logged": "2026-04-02",
-          "note": "PLACEHOLDER — replace with your own read."
+          "logged": "2026-08-07"
         }
       ]
     },
-    "Wisconsin": {
+    "Texas": {
       "races": [
         {
           "office": "senate",
-          "next": "2028-11-07",
-          "pick": "tbd",
-          "enthusiasm": "qualified",
-          "logged": "2026-01-19",
-          "note": "PLACEHOLDER — replace with your own read."
-        }
-      ],
-      "past": [
+          "next": "2026-11-03",
+          "pick": "Talarico",
+          "enthusiasm": "enthusiastic",
+          "logged": "2026-08-07"
+        },
         {
-          "date": "2022-11-08",
-          "office": "senate",
-          "pick": "tbd",
+          "office": "governor",
+          "next": "2026-11-03",
+          "pick": "Hinojosa",
           "enthusiasm": "qualified",
-          "note": "PLACEHOLDER."
+          "logged": "2026-08-07"
         }
       ]
     }
