@@ -342,14 +342,20 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
 }
 
 function Politics({ scope: routeScope }) {
-  const scope = POL_SCOPES.some(s => s.id === routeScope) ? routeScope : 'world';
+  // A bare #/politics lands on the US map. It carries the whole 2026 senate
+  // slate, so there is far more painted there than on the world map — which is
+  // two countries. Revisit when the world side fills out.
+  const scope = POL_SCOPES.some(s => s.id === routeScope) ? routeScope : 'us';
   const [log, setLog] = usePolState(POL_CACHE.log || null);
   const [geo, setGeo] = usePolState(POL_CACHE[scope] || null);
   const [selected, setSelected] = usePolState(null);
   const [hovered, setHovered] = usePolState(null);
   const [err, setErr] = usePolState(null);
 
-  const setScope = (id) => { window.location.hash = id === 'world' ? '/politics' : `/politics/${id}`; };
+  // The bare URL is whichever scope is the default above, so the two must move
+  // together — otherwise the non-default button writes a hash that resolves
+  // straight back to the default and the toggle looks broken.
+  const setScope = (id) => { window.location.hash = id === 'us' ? '/politics' : `/politics/${id}`; };
 
   // Both fetches go out on the same tick — the log and this scope's geometry
   // are independent, and chaining them would stall the map behind the JSON.
