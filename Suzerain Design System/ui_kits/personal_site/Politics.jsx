@@ -95,17 +95,62 @@ function polRaces(entry) {
   return entry.office || entry.next || entry.pick ? [entry] : [];
 }
 
-// Date first, rank second. Unscheduled races sort to the end — an undated
-// contest should never outrank one with a day on the calendar.
+// An election whose day has been and gone. It stops being something upcoming
+// the moment the date passes, with no edit to the data.
+function polPassed(race) {
+  const d = polDaysOut(race && race.next);
+  return d !== null && d < 0;
+}
+
+// Three buckets, in reading order: still to come, undated, already held. Then
+// date within the bucket — ascending for what is coming, most-recent-first for
+// what is done — and rank last, to settle a shared ballot.
+function polBucket(race) {
+  if (polPassed(race)) return 2;
+  return race && race.next ? 0 : 1;
+}
+
 function polCmp(scope, place) {
   return (a, b) => {
+    const ba = polBucket(a), bb = polBucket(b);
+    if (ba !== bb) return ba - bb;
     const da = a.next, db = b.next;
-    if (da && db && da !== db) return da.localeCompare(db);
-    if (!da && db) return 1;
-    if (da && !db) return -1;
+    if (da && db && da !== db) {
+      return ba === 2 ? db.localeCompare(da) : da.localeCompare(db);
+    }
     const r = polRank(a, scope, place) - polRank(b, scope, place);
     return r || String(a.office || '').localeCompare(String(b.office || ''));
   };
+}
+
+// History for a place: what was written by hand, plus any race whose date has
+// passed. The derived rows are what makes the log self-maintaining — a held
+// election lands here without anyone moving it.
+//
+// A hand-written entry wins a collision on the same office and date: it is the
+// considered version, and may say something the standing entry did not.
+function polPastRows(name, entry) {
+  const rows = [];
+  const seen = new Set();
+  const key = (office, date) => `${String(office || '').toLowerCase()}|${date || ''}`;
+
+  (entry.past || []).forEach(p => {
+    seen.add(key(p.office, p.date));
+    rows.push({ name, ...p });
+  });
+  polRaces(entry).forEach(race => {
+    if (!polPassed(race) || seen.has(key(race.office, race.next))) return;
+    rows.push({
+      name,
+      date: race.next,
+      office: race.office,
+      pick: race.pick,
+      enthusiasm: race.enthusiasm,
+      note: race.note,
+      logged: race.logged,
+    });
+  });
+  return rows;
 }
 
 // The race that speaks for a place: soonest, and the ranking contest among
@@ -180,6 +225,9 @@ function PolOverlay({ name, entry, scope, onClose }) {
   // The map can only paint one colour, so the overlay is where a full ballot
   // becomes legible.
   const races = polRaces(entry).slice().sort(polCmp(scope, name));
+  // Counts the derived rows too, so the hint matches what the panel below
+  // actually shows once an election has been held.
+  const pastCount = entry ? polPastRows(name, entry).length : 0;
   return (
     <div className="pol-overlay" role="dialog" aria-label={name}>
       <button className="pol-overlay-close" onClick={onClose} aria-label="close">×</button>
@@ -212,9 +260,9 @@ function PolOverlay({ name, entry, scope, onClose }) {
               </div>
             );
           })}
-          {entry.past && entry.past.length > 0 && (
+          {pastCount > 0 && (
             <div className="pol-overlay-past">
-              {entry.past.length} earlier read{entry.past.length === 1 ? '' : 's'} below
+              {pastCount} earlier read{pastCount === 1 ? '' : 's'} below
             </div>
           )}
         </React.Fragment>
@@ -356,10 +404,15 @@ function Politics({ scope: routeScope }) {
   // One row per contest, not per place. Soonest first, unscheduled parked at
   // the end — and where a ballot carries several races on one date, rank
   // decides: head of government, then legislature, then governor.
+  // Held elections drop out on their own. Without this they not only linger,
+  // they lead — the list sorts by date ascending, so a dead race would sit
+  // above everything still to come.
   const upcoming = usePolMemo(() => {
     const rows = [];
     records.list.forEach(({ name, entry }) => {
-      polRaces(entry).forEach(race => rows.push({ name, race }));
+      polRaces(entry).forEach(race => {
+        if (!polPassed(race)) rows.push({ name, race });
+      });
     });
     return rows.sort((a, b) => {
       const da = a.race.next, db = b.race.next;
@@ -377,7 +430,7 @@ function Politics({ scope: routeScope }) {
   const past = usePolMemo(() => {
     const rows = [];
     records.list.forEach(({ name, entry }) => {
-      (entry.past || []).forEach(p => rows.push({ name, ...p }));
+      polPastRows(name, entry).forEach(p => rows.push(p));
     });
     return rows.sort((a, b) => {
       if (a.name !== b.name) return a.name.localeCompare(b.name);
