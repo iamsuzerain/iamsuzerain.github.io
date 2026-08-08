@@ -225,9 +225,6 @@ function PolOverlay({ name, entry, scope, onClose }) {
   // The map can only paint one colour, so the overlay is where a full ballot
   // becomes legible.
   const races = polRaces(entry).slice().sort(polCmp(scope, name));
-  // Counts the derived rows too, so the hint matches what the panel below
-  // actually shows once an election has been held.
-  const pastCount = entry ? polPastRows(name, entry).length : 0;
   return (
     <div className="pol-overlay" role="dialog" aria-label={name}>
       <button className="pol-overlay-close" onClick={onClose} aria-label="close">×</button>
@@ -235,41 +232,51 @@ function PolOverlay({ name, entry, scope, onClose }) {
       {!races.length ? (
         <div className="pol-dim">not logged.</div>
       ) : (
-        <React.Fragment>
-          {races.map((r, i) => {
-            const countdown = polCountdown(r.next);
-            return (
-              <div className={`pol-race ${i === 0 ? 'is-primary' : ''}`} key={`${r.office}-${r.next}-${i}`}>
-                <div className="pol-race-head">
-                  <span className={`pol-swatch pol-sw-${polLevel(r)}`} aria-hidden />
-                  <span className="pol-race-office">{r.office || '—'}</span>
-                  <span className="pol-race-level">{polLevel(r)}</span>
-                </div>
-                <div className="pol-race-when">
-                  {polFmtDate(r.next)}
-                  {countdown && <span className="pol-dim"> · {countdown}</span>}
-                </div>
-                <div className="pol-race-pick">{r.pick || 'tbd'}</div>
-                {r.note && <p className="pol-race-note">{r.note}</p>}
-                {r.logged && (
-                  <div className="pol-race-logged">
-                    endorsed {polFmtDate(r.logged)}
-                    {polAgo(r.logged) && <span className="pol-dim"> · {polAgo(r.logged)}</span>}
-                  </div>
-                )}
+        races.map((r, i) => {
+          const countdown = polCountdown(r.next);
+          return (
+            <div className={`pol-race ${i === 0 ? 'is-primary' : ''}`} key={`${r.office}-${r.next}-${i}`}>
+              <div className="pol-race-head">
+                <span className={`pol-swatch pol-sw-${polLevel(r)}`} aria-hidden />
+                <span className="pol-race-office">{r.office || '—'}</span>
+                <span className="pol-race-level">{polLevel(r)}</span>
               </div>
-            );
-          })}
-          {pastCount > 0 && (
-            <div className="pol-overlay-past">
-              {pastCount} earlier read{pastCount === 1 ? '' : 's'} below
+              <div className="pol-race-when">
+                {polFmtDate(r.next)}
+                {countdown && <span className="pol-dim"> · {countdown}</span>}
+              </div>
+              <div className="pol-race-pick">{r.pick || 'tbd'}</div>
+              {r.note && <p className="pol-race-note">{r.note}</p>}
+              {r.logged && (
+                <div className="pol-race-logged">
+                  endorsed {polFmtDate(r.logged)}
+                  {polAgo(r.logged) && <span className="pol-dim"> · {polAgo(r.logged)}</span>}
+                </div>
+              )}
             </div>
-          )}
-        </React.Fragment>
+          );
+        })
       )}
     </div>
   );
 }
+
+// Ceiling on a marked state's outline, in viewBox units.
+//
+// A marked shape is clipped to itself, so it paints its band inward; two marked
+// neighbours each paint their own and the seam carries both. That was rare when
+// six states were logged and they barely touched. With the senate slate it is
+// most of the map, and build-geo.py clamps w at 4.0 with 46 of the 51 US shapes
+// at the cap — so nearly every interior seam was 8 units wide on a 980-unit
+// viewBox. Capping the doubled width here halves those back to 4, the weight a
+// single band used to carry and what the map was tuned for.
+//
+// A cap rather than one flat width, because the five shapes that score below
+// the clamp — Delaware, Rhode Island, Massachusetts, New Jersey, Alaska — score
+// low precisely because they are small, and a constant would push their borders
+// *up* (Rhode Island 3.2 to 4.0) on the states least able to carry it. Under a
+// cap they keep the weight build-geo.py gave them and only the fat ones move.
+const POL_US_STROKE_MAX = 4;
 
 function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
   // Logged places paint last. SVG has no z-index — a 4.5px border is drawn
@@ -314,13 +321,14 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
               key={f.id + f.name}
               d={f.d}
               className={`pol-shape ${entry ? 'pol-lv-' + polLevel(polPrimary(entry, scope, f.name)) : 'pol-none'} ${isSel ? 'is-selected' : ''}`}
-              // Per-feature weight from build-geo.py: a border heavy enough for
-              // Texas turns Japan into a blob. Unlogged shapes keep the CSS
-              // hairline — only the marked ones carry a sized outline, clipped
-              // to themselves and doubled so the visible band still reads at
-              // the intended weight.
+              // Unlogged shapes keep the CSS hairline; only marked ones carry a
+              // sized outline, clipped to themselves and doubled so the visible
+              // band still reads at the intended weight. The world map takes its
+              // weight per feature from build-geo.py, because a border heavy
+              // enough for Texas turns Japan into a blob. The US map is uniform
+              // and lighter — see POL_US_STROKE_MAX.
               clipPath={entry ? `url(#pol-clip-${f.id})` : undefined}
-              style={entry ? { strokeWidth: f.w * 2 } : undefined}
+              style={entry ? { strokeWidth: scope === 'us' ? Math.min(f.w * 2, POL_US_STROKE_MAX) : f.w * 2 } : undefined}
               // Only logged places are tab stops — 177 countries of tabbing to
               // reach the ten that say anything isn't navigation.
               tabIndex={entry ? 0 : undefined}
