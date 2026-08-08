@@ -13,7 +13,7 @@ const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   : [window.SZ_ID.wallet];
 const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = 'Seutervoinen';
-const PM_CACHE_KEY = 'pm-cache-v10'; // v10: pnl payload carries source/as-of
+const PM_CACHE_KEY = 'pm-cache-v11'; // v11: caches the live halves, not the daily files
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
@@ -305,17 +305,32 @@ function pmFetchStreams() {
 // there is no snapshot at all do they hold on `pnlPending`. What they must never
 // do is print the open-position fallback (realized-on-open + unrealized, off by
 // thousands) as though it were the lifetime figure.
-async function pmFetchAll(onPartial) {
-  // Try cache first
+// The cache holds the two slow live halves and nothing else: data-api's
+// per-wallet positions, and user-pnl-api's series (~0.08s/wallet warm, ~3.1s
+// cold — the reason any of this is cached). The daily same-origin files are
+// refetched on every load instead of riding along inside the cached payload.
+//
+// Caching them together meant a freshly published breakdown stayed invisible
+// for the whole TTL, and localStorage survives a hard refresh — so the one
+// move anybody makes when a page looks stale could not shift it. The files
+// cost one round trip each; there was never anything to win by pinning them.
+function pmReadCache({ ignoreAge = false } = {}) {
   try {
-    const raw = localStorage.getItem(PM_CACHE_KEY);
-    if (raw) {
-      const cached = JSON.parse(raw);
-      if (Date.now() - cached.t < PM_CACHE_TTL_MS) {
-        return cached.data;
-      }
-    }
-  } catch {}
+    const entry = JSON.parse(localStorage.getItem(PM_CACHE_KEY));
+    if (!entry || !entry.perWallet || !entry.pnl) return null;
+    if (!ignoreAge && Date.now() - entry.t >= PM_CACHE_TTL_MS) return null;
+    return entry;
+  } catch { return null; }
+}
+
+// Cached live halves + a breakdown fetched now, never the cached one.
+async function pmViewFromCache(entry) {
+  return pmBuild(entry.perWallet, pmPnlSettled(entry.pnl), await pmFetchBreakdown());
+}
+
+async function pmFetchAll(onPartial) {
+  const cached = pmReadCache();
+  if (cached) return pmViewFromCache(cached);
 
   const { breakdownP, coreP, pnlP, snapshotP } = pmFetchStreams();
   // pmFetchBreakdown and pmFetchPnlSnapshot resolve to null on any failure, so
@@ -327,13 +342,15 @@ async function pmFetchAll(onPartial) {
 
   // Live wins when it is complete; otherwise the snapshot keeps standing rather
   // than being replaced by a half-summed live series or by nothing.
-  const data = pmBuild(perWallet, pmPnlSettled((await pnlP) || snapshot), breakdown);
-  // Only cache a complete live payload. A snapshot-backed one would pin
+  const settled = pmPnlSettled((await pnlP) || snapshot);
+  const data = pmBuild(perWallet, settled, breakdown);
+  // Only cache a complete live series. A snapshot-backed one would pin
   // yesterday's close for the whole TTL on every reload, and a pnl-less one
   // would suppress the chart for the same window.
   if (data.pnlSource === 'live' && data.pnlSeries.length) {
     try {
-      localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+      localStorage.setItem(PM_CACHE_KEY,
+        JSON.stringify({ t: Date.now(), perWallet, pnl: settled }));
     } catch {}
   }
   return data;
@@ -1259,11 +1276,16 @@ function Polymarket() {
       .then(d => { if (!cancelled) setData(d); })
       .catch(e => {
         if (cancelled) return;
-        // Live fetch failed — fall back to expired cache rather than a blank error.
-        try {
-          const raw = localStorage.getItem(PM_CACHE_KEY);
-          if (raw) { setData(JSON.parse(raw).data); return; }
-        } catch {}
+        // Live fetch failed — fall back to expired cache rather than a blank
+        // error. The breakdown is still refetched, so the daily figures are
+        // current even when the live wallet calls are down.
+        const stale = pmReadCache({ ignoreAge: true });
+        if (stale) {
+          pmViewFromCache(stale)
+            .then(d => { if (!cancelled) setData(d); })
+            .catch(() => { if (!cancelled) setErr(String(e.message || e)); });
+          return;
+        }
         setErr(String(e.message || e));
       });
     // Calibration dataset (polymarket-calibration daily cron). Best-effort and
