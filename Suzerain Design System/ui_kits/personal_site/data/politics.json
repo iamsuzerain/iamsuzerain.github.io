@@ -11,7 +11,7 @@
     "pick": "who i'd support — free text. 'none' is a real answer",
     "enthusiasm": "enthusiastic | qualified | tactical",
     "note": "one line, why — optional",
-    "past": "[{ date, office, pick, enthusiasm, note }] — earlier reads, oldest first. A held race lands in the history on its own; entries here are for saying something the standing entry did not",
+    "past": "[{ date, office, pick, enthusiasm, note }] — earlier reads, authored oldest first; the panel renders them newest first. A held race lands in the history on its own; entries here are for saying something the standing entry did not",
     "logged": "ISO date the endorsement was made — stamped by scripts/politics/stamp-logged.py when the pick changes, not hand-written. Changing enthusiasm on the same pick leaves it alone",
     "_priority": "Soonest race leads — it colours the map and heads the overlay. Rank only settles a shared date: executive (president/PM/chancellor) > legislature > governor. Within the legislature, the US ranks senate above house; parliamentary systems rank the lower house (commons/bundestag/lok sabha) above the upper."
   },
@@ -43,10 +43,84 @@
           "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
+      ],
+      "past": [
+        {
+          "date": "2008-06-03",
+          "office": "presidential primary",
+          "pick": "Obama",
+          "enthusiasm": "enthusiastic"
+        },
+        {
+          "date": "2008-11-04",
+          "office": "president",
+          "pick": "Obama",
+          "enthusiasm": "enthusiastic"
+        },
+        {
+          "date": "2012-04-03",
+          "office": "presidential primary",
+          "pick": "Obama",
+          "enthusiasm": "qualified"
+        },
+        {
+          "date": "2012-11-06",
+          "office": "president",
+          "pick": "Obama",
+          "enthusiasm": "qualified"
+        },
+        {
+          "date": "2016-06-07",
+          "office": "presidential primary",
+          "pick": "Sanders",
+          "enthusiasm": "tactical"
+        },
+        {
+          "date": "2016-11-08",
+          "office": "president",
+          "pick": "Clinton",
+          "enthusiasm": "tactical"
+        },
+        {
+          "date": "2020-06-05",
+          "office": "presidential primary",
+          "pick": "Warren",
+          "enthusiasm": "enthusiastic"
+        },
+        {
+          "date": "2020-11-03",
+          "office": "president",
+          "pick": "Biden",
+          "enthusiasm": "qualified"
+        },
+        {
+          "date": "2024-03-12",
+          "office": "presidential primary",
+          "pick": "Biden",
+          "enthusiasm": "tactical",
+          "note": "Yes in March. After the debate, no."
+        },
+        {
+          "date": "2024-11-05",
+          "office": "president",
+          "pick": "Harris",
+          "enthusiasm": "tactical"
+        }
       ]
     }
   },
   "us": {
+    "Alaska": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Peltola",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
     "Arizona": {
       "races": [
         {
@@ -58,6 +132,17 @@
         }
       ]
     },
+    "Arkansas": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Shoffner",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
     "California": {
       "races": [
         {
@@ -65,6 +150,39 @@
           "next": "2026-11-03",
           "pick": "Becerra",
           "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Colorado": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Hickenlooper",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Delaware": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Coons",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Florida": {
+      "races": [
+        {
+          "office": "senate (special)",
+          "next": "2026-11-03",
+          "pick": "Vindman",
+          "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
       ]
@@ -87,6 +205,183 @@
         }
       ]
     },
+    "Idaho": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Achilles",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Illinois": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Stratton",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Iowa": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Turek",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Kansas": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Hamilton",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Kentucky": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Booker",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Louisiana": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Davis",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Maine": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Jackson",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Massachusetts": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Markey",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Michigan": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "El-Sayed",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Minnesota": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Flanagan",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Mississippi": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Colom",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Montana": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Bodnar",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07",
+          "note": "The only shot at a not-R. Hoping Bankhead relents."
+        }
+      ]
+    },
+    "Nebraska": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Osborn",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "New Hampshire": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Pappas",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "New Jersey": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Booker",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "New Mexico": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Luján",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
     "New York": {
       "races": [
         {
@@ -98,12 +393,85 @@
         }
       ]
     },
+    "North Carolina": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Cooper",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
     "Ohio": {
       "races": [
+        {
+          "office": "senate (special)",
+          "next": "2026-11-03",
+          "pick": "Brown",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        },
         {
           "office": "governor",
           "next": "2026-11-03",
           "pick": "Acton",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Oklahoma": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Priest",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Oregon": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Merkley",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Rhode Island": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Reed",
+          "enthusiasm": "tactical",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "South Carolina": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Andrews",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "South Dakota": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Bengs",
           "enthusiasm": "tactical",
           "logged": "2026-08-07"
         }
@@ -122,6 +490,17 @@
           "office": "governor",
           "next": "2026-11-03",
           "pick": "Hinojosa",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-07"
+        }
+      ]
+    },
+    "Virginia": {
+      "races": [
+        {
+          "office": "senate",
+          "next": "2026-11-03",
+          "pick": "Warner",
           "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }

@@ -426,7 +426,9 @@ function Politics({ scope: routeScope }) {
     });
   }, [records, scope]);
 
-  // Past reads: grouped by place, oldest first within each.
+  // Past reads: grouped by place, most recent first within each — the same
+  // direction polBucket already gives held races on the calendar. What I
+  // thought last cycle is worth more than what I thought in 2008.
   const past = usePolMemo(() => {
     const rows = [];
     records.list.forEach(({ name, entry }) => {
@@ -434,7 +436,7 @@ function Politics({ scope: routeScope }) {
     });
     return rows.sort((a, b) => {
       if (a.name !== b.name) return a.name.localeCompare(b.name);
-      const d = String(a.date).localeCompare(String(b.date));
+      const d = String(b.date).localeCompare(String(a.date));
       // Same place, same day — fall back to the same rank the calendar uses.
       return d || polRank(a, scope, a.name) - polRank(b, scope, b.name);
     });
@@ -539,7 +541,7 @@ function Politics({ scope: routeScope }) {
         <div className="sz-surface pol-panel pol-list-panel">
           <div className="pol-list-head">
             <span>past sympathies · {past.length}</span>
-            <span className="pol-dim">by place, oldest first</span>
+            <span className="pol-dim">by place, newest first</span>
           </div>
           <p className="pol-disclaimer">What I believed at the time, which may not be my politics now.</p>
           <ul className="pol-list">
