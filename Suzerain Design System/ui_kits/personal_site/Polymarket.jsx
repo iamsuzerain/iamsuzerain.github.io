@@ -330,14 +330,29 @@ async function pmViewFromCache(entry) {
 
 async function pmFetchAll(onPartial) {
   const cached = pmReadCache();
-  if (cached) return pmViewFromCache(cached);
-
   const { breakdownP, coreP, pnlP, snapshotP } = pmFetchStreams();
+
+  // Stale-while-revalidate. A cache hit paints immediately but no longer *ends*
+  // the load — the live calls go out on the same tick either way, so a reload
+  // always converges on current figures. Returning the cached view and stopping
+  // there replayed the same numbers for the rest of the TTL, which is what made
+  // refreshing look broken to anyone watching an intraday move.
+  if (cached && onPartial) {
+    breakdownP
+      .then(bd => onPartial(pmBuild(cached.perWallet, pmPnlSettled(cached.pnl), bd)))
+      .catch(() => {});
+  }
+
   // pmFetchBreakdown and pmFetchPnlSnapshot resolve to null on any failure, so
   // awaiting them alongside a fan-out that can throw never strands a rejection.
   const [perWallet, breakdown, snapshot] = await Promise.all([coreP, breakdownP, snapshotP]);
   if (onPartial) {
-    onPartial(pmBuild(perWallet, snapshot ? { ...snapshot, pending: true } : PM_PNL_PENDING, breakdown));
+    // With a cached live series in hand, hold it through this paint rather than
+    // downgrading to the snapshot and back again while the live call lands.
+    const interim = cached
+      ? pmPnlSettled(cached.pnl)
+      : (snapshot ? { ...snapshot, pending: true } : PM_PNL_PENDING);
+    onPartial(pmBuild(perWallet, interim, breakdown));
   }
 
   // Live wins when it is complete; otherwise the snapshot keeps standing rather
