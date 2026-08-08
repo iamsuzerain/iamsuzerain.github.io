@@ -19,8 +19,10 @@ WALLETS = [
 def bm_url(wallet):
     return f"https://www.betmoar.fun/profile/{wallet}"
 
-# Fallback hash — used if dynamic discovery fails
-_FALLBACK_HASH = "85d5ff77f7cca6369bc174dc6a4c1d46509ca4ab"
+# Fallback hash — used if dynamic discovery fails. Betmoar rotates this on every
+# redeploy, so it goes dead without warning; discovery is the real path and this
+# only buys a day or two. Refreshed 2026-08-08.
+_FALLBACK_HASH = "406cde1df00e88125d3dad5b9ce78d9e6976d68581"
 
 def discover_action_hash():
     """Scrape one profile page's JS bundles to find the current Next-Action hash."""
@@ -36,8 +38,13 @@ def discover_action_hash():
     for path in chunk_urls:
         try:
             cr = requests.get(base + path, impersonate="chrome", timeout=10)
-            # Next.js server action hashes appear as 40-char hex strings bound to action exports
-            matches = re.findall(r'["\'`]([0-9a-f]{40})["\' `]', cr.text)
+            # Match the createServerReference call rather than any quoted hex run:
+            # that call site is what actually marks an id as a server action, and it
+            # survives the id format changing. Next bumped these from 40 to 42 chars
+            # (2026-08-08), which a hard `{40}` between quotes silently missed —
+            # discovery found nothing and the dead fallback took the run down.
+            matches = re.findall(
+                r'createServerReference\)?\(\s*["\'`]([0-9a-f]{40,64})', cr.text)
             for m in matches:
                 # Quick sanity-check: try the hash and see if the response contains tradingProfit
                 if _try_hash(m, probe_wallet):
@@ -88,8 +95,15 @@ def fetch_stats(action_hash, wallet):
 
 def main():
     try:
-        action_hash = discover_action_hash() or _FALLBACK_HASH
-        print(f"using action hash: {action_hash}", file=sys.stderr)
+        action_hash = discover_action_hash()
+        if action_hash:
+            print(f"using action hash: {action_hash} (discovered)", file=sys.stderr)
+        else:
+            # Say this loudly: a passing run on the fallback still means discovery
+            # is broken, and the panel freezes the day betmoar rotates the id.
+            action_hash = _FALLBACK_HASH
+            print(f"WARNING: action hash discovery failed, using stale fallback "
+                  f"{action_hash} — fix discovery before it rotates", file=sys.stderr)
         per_wallet = []
         for w in WALLETS:
             stats = fetch_stats(action_hash, w)
