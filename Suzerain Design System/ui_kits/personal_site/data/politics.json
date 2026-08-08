@@ -116,7 +116,7 @@
           "office": "senate",
           "next": "2026-11-03",
           "pick": "Peltola",
-          "enthusiasm": "tactical",
+          "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
       ]
@@ -138,7 +138,7 @@
           "office": "senate",
           "next": "2026-11-03",
           "pick": "Shoffner",
-          "enthusiasm": "tactical",
+          "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
       ]
@@ -171,7 +171,7 @@
           "office": "senate",
           "next": "2026-11-03",
           "pick": "Coons",
-          "enthusiasm": "qualified",
+          "enthusiasm": "tactical",
           "logged": "2026-08-07"
         }
       ]
@@ -285,8 +285,8 @@
     "Massachusetts": {
       "races": [
         {
-          "office": "senate",
-          "next": "2026-11-03",
+          "office": "senate primary",
+          "next": "2026-09-01",
           "pick": "Markey",
           "enthusiasm": "qualified",
           "logged": "2026-08-07"
@@ -307,8 +307,8 @@
     "Minnesota": {
       "races": [
         {
-          "office": "senate",
-          "next": "2026-11-03",
+          "office": "senate primary",
+          "next": "2026-08-11",
           "pick": "Flanagan",
           "enthusiasm": "tactical",
           "logged": "2026-08-07"
@@ -388,7 +388,7 @@
           "office": "governor",
           "next": "2026-11-03",
           "pick": "Hochul",
-          "enthusiasm": "qualified",
+          "enthusiasm": "tactical",
           "logged": "2026-08-07"
         }
       ]
@@ -399,7 +399,7 @@
           "office": "senate",
           "next": "2026-11-03",
           "pick": "Cooper",
-          "enthusiasm": "tactical",
+          "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
       ]
@@ -425,8 +425,8 @@
     "Oklahoma": {
       "races": [
         {
-          "office": "senate",
-          "next": "2026-11-03",
+          "office": "senate primary runoff",
+          "next": "2026-08-25",
           "pick": "Priest",
           "enthusiasm": "qualified",
           "logged": "2026-08-07"
@@ -450,7 +450,7 @@
           "office": "senate",
           "next": "2026-11-03",
           "pick": "Reed",
-          "enthusiasm": "tactical",
+          "enthusiasm": "qualified",
           "logged": "2026-08-07"
         }
       ]
