@@ -24,6 +24,17 @@ def bm_url(wallet):
 # only buys a day or two. Refreshed 2026-08-09.
 _FALLBACK_HASH = "40e4d02f2fd0a00d3570b727b2686579471fa3b515"
 
+class DiscoveryBroken(Exception):
+    """The page no longer looks the way the scraper expects.
+
+    Distinct from "discovery ran but no id validated": this means a regex
+    matched nothing at all, so our assumptions about betmoar's markup or bundle
+    layout are stale. The fallback hash is not a legitimate substitute here —
+    whatever redeploy changed the format almost certainly rotated the ids too,
+    and sliding to the fallback just relocates the failure to fetch_stats as a
+    misleading "Server action not found".
+    """
+
 def discover_action_hash():
     """Scrape one profile page's JS bundles to find the current Next-Action hash."""
     probe_wallet = WALLETS[0]
@@ -40,6 +51,12 @@ def discover_action_hash():
     chunk_urls = list(dict.fromkeys(chunk_urls))
     base = "https://www.betmoar.fun"
 
+    if not chunk_urls:
+        raise DiscoveryBroken(
+            f"no /_next/static JS chunk URLs in {len(html)} bytes of profile HTML "
+            f"— page markup or bundle layout changed")
+
+    candidates = 0
     for path in chunk_urls:
         try:
             cr = requests.get(base + path, impersonate="chrome", timeout=10)
@@ -50,6 +67,7 @@ def discover_action_hash():
             # discovery found nothing and the dead fallback took the run down.
             matches = re.findall(
                 r'createServerReference\)?\(\s*["\'`]([0-9a-f]{40,64})', cr.text)
+            candidates += len(matches)
             for m in matches:
                 # Quick sanity-check: try the hash and see if the response contains tradingProfit
                 if _try_hash(m, probe_wallet):
@@ -57,6 +75,14 @@ def discover_action_hash():
         except Exception:
             continue
 
+    if not candidates:
+        raise DiscoveryBroken(
+            f"scanned {len(chunk_urls)} chunks, found no createServerReference ids "
+            f"— call-site pattern or id format changed")
+
+    # Ids were found but none answered with stats: they may have rotated between
+    # the page load and the probe, or a network blip ate the check. Worth one
+    # shot at the fallback, loudly.
     return None
 
 def _try_hash(action_hash, wallet):
@@ -114,6 +140,11 @@ def main():
             stats = fetch_stats(action_hash, w)
             print(f"fetched stats for {w}", file=sys.stderr)
             per_wallet.append(stats)
+    except DiscoveryBroken as e:
+        print(f"action hash discovery is broken: {e}", file=sys.stderr)
+        print(f"refusing to fall back to {_FALLBACK_HASH} — fix discovery, then "
+              f"refresh the fallback from the id it finds", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(f"error fetching stats: {e}", file=sys.stderr)
         sys.exit(1)
