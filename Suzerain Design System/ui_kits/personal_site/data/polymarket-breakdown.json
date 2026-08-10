@@ -9,7 +9,7 @@
     "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "totals": {
-    "trading": -2507,
+    "trading": -2036,
     "lp": 4941,
     "yield": 38,
     "maker": 1644,
@@ -19,8 +19,8 @@
     "fees": 2573
   },
   "balances": {
-    "positions": 220721,
-    "cash": 25570,
-    "nav": 246291
+    "positions": 220221,
+    "cash": 26126,
+    "nav": 246347
   }
 }
