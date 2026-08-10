@@ -21,8 +21,8 @@ def bm_url(wallet):
 
 # Fallback hash — used if dynamic discovery fails. Betmoar rotates this on every
 # redeploy, so it goes dead without warning; discovery is the real path and this
-# only buys a day or two. Refreshed 2026-08-08.
-_FALLBACK_HASH = "406cde1df00e88125d3dad5b9ce78d9e6976d68581"
+# only buys a day or two. Refreshed 2026-08-09.
+_FALLBACK_HASH = "40e4d02f2fd0a00d3570b727b2686579471fa3b515"
 
 def discover_action_hash():
     """Scrape one profile page's JS bundles to find the current Next-Action hash."""
@@ -31,8 +31,13 @@ def discover_action_hash():
     r.raise_for_status()
     html = r.text
 
-    # Collect all /_next/static JS chunk URLs
-    chunk_urls = re.findall(r'"(/_next/static/chunks/[^"]+\.js)"', html)
+    # Collect all /_next/static JS chunk URLs. Don't pin the directory under
+    # /_next/static/ — betmoar's turbopack build moved chunks from
+    # `static/chunks/` to `static/immutable/chunks/` (2026-08-09) and a path
+    # pinned to the old layout matched zero bundles, so discovery found nothing
+    # and the run died on the stale fallback.
+    chunk_urls = re.findall(r'"(/_next/static/[^"]+\.js)"', html)
+    chunk_urls = list(dict.fromkeys(chunk_urls))
     base = "https://www.betmoar.fun"
 
     for path in chunk_urls:
