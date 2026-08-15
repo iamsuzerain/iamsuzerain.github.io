@@ -56,6 +56,58 @@ function cmbUSD(n) {
 function cmbSigned(n) {
   return (n >= 0 ? '+' : '') + cmbUSD(n);
 }
+// Percent values arrive as ratios (see cmbPctSeries), so the formatter only has
+// to pick a unit — it never divides. Dividing here is what made this view's
+// third construction: a single window-start base for a book whose capital moved
+// all year.
+const cmbPctFmt = (v) => (v == null || !isFinite(v)) ? '—'
+  : (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+function cmbFmt(v, unit) {
+  return unit === 'pct' ? cmbPctFmt(v) : cmbSigned(v);
+}
+
+// ---------- percent mode: chained daily TWR, same construction as ibkr + polymarket ----------
+// Each day's P&L is measured against the capital that actually earned it —
+// p.base, carried per point from real NAV — and the daily returns are chained.
+// Deposits and IBKR→Polymarket transfers move the base without registering as
+// return, which is the property a fixed denominator cannot have.
+//
+// The legs are decomposed additively rather than chained on their own: a leg
+// accumulates (Δleg / base) scaled by the compounding factor to date. That sums
+// EXACTLY to the total, because the day's return is the sum of the legs' and
+// TWR = Σ_d r_d · Π_{k<d}(1 + r_k). Chaining each leg separately would leave
+// ibkr + polymarket a few basis points off the headline they sit under.
+//
+// Benchmarks stay their own index returns. Their dollar column is
+// winNotional × (index return), so dividing by that notional recovers the index
+// exactly — and they are not components of this book, so chaining them against
+// its capital base would be meaningless.
+function cmbPctSeries(series, notional) {
+  if (!series || series.length < 2) return null;
+  const bench = (src, dst) => {
+    for (const k of ['spx', 'vt']) {
+      if (src[k] != null && notional) dst[k] = src[k] / notional;
+    }
+  };
+  const first = { d: series[0].d, v: 0, ibkr: 0, pm: 0 };
+  bench(series[0], first);
+  const out = [first];
+  let cum = 1, cIbkr = 0, cPm = 0;
+  for (let i = 1; i < series.length; i++) {
+    const p = series[i], q = series[i - 1];
+    const base = (q.base != null && q.base > 0) ? q.base : notional;
+    if (!base || base <= 0) return null;
+    const dIbkr = (p.ibkr || 0) - (q.ibkr || 0);
+    const dPm = (p.pm || 0) - (q.pm || 0);
+    cIbkr += (dIbkr / base) * cum;         // cum is Π_{k<d}(1+r_k) — before this step
+    cPm += (dPm / base) * cum;
+    cum *= 1 + (dIbkr + dPm) / base;
+    const row = { d: p.d, v: cum - 1, ibkr: cIbkr, pm: cPm };
+    bench(p, row);
+    out.push(row);
+  }
+  return out;
+}
 // Correlations always carry a sign — an unsigned "0.03" reads as a magnitude and
 // loses the one bit that matters. U+2212 minus to match the display font's digits.
 function cmbCorrFmt(v) {
@@ -461,25 +513,34 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
 }
 
 // ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
-function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
+function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, unit }) {
   const benches = bench || [];
+  const base = ddNotional != null ? ddNotional : benchNotional;
+  const pct = unit === 'pct' && !!pctSeries;
+  // Percent redraws the curve rather than relabelling it: chaining against a
+  // moving capital base is a different shape, not a rescale. `series` stays the
+  // dollar copy because the drawdown strip rebuilds an equity curve from it.
+  const plot = pct ? pctSeries : series;
+  const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
   const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   const [annot, setAnnot] = useCmbState(null);
-  const markers = cmbMarkers(series, log).sort((a, b) => a.i - b.i);
+  const markers = cmbMarkers(plot, log).sort((a, b) => a.i - b.i);
   const cur = annot || (markers.length ? markers[markers.length - 1] : null);
   const curIdx = cur ? markers.findIndex(m => m.i === cur.i) : -1;
 
   const all = [];
-  for (const p of series) {
+  for (const p of plot) {
     all.push(p.v, p.ibkr, p.pm);
     for (const b of benches) if (p[b.key] != null) all.push(p[b.key]);
   }
   const min = Math.min(...all, 0), max = Math.max(...all);
-  const pad = (max - min) * 0.08 || 1;
+  // Ratios need a ratio-scale floor: the dollar `|| 1` is a hundred percentage
+  // points, which would flatten a whole window onto the zero line.
+  const pad = (max - min) * 0.08 || (pct ? 0.01 : 1);
   const y0 = min - pad, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
+  const x = (i) => PAD_L + (i / (plot.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
   // Monotone cubic spline (smoothPath, shared with the IBKR tab) rather than
@@ -487,16 +548,16 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
   // means the fitted curve never overshoots a turning point, so the area fill
   // can't bulge past a peak the data never reached.
   const linePath = (key) =>
-    smoothPath(series.map((_, i) => x(i)), series.map(p => y(p[key])));
+    smoothPath(plot.map((_, i) => x(i)), plot.map(p => y(p[key])));
   const totalPath = linePath('v');
-  const areaPath = totalPath + ` L${x(series.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const areaPath = totalPath + ` L${x(plot.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
   const zeroY = y(0);
 
-  const tickEvery = Math.max(1, Math.floor(series.length / 6));
-  const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
-  const spanDays = series.length > 1 ? cmbEpochDay(series[series.length - 1].d) - cmbEpochDay(series[0].d) : 0;
+  const tickEvery = Math.max(1, Math.floor(plot.length / 6));
+  const ticks = plot.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const spanDays = plot.length > 1 ? cmbEpochDay(plot[plot.length - 1].d) - cmbEpochDay(plot[0].d) : 0;
   const axisMode = spanDays <= 95 ? 'day'
-    : (series[0].d.slice(0, 4) === series[series.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
+    : (plot[0].d.slice(0, 4) === plot[plot.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
 
   function onMove(e) {
     const svg = svgRef.current;
@@ -505,11 +566,11 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
     const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
     const px = ((clientX - rect.left) / rect.width) * W;
     const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1))));
+    const idx = Math.max(0, Math.min(plot.length - 1, Math.round(t * (plot.length - 1))));
     setHover(idx);
   }
 
-  const hp = hover != null ? series[hover] : null;
+  const hp = hover != null ? plot[hover] : null;
 
   return (
     <>
@@ -593,7 +654,7 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
         })}
       </svg>
 
-      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>$0</div>
+      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>{pct ? '0%' : '$0'}</div>
       <div className="pf-axis-x">
         {ticks.map((t, i) => (
           <span key={i}
@@ -608,11 +669,11 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
           top: `${(y(hp.v) / H) * 100}%`,
         }}>
           <div className="pm-tt-date">{cmbFullDate(hp.d)}</div>
-          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_TOTAL }}/>total<span className={`cmb-tt-num ${hp.v >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.v)}</span></div>
-          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.ibkr)}</span></div>
-          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className={`cmb-tt-num ${hp.pm >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp.pm)}</span></div>
+          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_TOTAL }}/>total<span className={`cmb-tt-num ${hp.v >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.v)}</span></div>
+          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.ibkr)}</span></div>
+          <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className={`cmb-tt-num ${hp.pm >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.pm)}</span></div>
           {benches.map(b => hp[b.key] != null && (
-            <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{cmbSigned(hp[b.key])}</span></div>
+            <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{fmt(hp[b.key])}</span></div>
           ))}
         </div>
       )}
@@ -621,14 +682,19 @@ function CmbChart({ series, log, bench, benchNotional, ddNotional }) {
     {benches.length > 0 && (
       <div className="pf-bench-legend">
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
+        {/* The notional only explains anything in dollars — in percent the
+            benchmark line IS the index's own return, on no notional at all. */}
         {benches.map(b => (
-          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{(ddNotional != null ? ddNotional : benchNotional) ? ` · on ${cmbUSDk(ddNotional != null ? ddNotional : benchNotional)}` : ''}</span>
+          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{(!pct && base) ? ` · on ${cmbUSDk(base)}` : ''}</span>
         ))}
       </div>
     )}
-    <CmbDrawdownStrip series={series} notional={ddNotional != null ? ddNotional : benchNotional}
+    {/* Always the dollar series: this rebuilds an equity curve from notional +
+        cumulative P&L, and reads as a percentage under both settings anyway. */}
+    <CmbDrawdownStrip series={series} notional={base}
       markers={markers} cur={cur} onPick={setAnnot}/>
-    <CmbAlphaStrip series={series} markers={markers} cur={cur} onPick={setAnnot}/>
+    <CmbAlphaStrip series={plot} markers={markers} cur={cur} onPick={setAnnot}
+      unit={pct ? 'pct' : 'usd'}/>
     </>
   );
 }
@@ -1090,15 +1156,22 @@ function cmbWindow(series, notional, range, benchmarks) {
 }
 
 // ---------- combined rolling alpha strip (total $ minus SPX $, zero-centered) ----------
-function CmbAlphaStrip({ series, markers, cur, onPick }) {
+function CmbAlphaStrip({ series, markers, cur, onPick, unit }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
+  const pct = unit === 'pct';
+  const fmt = (v) => cmbFmt(v, unit);
   if (!series || series.length < 2 || series[0].spx == null) return null;
-  const alpha = series.map(p => ({ d: p.d, v: +(p.v - (p.spx || 0)).toFixed(2) }));
+  // In percent both terms are already returns, so the subtraction is in
+  // percentage points and needs no rounding to cents.
+  const alpha = series.map(p => ({
+    d: p.d,
+    v: pct ? p.v - (p.spx || 0) : +(p.v - (p.spx || 0)).toFixed(2),
+  }));
   const last = alpha[alpha.length - 1].v;
   const vals = alpha.map(p => p.v);
   const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  const pad = (hi - lo) * 0.12 || 1;
+  const pad = (hi - lo) * 0.12 || (pct ? 0.01 : 1);
   const y0 = lo - pad, y1 = hi + pad;
   const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
   const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
@@ -1123,7 +1196,7 @@ function CmbAlphaStrip({ series, markers, cur, onPick }) {
     <>
       <div className="pf-strip-head">
         <span className="pf-strip-label">alpha vs spx · cumulative</span>
-        <span className="pf-strip-meta">now {cmbSigned(last)}</span>
+        <span className="pf-strip-meta">now {fmt(last)}</span>
       </div>
       <div className="pm-chart-wrap">
         <svg
@@ -1169,7 +1242,7 @@ function CmbAlphaStrip({ series, markers, cur, onPick }) {
             top: `${(y(hovered.v) / H) * 100}%`,
           }}>
             <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
-            <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{cmbSigned(hovered.v)}</div>
+            <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{fmt(hovered.v)}</div>
           </div>
         )}
       </div>
@@ -1274,9 +1347,13 @@ const CMB_BAR_META = [
   { key: 'pm',   label: 'polymarket', color: CMB_C_PM },
 ];
 
-function CmbMonthlyBars({ series }) {
+function CmbMonthlyBars({ series, unit }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
+  // In percent the series carries additive contributions, so differencing month
+  // ends still gives columns that sum to the window's total return — the same
+  // arithmetic that works on cumulative dollars.
+  const fmt = (v) => cmbFmt(v, unit);
   const months = cmbMonthly(series);
   if (months.length < 2) return null;
   const hasSpx = months.some(m => m.spx != null);
@@ -1381,12 +1458,12 @@ function CmbMonthlyBars({ series }) {
           <div className="pm-tt-date">{hovered.ym}</div>
           {/* Rows follow the on-chart column order so the tooltip reads left
               to right the same way the marks do. */}
-          <div className="pf-tt-bench" style={{ color: CMB_C_IBKR }}>ibkr {cmbSigned(hovered.ibkr)}</div>
+          <div className="pf-tt-bench" style={{ color: CMB_C_IBKR }}>ibkr {fmt(hovered.ibkr)}</div>
           {hovered.spx != null && (
-            <div className="pf-tt-bench" style={{ color: CMB_BENCH.spx }}>spx {cmbSigned(hovered.spx)}</div>
+            <div className="pf-tt-bench" style={{ color: CMB_BENCH.spx }}>spx {fmt(hovered.spx)}</div>
           )}
-          <div className="pf-tt-bench" style={{ color: CMB_C_PM }}>poly {cmbSigned(hovered.pm)}</div>
-          <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {cmbSigned(hovered.total)}</div>
+          <div className="pf-tt-bench" style={{ color: CMB_C_PM }}>poly {fmt(hovered.pm)}</div>
+          <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {fmt(hovered.total)}</div>
         </div>
       )}
     </div>
@@ -1405,6 +1482,11 @@ function Combined({ setView }) {
   const [data, setData] = useCmbState(null);
   const [err, setErr] = useCmbState(null);
   const [range, setRange] = useCmbState('1Y');
+  // '$' or '%' for every P&L figure on the page. Percent by default, matching
+  // the ibkr view: a return on a stated capital base is the comparable figure,
+  // and it is the one that reads against the spx/vt lines drawn beside it.
+  // Dollars are one click away.
+  const [unit, setUnit] = useCmbState('pct');
 
   useCmbEffect(() => {
     let cancelled = false;
@@ -1568,6 +1650,15 @@ function Combined({ setView }) {
   const pos = wTotal >= 0;
   const rangeSub = range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range);
   const rangeNote = data.bdExtra ? `${cmbRangeLabel(range)} · trading + rewards` : `${cmbRangeLabel(range)} trading`;
+  // Percent is a chained TWR on the real per-day capital base — the same
+  // construction the ibkr and polymarket views use, so a return means one thing
+  // across all three pages.
+  const pctSeries = cmbPctSeries(win.series, win.notional);
+  const pct = unit === 'pct' && !!pctSeries;
+  const shown = pct ? pctSeries : win.series;
+  const sLast = (shown && shown.length) ? shown[shown.length - 1] : { v: 0, ibkr: 0, pm: 0 };
+  const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
+  const UnitToggle = window.UnitToggle;
 
   return (
     <section className="pf-wrap cmb-view">
@@ -1575,7 +1666,7 @@ function Combined({ setView }) {
         <div>
           <div className="sz-kicker">◆ overview · ibkr + polymarket</div>
           <h2 className="sz-h2 pm-headline">
-            <span>{pos ? '+' : ''}{cmbUSD(wTotal)}</span>
+            <span>{pct ? cmbPctFmt(sLast.v) : `${pos ? '+' : ''}${cmbUSD(wTotal)}`}</span>
             <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${cmbRangeLabel(range)} pnl`}</span>
           </h2>
           <div className="pf-sub">
@@ -1583,15 +1674,34 @@ function Combined({ setView }) {
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
+        {UnitToggle && (
+          <div className="pf-head-right">
+            <div className="pf-head-unit">
+              {/* No single denominator to name any more — each day divides by
+                  its own capital. Say the method instead. */}
+              {pct && <span className="pf-head-unit-note">time-weighted · daily pnl ÷ capital</span>}
+              <UnitToggle value={unit} onChange={setUnit}/>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="pf-stats">
-        <CmbStat label="ibkr" value={cmbSigned(wIbkr)} tone={wIbkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')} note="deposit-adjusted"/>
-        <CmbStat label="polymarket" value={cmbSigned(wPm)} tone={wPm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')} note={rangeNote}/>
+        {/* In % each book reads as its contribution to the combined return, so
+            the two still add to the headline exactly (see cmbPctSeries). A
+            return on the book's own capital would be a different question, and
+            one the polymarket page already answers. */}
+        <CmbStat label="ibkr" value={fmt(pct ? sLast.ibkr : wIbkr)} tone={wIbkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')}
+          note={pct ? 'deposit-adjusted · contribution' : 'deposit-adjusted'}/>
+        <CmbStat label="polymarket" value={fmt(pct ? sLast.pm : wPm)} tone={wPm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')}
+          note={pct ? `${rangeNote} · contribution` : rangeNote}/>
+        {/* In % the tile's own value IS the points figure it used to carry as a
+            kicker, so the kicker takes the dollars instead of restating it. */}
         {wSpxD != null && (
-          <CmbStat label="vs spx" value={cmbSigned(wSpxD)}
+          <CmbStat label="vs spx"
+            value={pct ? cmbPctFmt(sLast.v - (sLast.spx || 0)) : cmbSigned(wSpxD)}
             tone={wSpxD >= 0 ? 'pos' : 'neg'}
-            note={`${wSpxPts >= 0 ? '+' : ''}${wSpxPts.toFixed(1)}% on notional`}/>
+            note={pct ? `${cmbSigned(wSpxD)} in dollars` : `${wSpxPts >= 0 ? '+' : ''}${wSpxPts.toFixed(1)}% on notional`}/>
         )}
       </div>
 
@@ -1610,8 +1720,8 @@ function Combined({ setView }) {
               )}
             </div>
           </div>
-          <CmbChart series={win.series} log={data.log} bench={data.bench}
-            benchNotional={data.benchNotional} ddNotional={win.notional}/>
+          <CmbChart series={win.series} pctSeries={pctSeries} log={data.log} bench={data.bench}
+            benchNotional={data.benchNotional} ddNotional={win.notional} unit={pct ? 'pct' : 'usd'}/>
           {SZ.RollingStrip && cPerf && (
             <SZ.RollingStrip fullSeries={cFullPerf || cPerf} perfSeries={cPerf}
               benchSeries={cSpx} periods={365}/>
@@ -1656,9 +1766,11 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">monthly pnl · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">ibkr · spx · polymarket</span>
+            <span className="pf-panel-meta">
+              ibkr · spx · polymarket{pct ? ' · contribution to return' : ''}
+            </span>
           </div>
-          <CmbMonthlyBars series={win.series}/>
+          <CmbMonthlyBars series={shown} unit={pct ? 'pct' : 'usd'}/>
         </div>
       )}
 
