@@ -38,6 +38,17 @@
         }
       ]
     },
+    "New Zealand": {
+      "races": [
+        {
+          "office": "parliament",
+          "next": "2026-11-07",
+          "pick": "TOP",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-15"
+        }
+      ]
+    },
     "Sweden": {
       "races": [
         {
