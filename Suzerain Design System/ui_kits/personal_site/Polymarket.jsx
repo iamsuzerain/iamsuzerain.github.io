@@ -1586,8 +1586,12 @@ function Polymarket() {
             </span>
             <div className="pf-panel-head-right">
               <span className="pf-panel-meta">
+                {/* States the data limit, not the window start — the title
+                    already carries the window, and on 1mo or qtd "from jun 1"
+                    was simply false. Phrased as availability because that is
+                    what it explains: why the longer timeframes are missing. */}
                 {pct
-                  ? <>time-weighted · daily pnl ÷ nav · from {PM_PCT_START_LONG}</>
+                  ? <>time-weighted · daily pnl ÷ nav · data from {PM_PCT_START_LONG}</>
                   : !bdExtra ? 'trading only · USDC'
                   : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
                   : 'all sources · rewards spread linearly'}
