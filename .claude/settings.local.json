@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:iamsuzerain.netlify.app)"
+      "WebFetch(domain:iamsuzerain.netlify.app)",
+      "Skill(schedule)",
+      "Skill(schedule:*)",
+      "Bash(python -c \"import uuid;print\\(uuid.uuid4\\(\\)\\)\")"
     ]
   }
 }
