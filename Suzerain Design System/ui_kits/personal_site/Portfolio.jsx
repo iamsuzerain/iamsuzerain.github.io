@@ -741,7 +741,11 @@ function AllocDonut({ data }) {
 }
 
 // ---------- Stat tile ----------
-function StatTile({ label, value, change, kicker }) {
+// `change` always carries the sign — it drives the arrow and the colour — while
+// `changeText` optionally overrides what gets printed. That split is what lets
+// the P&L tiles keep one shape under both units: the big number is whichever
+// unit is selected, and the small coloured line underneath is the other one.
+function StatTile({ label, value, change, changeText, kicker }) {
   const pos = change != null && change >= 0;
   return (
     <div className="pf-stat">
@@ -749,7 +753,7 @@ function StatTile({ label, value, change, kicker }) {
       <div className="pf-stat-value">{value}</div>
       {change != null && (
         <div className={`pf-stat-chg ${pos ? 'pos' : 'neg'}`}>
-          {pos ? '▲' : '▼'} {fmtPct(change)}
+          {pos ? '▲' : '▼'} {changeText != null ? changeText : fmtPct(change)}
         </div>
       )}
       {kicker && <div className="pf-stat-kicker">{kicker}</div>}
@@ -1438,8 +1442,8 @@ function Portfolio() {
 
       {/* These four are fixed calendar periods, not the range picker's window,
           so the toggle only swaps which of the two figures each tile already
-          carried is the big one — the other moves to the kicker rather than
-          being dropped. */}
+          carried is the big one — the other takes the small coloured line
+          underneath. Same shape under both units; only the pair swaps. */}
       <div className="pf-stats">
         {[['mtd', 'mtd', 'month to date'],
           ['qtd', 'qtd', 'quarter to date'],
@@ -1449,7 +1453,8 @@ function Portfolio() {
           if (!p) return null;
           return usd
             ? <StatTile key={key} label={label} value={fmtUSD(p.abs)} change={p.pct} kicker={kicker}/>
-            : <StatTile key={key} label={label} value={fmtPct(p.pct)} kicker={`${kicker} · ${fmtUSD(p.abs)}`}/>;
+            : <StatTile key={key} label={label} value={fmtPct(p.pct)} change={p.pct}
+                changeText={fmtUSD(p.abs)} kicker={kicker}/>;
         })}
       </div>
 
