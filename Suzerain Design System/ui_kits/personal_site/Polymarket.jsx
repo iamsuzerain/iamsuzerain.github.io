@@ -585,7 +585,11 @@ function pmWindow(series, range) {
 // fact about when this account got funded, and a computed floor would move
 // under the reader whenever a scrape landed near the boundary.
 const PM_PCT_START = '2026-06-01';
-const PM_PCT_START_LABEL = 'jun 1';
+// Carries the year everywhere it is shown. "jun 1" beside a chart whose axis
+// runs into 2026 reads as this year's june by default, and the whole point of
+// the label is to say which june the series actually begins.
+const PM_PCT_START_SHORT = 'jun 1 26';     // range button — sized like "all-time"
+const PM_PCT_START_LONG = 'jun 1, 2026';   // panel title and meta
 
 // Last recorded NAV on or before a date, forward-filled. Rows arrive already
 // restated to close-of-day by szPmDateSnapshotRows at the fetch site.
@@ -1358,6 +1362,9 @@ function Polymarket() {
   // back past PM_PCT_START by definition, so they have no honest percent and
   // stay in dollars under both settings.
   const [unit, setUnit] = usePmState('usd');
+  // The timeframe percent stepped down from, so switching back restores it
+  // rather than stranding the reader on the shorter window.
+  const [usdRange, setUsdRange] = usePmState(null);
 
   usePmEffect(() => {
     let cancelled = false;
@@ -1492,12 +1499,26 @@ function Polymarket() {
   const chartSeries = pct ? twrSeries : winSeries;
   const shownRanges = pct ? PM_RANGES.filter(pctRangeOk) : PM_RANGES;
   // MAX stops meaning all-time once the window is trimmed, so it says so.
-  const labelFor = (r) => (pct && r === 'MAX') ? PM_PCT_START_LABEL : pmRangeLabel(r);
+  const labelFor = (r) => (pct && r === 'MAX') ? PM_PCT_START_SHORT : pmRangeLabel(r);
+  // Landing spot when the selected range has no percent. Prefer the longest
+  // real timeframe that does — earliest cutoff wins — and fall back to the
+  // trimmed window only if nothing else qualifies. Dropping straight to "jun 1
+  // 26" would swap a named timeframe for a substitute one when a genuine
+  // shorter timeframe was available: today 12mo steps down to qtd, not to the
+  // start date.
+  const pctFallback = () => {
+    const real = PM_RANGES.filter(r => r !== 'MAX' && pctRangeOk(r));
+    if (!real.length) return 'MAX';
+    return real.reduce((best, r) =>
+      pmRangeCutoff(r, lastD) < pmRangeCutoff(best, lastD) ? r : best);
+  };
   const onUnit = (u) => {
     setUnit(u);
     // Leaving the reader on a range percent cannot express would silently show
     // them a different window than the highlighted button claims.
-    if (u === 'pct' && !pctRangeOk(range)) setRange('MAX');
+    if (u === 'pct' && !pctRangeOk(range)) { setUsdRange(range); setRange(pctFallback()); }
+    // Coming back, restore whatever timeframe they were on before the step-down.
+    if (u === 'usd' && usdRange) { setRange(usdRange); setUsdRange(null); }
   };
 
   // Completed quarters the curve covers end to end, for the history picker.
@@ -1561,12 +1582,12 @@ function Polymarket() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">
-              cumulative pnl · {pct && range === 'MAX' ? `since ${PM_PCT_START_LABEL}` : pmRangeLabel(range)}
+              cumulative pnl · {pct && range === 'MAX' ? `since ${PM_PCT_START_LONG}` : pmRangeLabel(range)}
             </span>
             <div className="pf-panel-head-right">
               <span className="pf-panel-meta">
                 {pct
-                  ? <>time-weighted · daily pnl ÷ nav · from {PM_PCT_START_LABEL}</>
+                  ? <>time-weighted · daily pnl ÷ nav · from {PM_PCT_START_LONG}</>
                   : !bdExtra ? 'trading only · USDC'
                   : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
                   : 'all sources · rewards spread linearly'}

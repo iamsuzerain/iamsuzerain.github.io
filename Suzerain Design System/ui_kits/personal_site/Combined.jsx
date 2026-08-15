@@ -60,8 +60,12 @@ function cmbSigned(n) {
 // to pick a unit — it never divides. Dividing here is what made this view's
 // third construction: a single window-start base for a book whose capital moved
 // all year.
+// Two decimals, matching the ibkr view's fmtPct. One decimal made the legs look
+// like they missed the headline they sum to: 50.94 + 0.45 rounds to 50.9 + 0.5
+// = 51.4 against a total of 51.3. The values are exactly additive (see
+// cmbPctSeries); only the display was losing the carry.
 const cmbPctFmt = (v) => (v == null || !isFinite(v)) ? '—'
-  : (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+  : (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
 function cmbFmt(v, unit) {
   return unit === 'pct' ? cmbPctFmt(v) : cmbSigned(v);
 }
