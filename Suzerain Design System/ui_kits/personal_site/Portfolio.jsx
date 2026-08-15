@@ -126,25 +126,74 @@ function pfRangeCutoff(range, dates) {
 // (v = 0 at the seam) continuously — the trailing window is left untouched. A
 // length-matched placeholder nav rides along because NavChart reads navSeries
 // only for its length when perfSeries is present (values come from perf).
-function pfExtendHistory(navSeries, perfSeries, hist) {
+// The dollar leg of the same curve, for the $ half of the units toggle.
+//
+// It has to be portfolio.json's pnlSeries — the true daily cumulative *dollar*
+// P&L — and never perfSeries scaled by a notional. TWR is scale-free by
+// construction, so one multiplier silently assumes the account was one size all
+// year; it wasn't, and that misprices every intra-year segment. (Combined.jsx's
+// cmbIbkrPoints carries the measured damage: q4 25 read $57.7k against a true
+// $63.6k.)
+//
+// The endpoint is then anchored to pnl["1y"].abs, IBKR's deposit-adjusted
+// ChangeInNAV, which is what the stat tiles headline. On pnlSeries that is a
+// uniform 0.66% nudge (the flows ChangeInNAV counts differ from the
+// CashTransaction sum by ~$2k) rather than a reshaping of the curve — and
+// without it the chart's last point and the "1y" tile would print two different
+// dollar figures for the same quantity, two panels apart.
+function pfAnchorDollars(pnlSeries, perfSeries, oneYearAbs) {
+  if (!pnlSeries || !perfSeries || pnlSeries.length !== perfSeries.length || !pnlSeries.length) return null;
+  const last = pnlSeries[pnlSeries.length - 1].v;
+  if (oneYearAbs == null || !last) return pnlSeries.map(p => ({ d: p.d, v: p.v }));
+  const k = oneYearAbs / last;
+  return pnlSeries.map(p => ({ d: p.d, v: +(p.v * k).toFixed(2) }));
+}
+
+function pfExtendHistory(navSeries, perfSeries, pnlSeries, hist, oneYearAbs) {
+  const dollars = pfAnchorDollars(pnlSeries, perfSeries, oneYearAbs);
   const rows = hist && hist.rows;
-  if (!rows || !rows.length || !perfSeries || !perfSeries.length) return { nav: navSeries, perf: perfSeries };
+  const plain = { nav: navSeries, perf: perfSeries, pnl: dollars };
+  if (!rows || !rows.length || !perfSeries || !perfSeries.length) return plain;
   const seamD = perfSeries[0].d;
   let tSeam = null;                            // history TWR at the seam (exact, else nearest earlier)
-  for (const r of rows) { if (r.t == null) continue; if (r.d <= seamD) tSeam = r.t; else break; }
-  if (tSeam == null) return { nav: navSeries, perf: perfSeries };
+  let vSeam = null;                            // and its cumulative-$ twin, same row
+  for (const r of rows) {
+    if (r.d > seamD) break;
+    if (r.t != null) { tSeam = r.t; vSeam = r.v; }
+  }
+  if (tSeam == null) return plain;
   const f = 1 + tSeam;
-  const pre = rows.filter(r => r.d < seamD && r.t != null)
-                  .map(r => ({ d: r.d, v: (1 + r.t) / f - 1 }));
-  if (!pre.length) return { nav: navSeries, perf: perfSeries };
-  return { nav: pre.map(r => ({ d: r.d, v: 0 })).concat(navSeries), perf: pre.concat(perfSeries) };
+  const preRows = rows.filter(r => r.d < seamD && r.t != null);
+  const pre = preRows.map(r => ({ d: r.d, v: (1 + r.t) / f - 1 }));
+  if (!pre.length) return plain;
+  // History rows are cumulative-$ on their own baseline while the trailing curve
+  // starts at 0 on perfSeries[0].d, so the block is offset by its value at the
+  // seam and the two meet continuously — the anchored trailing year is untouched.
+  // Built off the SAME filtered rows as `pre` so the two legs stay index-aligned;
+  // if a row is missing its dollar figure the whole dollar extension is dropped
+  // rather than shipped one point short of the percent one.
+  const preD = (dollars && vSeam != null && preRows.every(r => r.v != null))
+    ? preRows.map(r => ({ d: r.d, v: +(r.v - vSeam).toFixed(2) }))
+    : null;
+  // The pre-window nav block used to be a length-matched run of zeros, because
+  // NavChart only ever read navSeries for its length once perfSeries was
+  // present. The units toggle now reads nav[0] as the notional its dollar
+  // benchmarks are valued on, and a zero there silently dropped $ mode on every
+  // window opening inside the history — MAX included. nav-history carries the
+  // real closing NAV per row (`n`), so use it and keep 0 only where it is
+  // genuinely absent.
+  return {
+    nav: preRows.map(r => ({ d: r.d, v: r.n != null ? r.n : 0 })).concat(navSeries),
+    perf: pre.concat(perfSeries),
+    pnl: preD ? preD.concat(dollars) : null,
+  };
 }
 
 // Slice navSeries + perfSeries to a trailing range and re-base the cumulative
 // TWR to the window start, so a 3M view reads as the 3M return rather than 3M of
 // the full 12mo curve. Both arrays share dates/length, so one index aligns them.
-function pfWindow(navSeries, perfSeries, range) {
-  if (!perfSeries || perfSeries.length < 2) return { nav: navSeries, perf: perfSeries };
+function pfWindow(navSeries, perfSeries, pnlSeries, range) {
+  if (!perfSeries || perfSeries.length < 2) return { nav: navSeries, perf: perfSeries, pnl: pnlSeries };
   const cutoff = pfRangeCutoff(range, perfSeries.map(p => p.d));
   let i = perfSeries.findIndex(p => p.d >= cutoff);
   if (i < 0) i = 0;
@@ -159,7 +208,14 @@ function pfWindow(navSeries, perfSeries, range) {
   if (j < i + 1) j = Math.min(perfSeries.length - 1, i + 1);
   const base = perfSeries[i].v;
   const perf = perfSeries.slice(i, j + 1).map(p => ({ d: p.d, v: (1 + p.v) / (1 + base) - 1 }));
-  return { nav: navSeries.slice(i, j + 1), perf };
+  // Cumulative dollars subtract cleanly where TWR has to be re-compounded, so
+  // the dollar leg rebases with one subtraction. Dropped entirely if it isn't
+  // index-aligned with perf — a half-aligned series would draw the right shape
+  // against the wrong dates.
+  const pnl = (pnlSeries && pnlSeries.length === perfSeries.length)
+    ? pnlSeries.slice(i, j + 1).map(p => ({ d: p.d, v: +(p.v - pnlSeries[i].v).toFixed(2) }))
+    : null;
+  return { nav: navSeries.slice(i, j + 1), perf, pnl };
 }
 
 // Cumulative alpha: portfolio TWR minus the benchmark's rebased cumulative
@@ -169,6 +225,19 @@ function pfAlphaSeries(perf, benchSeries) {
   const b = rebaseBenchmark(benchSeries, perf.map(p => p.d));
   if (!b) return null;
   return perf.map((p, i) => ({ d: p.d, v: p.v - b[i] }));
+}
+
+// Same idea in dollars: cumulative $ P&L minus what the window-start NAV would
+// have made in the index. Approximate by construction — the real capital base
+// moved during the window — which is exactly why the percent version stays the
+// default here and the dollar figure prints its notional in the legend.
+function pfAlphaDollars(pnl, nav, benchSeries) {
+  if (!pnl || pnl.length < 2 || !nav || !nav.length || !benchSeries) return null;
+  const notional = nav[0].v;
+  if (!notional) return null;
+  const b = rebaseBenchmark(benchSeries, pnl.map(p => p.d));
+  if (!b) return null;
+  return pnl.map((p, i) => ({ d: p.d, v: +(p.v - notional * b[i]).toFixed(2) }));
 }
 
 // Sharpe / annualized vol / max drawdown over a (windowed) TWR series. Mirrors
@@ -436,7 +505,7 @@ const BENCH_STYLES = {
 };
 
 // ---------- Performance chart (deposit-adjusted TWR %) ----------
-function NavChart({ series, perfSeries, benchmarks }) {
+function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
@@ -446,6 +515,13 @@ function NavChart({ series, perfSeries, benchmarks }) {
   const perf = perfSeries && perfSeries.length === series.length
     ? perfSeries
     : series.map(p => ({ d: p.d, v: (p.v - base) / base }));
+
+  // $ mode needs a real dollar curve AND a notional to value the benchmarks on.
+  // Missing either, the chart quietly stays in percent rather than inventing one.
+  const notional = series[0] ? series[0].v : null;
+  const usd = unit === 'usd' && dollars && dollars.length === perf.length && !!notional;
+  const plot = usd ? dollars : perf;
+  const fmtV = usd ? (v) => (v >= 0 ? '+' : '') + fmtUSD(v) : fmtPct;
 
   const overlays = usePortMemo(() => {
     if (!benchmarks) return [];
@@ -458,16 +534,21 @@ function NavChart({ series, perfSeries, benchmarks }) {
       .filter(Boolean);
   }, [benchmarks, perfSeries, series]);
 
-  const values = perf.map(p => p.v);
-  for (const o of overlays) values.push(...o.vals);
+  // The overlays are rebased *returns*; in $ they become what the window-start
+  // NAV would have made in the index, which is the same comparison the combined
+  // view draws.
+  const ovVals = (o) => usd ? o.vals.map(v => notional * v) : o.vals;
+
+  const values = plot.map(p => p.v);
+  for (const o of overlays) values.push(...ovVals(o));
   const min = Math.min(...values), max = Math.max(...values);
   const pad = (max - min) * 0.08 || 0.005;
   const y0 = min - pad, y1 = max + pad;
   const x = (i) => PAD_L + (i / (perf.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
 
-  const linePath = smoothPath(perf.map((_, i) => x(i)), perf.map(p => y(p.v)));
-  const areaPath = linePath + ` L${x(perf.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const linePath = smoothPath(plot.map((_, i) => x(i)), plot.map(p => y(p.v)));
+  const areaPath = linePath + ` L${x(plot.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
 
   const tickEvery = Math.max(1, Math.floor(perf.length / 5));
   const ticks = perf.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
@@ -488,7 +569,7 @@ function NavChart({ series, perfSeries, benchmarks }) {
     setHover(idx);
   }
 
-  const hovered = hover != null ? perf[hover] : null;
+  const hovered = hover != null ? plot[hover] : null;
   const zeroY = y(0);
 
   return (
@@ -527,7 +608,7 @@ function NavChart({ series, perfSeries, benchmarks }) {
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
         {overlays.map(o => (
           <path key={o.key}
-            d={smoothPath(o.vals.map((_, i) => x(i)), o.vals.map(v => y(v)))}
+            d={smoothPath(ovVals(o).map((_, i) => x(i)), ovVals(o).map(v => y(v)))}
             fill="none" stroke={o.style.color} strokeWidth="1.25"/>
         ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
@@ -541,7 +622,7 @@ function NavChart({ series, perfSeries, benchmarks }) {
       </svg>
       <div className="pf-axis-y">
         {yLabels.map((yl, i) => (
-          <span key={i} style={{ top: `${(y(yl.v) / H) * 100}%` }}>{fmtPct(yl.v)}</span>
+          <span key={i} style={{ top: `${(y(yl.v) / H) * 100}%` }}>{fmtV(yl.v)}</span>
         ))}
       </div>
       <div className="pf-axis-x">
@@ -557,10 +638,10 @@ function NavChart({ series, perfSeries, benchmarks }) {
           top: `${(y(hovered.v) / H) * 100}%`,
         }}>
           <div className="pm-tt-date">{hovered.d}</div>
-          <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtPct(hovered.v)}</div>
+          <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtV(hovered.v)}</div>
           {overlays.map(o => (
             <div key={o.key} className="pf-tt-bench" style={{ color: o.style.solid }}>
-              {o.label.toLowerCase()} {fmtPct(o.vals[hover])}
+              {o.label.toLowerCase()} {fmtV(ovVals(o)[hover])}
             </div>
           ))}
         </div>
@@ -570,7 +651,8 @@ function NavChart({ series, perfSeries, benchmarks }) {
       <div className="pf-bench-legend">
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
         {overlays.map(o => (
-          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}</span>
+          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}
+            {usd ? ` · on ${fmtUSD(notional, true)}` : ''}</span>
         ))}
       </div>
     )}
@@ -749,14 +831,18 @@ function DrawdownStrip({ perfSeries }) {
 }
 
 // ---------- Rolling alpha strip (cumulative TWR minus SPX, zero-centered) ----------
-function AlphaStrip({ alpha }) {
+function AlphaStrip({ alpha, unit }) {
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
   if (!alpha || alpha.length < 2) return null;
+  const usd = unit === 'usd';
   const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
   const vals = alpha.map(p => p.v);
   const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  const pad = (hi - lo) * 0.12 || 0.002;
+  // Floor scales with the units: 0.002 is a fifth of a percentage point in
+  // ratio terms and two-tenths of a cent in dollars, which would collapse a
+  // flat dollar strip onto the zero line.
+  const pad = (hi - lo) * 0.12 || (usd ? 1 : 0.002);
   const y0 = lo - pad, y1 = hi + pad;
   const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
   const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
@@ -817,7 +903,9 @@ function AlphaStrip({ alpha }) {
           top: `${(y(hovered.v) / H) * 100}%`,
         }}>
           <div className="pm-tt-date">{hovered.d}</div>
-          <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{hovered.v >= 0 ? '+' : ''}{fmtPctBare(hovered.v)}</div>
+          <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>
+            {hovered.v >= 0 ? '+' : ''}{usd ? fmtUSD(hovered.v) : fmtPctBare(hovered.v)}
+          </div>
         </div>
       )}
     </div>
@@ -1232,6 +1320,10 @@ function Portfolio() {
   const [bench, setBench] = usePortState(null);
   const [hist, setHist] = usePortState(null);
   const [range, setRange] = usePortState('1Y');
+  // Percent by default: this page's headline metric is TWR (the "1y" tile says
+  // so), and the benchmark overlays are exact in percent where the dollar
+  // versions have to assume a notional. $ is one click away.
+  const [unit, setUnit] = usePortState('pct');
 
   usePortEffect(() => {
     fetch('data/portfolio.json', { cache: 'no-store' })
@@ -1274,8 +1366,9 @@ function Portfolio() {
   // Range selector windows the chart, its strips, AND the risk tiles. MAX draws
   // on the accumulated history (nav-history.json) prepended ahead of the Flex
   // window; shorter ranges slice within the trailing year exactly as before.
-  const ext = pfExtendHistory(d.navSeries, d.perfSeries, hist);
-  const win = pfWindow(ext.nav, ext.perf, range);
+  const oneY = d.pnl && d.pnl['1y'] ? d.pnl['1y'].abs : null;
+  const ext = pfExtendHistory(d.navSeries, d.perfSeries, d.pnlSeries, hist, oneY);
+  const win = pfWindow(ext.nav, ext.perf, ext.pnl, range);
   // Completed quarters the (history-extended) curve covers end to end.
   const quarters = (window.szQuarters && ext.perf && ext.perf.length)
     ? window.szQuarters(ext.perf[0].d, ext.perf[ext.perf.length - 1].d)
@@ -1286,10 +1379,17 @@ function Portfolio() {
   const winRisk = pfRiskWindow(win.perf) || risk;
   const betaObj = bench && bench.spx ? computeBeta(win.perf, bench.spx.series) : null;
   const alpha = bench && bench.spx ? pfAlphaSeries(win.perf, bench.spx.series) : null;
+  const alphaD = bench && bench.spx ? pfAlphaDollars(win.pnl, win.nav, bench.spx.series) : null;
   const winDd = win.perf && win.perf.length ? drawdownSeries(win.perf) : [];
   const winMaxDd = winDd.length ? Math.min(0, ...winDd.map(p => p.v)) : 0;
   const winCurDd = winDd.length ? winDd[winDd.length - 1].v : 0;
   const alphaNow = alpha && alpha.length ? alpha[alpha.length - 1].v : null;
+  // $ mode only stands where the dollar leg survived (see pfExtendHistory);
+  // otherwise every panel below silently keeps drawing percent.
+  const usd = unit === 'usd' && !!win.pnl;
+  const alphaShown = (usd && alphaD) ? alphaD : alpha;
+  const alphaShownNow = alphaShown && alphaShown.length ? alphaShown[alphaShown.length - 1].v : null;
+  const PfUnitToggle = window.UnitToggle;
   // Range-aware like the risk tiles: every panel below re-reads the same window.
   const spxSeries = bench && bench.spx ? bench.spx.series : null;
   const capture = spxSeries ? pfCapture(win.perf, spxSeries) : null;
@@ -1307,9 +1407,21 @@ function Portfolio() {
             buying power {fmtUSD(d.account.buyingPower)}
           </div>
         </div>
-        <div className="pf-updated">
-          <span className="pf-dot"/>
-          <span>auto-updated {updatedStr}</span>
+        <div className="pf-head-right">
+          <div className="pf-updated">
+            <span className="pf-dot"/>
+            <span>auto-updated {updatedStr}</span>
+          </div>
+          {PfUnitToggle && win.pnl && (
+            <div className="pf-head-unit">
+              {/* The notional the dollar benchmarks are valued on — the NAV this
+                  window opened at, not today's. */}
+              {usd && win.nav && win.nav.length > 0 && win.nav[0].v > 0 && (
+                <span className="pf-head-unit-note">on {fmtUSD(win.nav[0].v, true)} at {pfRangeLabel(range)} start</span>
+              )}
+              <PfUnitToggle value={unit} onChange={setUnit}/>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1324,11 +1436,21 @@ function Portfolio() {
         <span>delayed up to 24h</span>
       </div>
 
+      {/* These four are fixed calendar periods, not the range picker's window,
+          so the toggle only swaps which of the two figures each tile already
+          carried is the big one — the other moves to the kicker rather than
+          being dropped. */}
       <div className="pf-stats">
-        <StatTile label="mtd"  value={fmtUSD(d.pnl.mtd.abs)}  change={d.pnl.mtd.pct}  kicker="month to date"/>
-        <StatTile label="qtd"  value={fmtUSD(d.pnl.qtd.abs)}  change={d.pnl.qtd.pct}  kicker="quarter to date"/>
-        <StatTile label="ytd"  value={fmtUSD(d.pnl.ytd.abs)}  change={d.pnl.ytd.pct}  kicker="year to date"/>
-        {d.pnl['1y'] && <StatTile label="1y" value={fmtUSD(d.pnl['1y'].abs)} change={d.pnl['1y'].pct} kicker="trailing 12mo · twr"/>}
+        {[['mtd', 'mtd', 'month to date'],
+          ['qtd', 'qtd', 'quarter to date'],
+          ['ytd', 'ytd', 'year to date'],
+          ['1y', '1y', 'trailing 12mo · twr']].map(([key, label, kicker]) => {
+          const p = d.pnl[key];
+          if (!p) return null;
+          return usd
+            ? <StatTile key={key} label={label} value={fmtUSD(p.abs)} change={p.pct} kicker={kicker}/>
+            : <StatTile key={key} label={label} value={fmtPct(p.pct)} kicker={`${kicker} · ${fmtUSD(p.abs)}`}/>;
+        })}
       </div>
 
       {risk && (
@@ -1355,19 +1477,25 @@ function Portfolio() {
             )}
           </div>
         </div>
-        <NavChart series={win.nav} perfSeries={win.perf} benchmarks={bench}/>
+        <NavChart series={win.nav} perfSeries={win.perf} benchmarks={bench}
+          unit={unit} dollars={win.pnl}/>
+        {/* Drawdown stays in percent under both units: a decline from peak is a
+            portfolio-level ratio, and the combined view reads it the same way. */}
         <div className="pf-strip-head">
           <span className="pf-strip-label">underwater · drawdown from peak</span>
           <span className="pf-strip-meta">max {fmtPctBare(winMaxDd)} · now {fmtPctBare(winCurDd)}</span>
         </div>
         <DrawdownStrip perfSeries={win.perf}/>
-        {alpha && (
+        {alphaShown && (
           <>
             <div className="pf-strip-head">
               <span className="pf-strip-label">alpha vs spx · cumulative</span>
-              <span className="pf-strip-meta">now {alphaNow >= 0 ? '+' : ''}{fmtPctBare(alphaNow)}</span>
+              <span className="pf-strip-meta">
+                now {alphaShownNow >= 0 ? '+' : ''}
+                {(usd && alphaD) ? fmtUSD(alphaShownNow) : fmtPctBare(alphaShownNow)}
+              </span>
             </div>
-            <AlphaStrip alpha={alpha}/>
+            <AlphaStrip alpha={alphaShown} unit={(usd && alphaD) ? 'usd' : 'pct'}/>
           </>
         )}
         <RollingStrip fullSeries={ext.perf} perfSeries={win.perf} benchSeries={spxSeries}/>

@@ -556,7 +556,75 @@ function pmWindow(series, range) {
   return series.slice(i, j + 1).map(p => ({ ...p, v: +(p.v - base).toFixed(2) }));
 }
 
-function PmSpark({ series }) {
+// ---------- percent mode: time-weighted return, from 2026-06-01 ----------
+// A percentage here can only be a time-weighted return, and only over a window
+// where the capital base is stable. Both halves of that were learned the hard
+// way:
+//
+//   A fixed denominator cannot work. The book went ~$3k to ~$247k on transfers,
+//   so dividing a window's P&L by any single NAV in it is wrong at one end or
+//   the other — 6mo on its window-start NAV printed peak +270.8%.
+//
+//   TWR fixes the ramp (each day's P&L is measured against the NAV that earned
+//   it, and a transfer moves NAV without moving P&L, so flows never register as
+//   performance) but not the data. polymarket-nav-history.json is `derived`
+//   before 2026-07-15 — anchored to the oldest recorded NAV and walked back
+//   through transfer/pnl/rewards deltas — and its error is an ABSOLUTE dollar
+//   amount, not a proportional one. The generator validates at 0.36% mean /
+//   1.52% worst, but that was measured at ~$230k NAV. The same $838-$3,485
+//   against the $3,032 NAV of 2026-01-09 is 28%-115%. Run over the full history
+//   the answer is "+111%, give or take 40 points", which is not a number to put
+//   on a page.
+//
+// 2026-06-01 is where the book crosses ~$200k and stays there (min NAV after it
+// is $215,185, so the worst residual is 1.62% of the smallest denominator).
+// From there the percent and the dollars finally tell the same story — 1mo
+// reads +10.1% against +$22,895 — which is the test the longer windows failed.
+//
+// Hardcoded rather than rediscovered from a NAV threshold each load: it is one
+// fact about when this account got funded, and a computed floor would move
+// under the reader whenever a scrape landed near the boundary.
+const PM_PCT_START = '2026-06-01';
+const PM_PCT_START_LABEL = 'jun 1';
+
+// Last recorded NAV on or before a date, forward-filled. Rows arrive already
+// restated to close-of-day by szPmDateSnapshotRows at the fetch site.
+function pmNavLookup(rows) {
+  const sorted = (rows || [])
+    .filter(r => r && r.d && r.nav != null)
+    .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  if (!sorted.length) return null;
+  return (iso) => {
+    let lo = 0, hi = sorted.length - 1, best = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (sorted[mid].d <= iso) { best = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return best === -1 ? null : sorted[best].nav;
+  };
+}
+
+// Chain daily returns into a cumulative TWR series starting at 0. Takes the
+// dollar curve the chart already plots — trading plus the all-source income
+// ramp — so the two units describe the same quantity. Deltas are unaffected by
+// pmWindow's rebasing, so the slice can arrive already rebased.
+function pmTwrSeries(series, navAt) {
+  if (!series || series.length < 2 || !navAt) return null;
+  const out = [{ d: series[0].d, v: 0 }];
+  let cum = 1;
+  for (let i = 1; i < series.length; i++) {
+    const base = navAt(series[i - 1].d);
+    if (!base || base <= 0) return null;
+    cum *= 1 + (series[i].v - series[i - 1].v) / base;
+    out.push({ d: series[i].d, v: +(cum - 1).toFixed(6) });
+  }
+  return out;
+}
+
+function PmSpark({ series, unit }) {
+  const pct = unit === 'pct';
+  const fmt = (v) => pct ? pmPct(v) : (v >= 0 ? '+' : '') + pmUSD(v);
+  const fmtCompact = (v) => pct ? pmPct(v) : pmUSDCompact(v);
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
   const svgRef = usePmRef(null);
   const [hover, setHover] = usePmState(null);
@@ -638,9 +706,9 @@ function PmSpark({ series }) {
         )}
       </svg>
 
-      <div className="pm-peak" style={{ left: `${(x(maxIdx) / W) * 100}%`, top: `${(y(max) / H) * 100}%` }}>peak {pmUSDCompact(max)}</div>
-      <div className="pm-trough" style={{ left: `${(x(minIdx) / W) * 100}%`, top: `${(y(min) / H) * 100}%` }}>trough {pmUSDCompact(min)}</div>
-      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>$0</div>
+      <div className="pm-peak" style={{ left: `${(x(maxIdx) / W) * 100}%`, top: `${(y(max) / H) * 100}%` }}>peak {fmtCompact(max)}</div>
+      <div className="pm-trough" style={{ left: `${(x(minIdx) / W) * 100}%`, top: `${(y(min) / H) * 100}%` }}>trough {fmtCompact(min)}</div>
+      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>{pct ? '0%' : '$0'}</div>
       <div className="pf-axis-x">
         {ticks.map((t, i) => (
           <span key={i}
@@ -655,9 +723,7 @@ function PmSpark({ series }) {
           top: `${(y(hovered.v) / H) * 100}%`,
         }}>
           <div className="pm-tt-date">{fmtDate(hovered.d)}</div>
-          <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>
-            {hovered.v >= 0 ? '+' : ''}{pmUSD(hovered.v)}
-          </div>
+          <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmt(hovered.v)}</div>
         </div>
       )}
     </div>
@@ -1281,9 +1347,17 @@ function Polymarket() {
   const [err, setErr] = usePmState(null);
   const [cal, setCal] = usePmState(null);
   const [hist, setHist] = usePmState(null);
+  // Daily Polymarket NAV — read only as the denominator for percent mode.
+  const [navRows, setNavRows] = usePmState(null);
   // Defaults to the trailing year like the ibkr and overview charts — the
   // lifetime curve is still one click away under MAX.
   const [range, setRange] = usePmState('1Y');
+  // Dollars by default, and unlike the other two views this governs the chart
+  // panel alone — which is why the switch lives in that panel's head rather
+  // than the page's. The tiles above are lifetime figures whose window reaches
+  // back past PM_PCT_START by definition, so they have no honest percent and
+  // stay in dollars under both settings.
+  const [unit, setUnit] = usePmState('usd');
 
   usePmEffect(() => {
     let cancelled = false;
@@ -1318,6 +1392,16 @@ function Polymarket() {
       .then(j => {
         if (cancelled || !j) return;
         setHist({ ...j, rows: window.szPmDateSnapshotRows(j.rows) });
+      })
+      .catch(() => {});
+    // NAV history rides the same ~08:45 UTC betmoar scrape as the breakdown
+    // history, so its rows get the same date restatement — a denominator read
+    // off the wrong day would shift every return in percent mode.
+    fetch('data/polymarket-nav-history.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (cancelled || !j || !Array.isArray(j.rows)) return;
+        setNavRows(window.szPmDateSnapshotRows(j.rows));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -1385,11 +1469,44 @@ function Polymarket() {
   // Chart window. Rewards are spread across the *lifetime* timeline before the
   // slice, so a window shows the share of them that accrued inside it.
   const winSeries = pmWindow(sparkSeries, range);
+
+  // ---- percent mode ----
+  // Every window is trimmed at PM_PCT_START, so MAX in percent means "since
+  // jun 1" rather than a lifetime TWR whose early denominators are guesses.
+  const navAt = pmNavLookup(navRows);
+  const lastD = (pnlSeries && pnlSeries.length) ? pnlSeries[pnlSeries.length - 1].d : null;
+  // A range qualifies once its own start clears PM_PCT_START. MAX always does,
+  // because it gets trimmed to exactly that date. This list grows on its own as
+  // history accumulates — 3mo qualifies from 2026-09-01, 6mo from 2026-12-01.
+  const pctRangeOk = (r) => {
+    if (r === 'MAX') return true;
+    if (!lastD) return false;
+    const c = pmRangeCutoff(r, lastD);
+    return c != null && c >= PM_PCT_START;
+  };
+  const pctSlice = (winSeries || []).filter(p => p.d >= PM_PCT_START);
+  const twrSeries = navAt ? pmTwrSeries(pctSlice, navAt) : null;
+  // Percent is only offered when there is a denominator for every day of it.
+  const pctReady = !!(twrSeries && twrSeries.length > 1);
+  const pct = unit === 'pct' && pctReady;
+  const chartSeries = pct ? twrSeries : winSeries;
+  const shownRanges = pct ? PM_RANGES.filter(pctRangeOk) : PM_RANGES;
+  // MAX stops meaning all-time once the window is trimmed, so it says so.
+  const labelFor = (r) => (pct && r === 'MAX') ? PM_PCT_START_LABEL : pmRangeLabel(r);
+  const onUnit = (u) => {
+    setUnit(u);
+    // Leaving the reader on a range percent cannot express would silently show
+    // them a different window than the highlighted button claims.
+    if (u === 'pct' && !pctRangeOk(range)) setRange('MAX');
+  };
+
   // Completed quarters the curve covers end to end, for the history picker.
-  const quarters = (window.szQuarters && pnlSeries && pnlSeries.length)
+  const allQuarters = (window.szQuarters && pnlSeries && pnlSeries.length)
     ? window.szQuarters(pnlSeries[0].d, pnlSeries[pnlSeries.length - 1].d)
     : [];
+  const quarters = pct ? allQuarters.filter(q => q.start >= PM_PCT_START) : allQuarters;
   const PmHistoryPicker = window.HistoryPicker;
+  const PmUnitToggle = window.UnitToggle;
 
   return (
     <section className="pf-wrap pm-view">
@@ -1443,10 +1560,14 @@ function Polymarket() {
       {pnlSeries && pnlSeries.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">cumulative pnl · {pmRangeLabel(range)}</span>
+            <span className="pf-panel-title">
+              cumulative pnl · {pct && range === 'MAX' ? `since ${PM_PCT_START_LABEL}` : pmRangeLabel(range)}
+            </span>
             <div className="pf-panel-head-right">
               <span className="pf-panel-meta">
-                {!bdExtra ? 'trading only · USDC'
+                {pct
+                  ? <>time-weighted · daily pnl ÷ nav · from {PM_PCT_START_LABEL}</>
+                  : !bdExtra ? 'trading only · USDC'
                   : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
                   : 'all sources · rewards spread linearly'}
                 {pnlStale && (pnlPending
@@ -1454,18 +1575,25 @@ function Polymarket() {
                   : <> · <span className="sz-dim">daily snapshot</span></>)}
               </span>
               <div className="pf-range">
-                {PM_RANGES.map(r => (
+                {shownRanges.map(r => (
                   <button key={r} type="button"
                     className={`pf-range-btn${range === r ? ' active' : ''}`}
-                    onClick={() => setRange(r)}>{r.toLowerCase()}</button>
+                    onClick={() => setRange(r)}>{labelFor(r).toLowerCase()}</button>
                 ))}
                 {PmHistoryPicker && (
                   <PmHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
                 )}
+                {/* Sits with the range buttons, in this panel's head, because
+                    it governs this panel and nothing else on the page. */}
+                {PmUnitToggle && pctReady && (
+                  <span className="pf-range-unit">
+                    <PmUnitToggle value={pct ? 'pct' : 'usd'} onChange={onUnit}/>
+                  </span>
+                )}
               </div>
             </div>
           </div>
-          <PmSpark series={winSeries}/>
+          <PmSpark series={chartSeries} unit={pct ? 'pct' : 'usd'}/>
         </div>
       )}
 

@@ -267,6 +267,24 @@
       0 8px 24px -14px rgba(0,0,0,0.9);
   }
 
+  /* Data views knock the photo back on purpose (.sz-dim .sz-skyline-photo), but
+     the surfaces above sample that backdrop and put the colour straight back:
+     0.92 x 1.2 = 1.10, more saturated inside a pane than one pixel outside it.
+     At 0.45 alpha that reads through. The skyline in window-view.jpg is lit
+     windows and signage — long thin horizontal bands of red — so what surfaced
+     on the overview was a red line lying across a chart with no visible source
+     anywhere around it. Match the dim rather than fight it: 0.92 x 0.85 = 0.78
+     leaves the pane recessed from the photo it sits on, which is what glass
+     over a dimmed view should do. The hero keeps the 120% it was tuned for. */
+  .sz-dim .sz-surface,
+  .sz-dim .sz-prose,
+  .sz-dim .pf-head,
+  .sz-dim .pf-stat,
+  .sz-dim .pf-panel {
+    backdrop-filter: blur(20px) saturate(85%);
+    -webkit-backdrop-filter: blur(20px) saturate(85%);
+  }
+
   /* The page header sits nearest the viewer — a touch more opaque, lit a
      little harder, dropping a longer shadow. The only depth step on the page;
      more than one and the hierarchy stops meaning anything. */
@@ -573,6 +591,28 @@
      in the middle of the head */
   .pf-panel-head-right {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px;
+  }
+  /* $ / % switch. It lives in the page head rather than a panel head because it
+     governs the headline, the stat row AND every dollar chart below them — a
+     per-panel control would let the tiles and the chart under them disagree
+     about what their numbers mean. The base it divides by is printed beside it
+     whenever % is on, so the percentage is never denominator-less. */
+  .pf-head-right {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  }
+  .pf-head-unit { display: flex; align-items: center; gap: 10px; }
+  /* Same switch sitting inside a panel head's range strip, where it governs
+     that one panel. The rule separates it from the range buttons so it doesn't
+     read as an eighth timeframe. */
+  .pf-range-unit {
+    display: inline-flex; margin-left: 8px; padding-left: 10px;
+    border-left: 1px solid var(--border-soft);
+  }
+  .pf-unit { display: inline-flex; gap: 4px; }
+  .pf-unit .pf-range-btn { min-width: 28px; }
+  .pf-head-unit-note {
+    font-family: var(--font-mono); font-size: 10px; color: var(--fg-4);
+    letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
   }
   .pf-range-btn {
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;

@@ -428,6 +428,39 @@ function szPmIncomeCurve(rows, lifeStartDay, total, endDay) {
   };
 }
 
+// ---------- $ / % units (overview · polymarket) ----------
+// Both views chart cumulative *dollars*, so a percentage here is always "P&L
+// over a stated capital base" — never a time-weighted return. Dividing a whole
+// window by one base is a pure rescale: every curve keeps its exact shape and
+// only the labels change, which is the point. It is also why the base has to be
+// printed on screen wherever the toggle is on. A bare percentage whose
+// denominator is off-screen is the one thing this must not produce — the same
+// +8% could be on a $250k book or a $970k one.
+function szPctOf(v, base) {
+  if (v == null || !base) return null;
+  return (v / base) * 100;
+}
+
+function szFmtPct(v, base, digits = 1) {
+  const p = szPctOf(v, base);
+  if (p == null || !isFinite(p)) return '—';
+  return (p >= 0 ? '+' : '') + p.toFixed(digits) + '%';
+}
+
+// Two buttons wearing the range selector's chrome, because they sit beside it
+// (or above it) and do the same kind of job: change how the same series reads.
+function UnitToggle({ value, onChange }) {
+  return (
+    <div className="pf-unit" role="group" aria-label="value units">
+      {[['usd', '$'], ['pct', '%']].map(([k, lbl]) => (
+        <button key={k} type="button" aria-pressed={value === k}
+          className={`pf-range-btn${value === k ? ' active' : ''}`}
+          onClick={() => onChange(k)}>{lbl}</button>
+      ))}
+    </div>
+  );
+}
+
 // The "history" control that sits after MAX on a range selector.
 function HistoryPicker({ quarters, value, onPick }) {
   const [open, setOpen] = useState(false);
@@ -475,6 +508,9 @@ window.Cursor = Cursor;
 window.useDecode = useDecode;
 window.useCursor = useCursor;
 window.HistoryPicker = HistoryPicker;
+window.UnitToggle = UnitToggle;
+window.szPctOf = szPctOf;
+window.szFmtPct = szFmtPct;
 window.szQuarters = szQuarters;
 window.szIsQuarter = szIsQuarter;
 window.szQuarterLabel = szQuarterLabel;
