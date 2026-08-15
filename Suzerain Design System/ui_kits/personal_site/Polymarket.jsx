@@ -589,7 +589,7 @@ const PM_PCT_START = '2026-06-01';
 // runs into 2026 reads as this year's june by default, and the whole point of
 // the label is to say which june the series actually begins.
 const PM_PCT_START_SHORT = 'jun 1 26';     // range button — sized like "all-time"
-const PM_PCT_START_LONG = 'jun 1, 2026';   // panel title and meta
+const PM_PCT_START_LONG = 'jun 1, 2026';   // panel title, on that range only
 
 // Last recorded NAV on or before a date, forward-filled. Rows arrive already
 // restated to close-of-day by szPmDateSnapshotRows at the fetch site.
@@ -1586,12 +1586,13 @@ function Polymarket() {
             </span>
             <div className="pf-panel-head-right">
               <span className="pf-panel-meta">
-                {/* States the data limit, not the window start — the title
-                    already carries the window, and on 1mo or qtd "from jun 1"
-                    was simply false. Phrased as availability because that is
-                    what it explains: why the longer timeframes are missing. */}
+                {/* No start date here. The title names the window on every
+                    range and the range strip carries the start date on the one
+                    button where it IS the window — repeating it in the meta put
+                    a jun 1 next to timeframes that begin in july. This says
+                    what the numbers are, matching the dollar line beside it. */}
                 {pct
-                  ? <>time-weighted · daily pnl ÷ nav · data from {PM_PCT_START_LONG}</>
+                  ? (bdExtra ? 'time-weighted · all sources' : 'time-weighted · trading only')
                   : !bdExtra ? 'trading only · USDC'
                   : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
                   : 'all sources · rewards spread linearly'}
