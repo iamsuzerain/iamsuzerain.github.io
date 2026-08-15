@@ -27,6 +27,17 @@
         }
       ]
     },
+    "Sweden": {
+      "races": [
+        {
+          "office": "parliament",
+          "next": "2026-09-13",
+          "pick": "Centerpartiet",
+          "enthusiasm": "qualified",
+          "logged": "2026-08-15"
+        }
+      ]
+    },
     "United States of America": {
       "races": [
         {
