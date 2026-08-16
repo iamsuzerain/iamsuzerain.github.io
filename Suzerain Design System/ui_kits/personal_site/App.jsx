@@ -27,7 +27,7 @@ function App() {
   }, []);
   const setView = (v) => { window.location.hash = v === 'hero' ? '/' : `/${v}`; };
   const views = {
-    hero: <Hero setView={setView}/>,
+    hero: <Hero/>,
     portfolio: <Portfolio/>,
     polymarket: <Polymarket/>,
     combined: <Combined setView={setView}/>,
