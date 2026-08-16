@@ -1662,7 +1662,7 @@ function Combined({ setView }) {
   const shown = pct ? pctSeries : win.series;
   const sLast = (shown && shown.length) ? shown[shown.length - 1] : { v: 0, ibkr: 0, pm: 0 };
   const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
-  const UnitToggle = window.UnitToggle;
+  const UnitBar = window.UnitBar;
 
   return (
     <section className="pf-wrap cmb-view">
@@ -1678,15 +1678,13 @@ function Combined({ setView }) {
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
-        {UnitToggle && (
-          <div className="pf-head-right">
-            <div className="pf-head-unit">
-              {/* No single denominator to name any more — each day divides by
-                  its own capital. Say the method instead. */}
-              {pct && <span className="pf-head-unit-note">time-weighted · daily pnl ÷ capital</span>}
-              <UnitToggle value={unit} onChange={setUnit}/>
-            </div>
-          </div>
+        {/* Draws in the nav, not here — the risk grid and monthly bars this
+            governs sit well below the fold. There is no single denominator to
+            name (each day divides by its own capital), so the note names the
+            method, and in the nav it names it the way the ibkr page's 1y tile
+            already does. */}
+        {UnitBar && (
+          <UnitBar value={unit} onChange={setUnit} note={pct ? 'twr' : null}/>
         )}
       </div>
 

@@ -166,8 +166,14 @@
   }
 
   /* ========== Nav ========== */
+  /* Wraps at every width, not just the phone breakpoint below. Once the unit
+     switch joined the row, widths in the 800–1200 band ran out of room, and an
+     unwrapped flex row resolves that by crushing the one shrinkable item — the
+     note naming the denominator, which is exactly the thing that must not
+     disappear. Wrapping drops the switch to its own row instead. */
   .sz-nav {
     display: flex; align-items: center; gap: 28px;
+    flex-wrap: wrap; row-gap: 10px;
     padding: 14px 20px; margin-bottom: 80px;
     background: rgba(10,6,18,0.6);
     backdrop-filter: blur(12px);
@@ -203,6 +209,28 @@
   .sz-nav-item:hover { color: var(--violet-400); }
   .sz-nav-item.active { color: var(--fg-1); }
   .sz-nav-arrow { color: var(--violet-400); }
+  /* $ / % switch, published into the nav by whichever view owns one. It sits
+     here rather than in that view's head because it governs the headline, the
+     stat row and every chart below them — all of which outrun the fold, while
+     the nav is sticky. The base it divides by rides beside it whenever % is on,
+     so the percentage is never denominator-less at any scroll position.
+     margin-left:auto is a no-op on desktop, where .sz-nav-items already eats
+     the slack; it does the work once the nav wraps and the items drop away to
+     their own row. */
+  .sz-nav-unit {
+    display: flex; align-items: center; gap: 10px;
+    margin-left: auto; min-width: 0; flex: none;
+  }
+  /* Budget: the nav gives this note about 210px at 1280, which is ~28 mono
+     characters. Notes are written to that — the ellipsis is a floor, not the
+     plan, and if it engages the note is too long to be doing its job. */
+  .sz-nav-unit-note {
+    color: var(--fg-4); font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Whatever the note gives up, the buttons keep. */
+  .sz-nav-unit .pf-unit { flex: none; }
   .sz-nav-meta {
     color: var(--fg-3); font-size: 10px;
     letter-spacing: 0.14em; text-transform: uppercase;
@@ -592,28 +620,20 @@
   .pf-panel-head-right {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px;
   }
-  /* $ / % switch. It lives in the page head rather than a panel head because it
-     governs the headline, the stat row AND every dollar chart below them — a
-     per-panel control would let the tiles and the chart under them disagree
-     about what their numbers mean. The base it divides by is printed beside it
-     whenever % is on, so the percentage is never denominator-less. */
   .pf-head-right {
     display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
   }
-  .pf-head-unit { display: flex; align-items: center; gap: 10px; }
-  /* Same switch sitting inside a panel head's range strip, where it governs
-     that one panel. The rule separates it from the range buttons so it doesn't
-     read as an eighth timeframe. */
+  /* The same switch sitting inside a panel head's range strip, where it governs
+     that one panel — polymarket's cumulative-pnl chart, the only one still
+     scoped that narrowly. The rule separates it from the range buttons so it
+     doesn't read as an eighth timeframe. The page-wide switches on ibkr and
+     overview draw in the nav instead; see .sz-nav-unit. */
   .pf-range-unit {
     display: inline-flex; margin-left: 8px; padding-left: 10px;
     border-left: 1px solid var(--border-soft);
   }
   .pf-unit { display: inline-flex; gap: 4px; }
   .pf-unit .pf-range-btn { min-width: 28px; }
-  .pf-head-unit-note {
-    font-family: var(--font-mono); font-size: 10px; color: var(--fg-4);
-    letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
-  }
   .pf-range-btn {
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--fg-4);
@@ -891,13 +911,14 @@
     .pf-row { grid-template-columns: minmax(0, 1fr); }
     .sz-nav {
       gap: 12px; padding: 12px 14px; margin-bottom: 48px;
-      flex-wrap: wrap; row-gap: 8px;
+      row-gap: 8px;   /* wrapping itself is unconditional now — see above */
     }
     .sz-nav-items {
       gap: 14px; margin-left: 0; order: 3; flex-basis: 100%;
       flex-wrap: wrap;
     }
     .sz-nav-meta { display: none; }
+    .sz-nav-unit { gap: 8px; }
     .pf-table { font-size: 11px; }
     .pf-table th, .pf-table td { padding: 7px 8px; }
   }

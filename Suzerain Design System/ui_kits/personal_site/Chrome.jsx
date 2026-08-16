@@ -449,6 +449,8 @@ function szFmtPct(v, base, digits = 1) {
 
 // Two buttons wearing the range selector's chrome, because they sit beside it
 // (or above it) and do the same kind of job: change how the same series reads.
+// Drawn in a panel head where the switch governs that panel, and in the nav
+// where it governs the page — see UnitBar below.
 function UnitToggle({ value, onChange }) {
   return (
     <div className="pf-unit" role="group" aria-label="value units">
@@ -459,6 +461,55 @@ function UnitToggle({ value, onChange }) {
       ))}
     </div>
   );
+}
+
+// Where a switch governs a whole page — ibkr and overview — it used to sit in
+// that page's head, and the head scrolls away within a screen. Reading a
+// percentage eight panels down meant scrolling back to the top to see it in
+// dollars. The nav is the one strip that stays, so those two draw there, and
+// the note naming the base goes with them: szPctOf's rule (never a percentage
+// whose denominator is off-screen) then holds at any scroll position instead of
+// only at the top of the page. Panel-scoped switches stay in their panel head —
+// see polymarket, where the switch governs one chart.
+//
+// A module-level slot rather than state lifted through App, because Nav is
+// App's sibling, not its child: the two views own their unit as before and only
+// publish a view of it here.
+const SZ_UNIT_SLOT = { cur: null, subs: new Set() };
+function szSetUnitSlot(slot) {
+  SZ_UNIT_SLOT.cur = slot;
+  SZ_UNIT_SLOT.subs.forEach(fn => fn(slot));
+}
+
+// Rendered (as null) by the view, where the toggle used to be — a component
+// rather than a hook because both of these views early-return while their feed
+// is loading, so a hook at the call site would be a conditional one.
+function UnitBar({ value, onChange, note }) {
+  // The views pass inline arrows, so onChange is a new function every render.
+  // Through a ref it can't re-publish the slot and re-render the nav on each
+  // unrelated state change in the page.
+  const handler = useRef(onChange);
+  useEffect(() => { handler.current = onChange; });
+  useEffect(() => {
+    szSetUnitSlot({ value, note: note || null, onChange: (u) => handler.current(u) });
+  }, [value, note]);
+  // Unmount only. Clearing on every deps change would blink the switch out of
+  // the nav and back in each time the note text changed.
+  useEffect(() => () => szSetUnitSlot(null), []);
+  return null;
+}
+
+// The nav side of the same slot. Null whenever the mounted view has no
+// page-wide unit to offer, which is every view but ibkr and overview.
+function useUnitSlot() {
+  const [slot, setSlot] = useState(SZ_UNIT_SLOT.cur);
+  useEffect(() => {
+    const fn = (s) => setSlot(s);
+    SZ_UNIT_SLOT.subs.add(fn);
+    setSlot(SZ_UNIT_SLOT.cur);   // in case a view published before we subscribed
+    return () => { SZ_UNIT_SLOT.subs.delete(fn); };
+  }, []);
+  return slot;
 }
 
 // The "history" control that sits after MAX on a range selector.
@@ -509,6 +560,8 @@ window.useDecode = useDecode;
 window.useCursor = useCursor;
 window.HistoryPicker = HistoryPicker;
 window.UnitToggle = UnitToggle;
+window.UnitBar = UnitBar;
+window.useUnitSlot = useUnitSlot;
 window.szPctOf = szPctOf;
 window.szFmtPct = szFmtPct;
 window.szQuarters = szQuarters;
