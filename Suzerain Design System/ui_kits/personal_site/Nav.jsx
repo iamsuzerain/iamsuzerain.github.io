@@ -19,6 +19,13 @@ function useStuck(threshold = 8) {
 
 function Nav({ view, setView }) {
   const stuck = useStuck();
+  // Whatever view is mounted publishes its $/% switch into Chrome.jsx's slot;
+  // the nav hosts it so the control rides the scroll rather than sitting in a
+  // panel head the reader has long since scrolled past. Null on views without
+  // one. Unguarded because Chrome.jsx always loads first — a hook can't be
+  // called conditionally anyway.
+  const unit = window.useUnitSlot();
+  const NavUnitToggle = window.UnitToggle;
   const items = [
     { id: 'hero', label: 'home' },
     { id: 'combined', label: 'overview' },
@@ -62,6 +69,12 @@ function Nav({ view, setView }) {
           </button>
         ))}
       </div>
+      {unit && NavUnitToggle && (
+        <div className="sz-nav-unit">
+          {unit.note && <span className="sz-nav-unit-note">{unit.note}</span>}
+          <NavUnitToggle value={unit.value} onChange={unit.onChange}/>
+        </div>
+      )}
       <div className="sz-nav-meta">◆ {new Date().getFullYear()} · {(window.CONTENT && window.CONTENT.version) || 'v0.5'}</div>
     </nav>
   );

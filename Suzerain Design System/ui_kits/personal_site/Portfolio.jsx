@@ -1393,7 +1393,7 @@ function Portfolio() {
   const usd = unit === 'usd' && !!win.pnl;
   const alphaShown = (usd && alphaD) ? alphaD : alpha;
   const alphaShownNow = alphaShown && alphaShown.length ? alphaShown[alphaShown.length - 1].v : null;
-  const PfUnitToggle = window.UnitToggle;
+  const PfUnitBar = window.UnitBar;
   // Range-aware like the risk tiles: every panel below re-reads the same window.
   const spxSeries = bench && bench.spx ? bench.spx.series : null;
   const capture = spxSeries ? pfCapture(win.perf, spxSeries) : null;
@@ -1416,15 +1416,15 @@ function Portfolio() {
             <span className="pf-dot"/>
             <span>auto-updated {updatedStr}</span>
           </div>
-          {PfUnitToggle && win.pnl && (
-            <div className="pf-head-unit">
-              {/* The notional the dollar benchmarks are valued on — the NAV this
-                  window opened at, not today's. */}
-              {usd && win.nav && win.nav.length > 0 && win.nav[0].v > 0 && (
-                <span className="pf-head-unit-note">on {fmtUSD(win.nav[0].v, true)} at {pfRangeLabel(range)} start</span>
-              )}
-              <PfUnitToggle value={unit} onChange={setUnit}/>
-            </div>
+          {/* Renders nothing here: the switch itself is drawn in the nav, which
+              stays put while the analytics stack below runs past the fold. The
+              note is the notional the dollar benchmarks are valued on — the NAV
+              this window opened at, not today's — and travels with it so the
+              percentages are never denominator-less on screen. */}
+          {PfUnitBar && win.pnl && (
+            <PfUnitBar value={unit} onChange={setUnit}
+              note={usd && win.nav && win.nav.length > 0 && win.nav[0].v > 0
+                ? `on ${fmtUSD(win.nav[0].v, true)} at ${pfRangeLabel(range)} start` : null}/>
           )}
         </div>
       </div>

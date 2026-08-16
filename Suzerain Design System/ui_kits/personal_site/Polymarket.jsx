@@ -1610,7 +1610,10 @@ function Polymarket() {
                   <PmHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
                 )}
                 {/* Sits with the range buttons, in this panel's head, because
-                    it governs this panel and nothing else on the page. */}
+                    it governs this panel and nothing else on the page. The ibkr
+                    and overview switches ride in the nav instead — they govern
+                    a whole page, and a page-wide control in a panel head is the
+                    thing worth hoisting. This one is not. */}
                 {PmUnitToggle && pctReady && (
                   <span className="pf-range-unit">
                     <PmUnitToggle value={pct ? 'pct' : 'usd'} onChange={onUnit}/>
