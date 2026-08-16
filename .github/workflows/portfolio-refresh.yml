@@ -40,7 +40,7 @@ jobs:
         run: |
           python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/merge-nav-history.py"
 
-      - name: fetch benchmark closes (SPX + VT)
+      - name: fetch benchmark closes (see TICKERS in fetch-benchmarks.py)
         # Best-effort: a Yahoo hiccup shouldn't block the IBKR refresh.
         run: |
           python3 "Suzerain Design System/ui_kits/personal_site/scripts/benchmarks/fetch-benchmarks.py" \
