@@ -327,10 +327,13 @@ function pfHistogram(rets, moments, targetBins = 28) {
 // The tiles report one number per window; this reports how that number moved
 // inside the window. A book whose net exposure swings shows it here and nowhere
 // else. Window adapts down on short ranges so 1M still plots something honest.
+// `bench: true` metrics name the benchmark they were measured against, which the
+// reader now chooses — so the label is built at render time from whichever one
+// the strip was handed, not baked in here.
 const PF_ROLL_METRICS = {
-  beta: { label: 'beta vs spx', zero: 1, fmt: (v) => fmtNum(v, 2), bench: true },
-  vol:  { label: 'ann vol',     zero: 0, fmt: (v) => fmtPctBare(v, 1), bench: false },
-  corr: { label: 'corr vs spx', zero: 0, fmt: (v) => fmtNum(v, 2), bench: true },
+  beta: { label: 'beta', zero: 1, fmt: (v) => fmtNum(v, 2), bench: true },
+  vol:  { label: 'ann vol', zero: 0, fmt: (v) => fmtPctBare(v, 1), bench: false },
+  corr: { label: 'corr', zero: 0, fmt: (v) => fmtNum(v, 2), bench: true },
 };
 
 // `periods` is the annualization factor for vol: 252 for a trading-day series
@@ -499,13 +502,15 @@ function rebaseBenchmark(benchSeries, perfDates) {
   return out.map(v => v / base - 1);
 }
 
-const BENCH_STYLES = {
-  spx: { color: 'rgba(94,234,212,0.55)', solid: '#5eead4' },
-  vt:  { color: 'rgba(250,204,21,0.5)',  solid: '#facc15' },
-};
+// Colours, labels and ordering all come from the shared registry (SZ_BENCHES in
+// Chrome.jsx), so this chart, the overview's, and the picker's swatches cannot
+// drift apart as tickers are added.
+const benchColor = (key) => (window.szBenchColor ? window.szBenchColor(key) : '#5eead4');
+const benchLabel = (key) => (window.szBenchLabel ? window.szBenchLabel(key) : key);
+const benchOrder = (keys) => (window.szBenchSort ? window.szBenchSort(keys) : (keys || []));
 
 // ---------- Performance chart (deposit-adjusted TWR %) ----------
-function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
+function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) {
   const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
@@ -523,16 +528,19 @@ function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
   const plot = usd ? dollars : perf;
   const fmtV = usd ? (v) => (v >= 0 ? '+' : '') + fmtUSD(v) : fmtPct;
 
+  // Only what the picker has selected, in registry order — a key the feed
+  // doesn't carry drops out silently rather than drawing an empty line.
   const overlays = usePortMemo(() => {
     if (!benchmarks) return [];
     const dates = perf.map(p => p.d);
-    return Object.entries(benchmarks)
-      .map(([key, b]) => {
-        const vals = rebaseBenchmark(b.series, dates);
-        return vals && { key, label: b.label, vals, style: BENCH_STYLES[key] || BENCH_STYLES.spx };
+    return benchOrder(benchKeys)
+      .map(key => {
+        const b = benchmarks[key];
+        const vals = b && rebaseBenchmark(b.series, dates);
+        return vals && { key, label: benchLabel(key), vals, color: benchColor(key) };
       })
       .filter(Boolean);
-  }, [benchmarks, perfSeries, series]);
+  }, [benchmarks, benchKeys, perfSeries, series]);
 
   // The overlays are rebased *returns*; in $ they become what the window-start
   // NAV would have made in the index, which is the same comparison the combined
@@ -609,7 +617,7 @@ function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
         {overlays.map(o => (
           <path key={o.key}
             d={smoothPath(ovVals(o).map((_, i) => x(i)), ovVals(o).map(v => y(v)))}
-            fill="none" stroke={o.style.color} strokeWidth="1.25"/>
+            fill="none" stroke={o.color} strokeOpacity="0.55" strokeWidth="1.25"/>
         ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
         {hovered && (
@@ -640,8 +648,8 @@ function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
           <div className="pm-tt-date">{hovered.d}</div>
           <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtV(hovered.v)}</div>
           {overlays.map(o => (
-            <div key={o.key} className="pf-tt-bench" style={{ color: o.style.solid }}>
-              {o.label.toLowerCase()} {fmtV(ovVals(o)[hover])}
+            <div key={o.key} className="pf-tt-bench" style={{ color: o.color }}>
+              {o.label} {fmtV(ovVals(o)[hover])}
             </div>
           ))}
         </div>
@@ -651,7 +659,7 @@ function NavChart({ series, perfSeries, benchmarks, unit, dollars }) {
       <div className="pf-bench-legend">
         <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
         {overlays.map(o => (
-          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.style.solid }}/>{o.label.toLowerCase()}
+          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.color }}/>{o.label}
             {usd ? ` · on ${fmtUSD(notional, true)}` : ''}</span>
         ))}
       </div>
@@ -1023,7 +1031,7 @@ function ReturnDistribution({ perfSeries }) {
 }
 
 // ---------- Rolling risk strip ----------
-function RollingStrip({ fullSeries, perfSeries, benchSeries, periods = 252 }) {
+function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', periods = 252 }) {
   const [metric, setMetric] = usePortState('beta');
   const svgRef = usePortRef(null);
   const [hover, setHover] = usePortState(null);
@@ -1067,7 +1075,9 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, periods = 252 }) {
   return (
     <React.Fragment>
       <div className="pf-strip-head">
-        <span className="pf-strip-label">rolling {spec.label} · {win}-session</span>
+        <span className="pf-strip-label">
+          rolling {spec.label}{spec.bench ? ` vs ${benchName}` : ''} · {win}-session
+        </span>
         <div className="pf-strip-toggle">
           <div className="pf-range">
             {available.map(k => (
@@ -1328,6 +1338,10 @@ function Portfolio() {
   // so), and the benchmark overlays are exact in percent where the dollar
   // versions have to assume a notional. $ is one click away.
   const [unit, setUnit] = usePortState('pct');
+  // What the book is drawn against. SPX alone by default — it's the comparison
+  // the tiles and strips below are worded for, and a chart that opens with one
+  // benchmark on it says which one matters rather than making you read a key.
+  const [benchKeys, setBenchKeys] = usePortState(window.SZ_BENCH_DEFAULT || ['spx']);
 
   usePortEffect(() => {
     fetch('data/portfolio.json', { cache: 'no-store' })
@@ -1381,9 +1395,16 @@ function Portfolio() {
   // Plain computations (not hooks) — these run after the early returns above, so a
   // useMemo here would violate the rules of hooks. Both are cheap.
   const winRisk = pfRiskWindow(win.perf) || risk;
-  const betaObj = bench && bench.spx ? computeBeta(win.perf, bench.spx.series) : null;
-  const alpha = bench && bench.spx ? pfAlphaSeries(win.perf, bench.spx.series) : null;
-  const alphaD = bench && bench.spx ? pfAlphaDollars(win.pnl, win.nav, bench.spx.series) : null;
+  // Beta, alpha and capture all name a benchmark, so they follow the picker
+  // rather than staying pinned to SPX while the chart above draws something
+  // else. First selected wins; an empty selection falls back to spx so these
+  // panels keep working when the reader just wants a bare chart.
+  const primary = window.szBenchPrimary ? window.szBenchPrimary(benchKeys) : 'spx';
+  const primaryName = benchLabel(primary);
+  const primarySeries = bench && bench[primary] ? bench[primary].series : null;
+  const betaObj = primarySeries ? computeBeta(win.perf, primarySeries) : null;
+  const alpha = primarySeries ? pfAlphaSeries(win.perf, primarySeries) : null;
+  const alphaD = primarySeries ? pfAlphaDollars(win.pnl, win.nav, primarySeries) : null;
   const winDd = win.perf && win.perf.length ? drawdownSeries(win.perf) : [];
   const winMaxDd = winDd.length ? Math.min(0, ...winDd.map(p => p.v)) : 0;
   const winCurDd = winDd.length ? winDd[winDd.length - 1].v : 0;
@@ -1395,9 +1416,9 @@ function Portfolio() {
   const alphaShownNow = alphaShown && alphaShown.length ? alphaShown[alphaShown.length - 1].v : null;
   const PfUnitBar = window.UnitBar;
   // Range-aware like the risk tiles: every panel below re-reads the same window.
-  const spxSeries = bench && bench.spx ? bench.spx.series : null;
-  const capture = spxSeries ? pfCapture(win.perf, spxSeries) : null;
+  const capture = primarySeries ? pfCapture(win.perf, primarySeries) : null;
   const episodes = pfDrawdownEpisodes(win.perf);
+  const PfBenchPicker = window.BenchPicker;
 
   return (
     <section className="pf-wrap">
@@ -1461,7 +1482,7 @@ function Portfolio() {
           <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
           <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)} kicker="peak-to-trough"/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}
-                    kicker={betaObj ? `vs spx · r² ${fmtNum(betaObj.r2)}` : 'vs spx'}/>
+                    kicker={betaObj ? `vs ${primaryName} · r² ${fmtNum(betaObj.r2)}` : `vs ${primaryName}`}/>
         </div>
       )}
 
@@ -1477,10 +1498,14 @@ function Portfolio() {
             {PfHistoryPicker && (
               <PfHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
             )}
+            {PfBenchPicker && bench && (
+              <PfBenchPicker value={benchKeys} onChange={setBenchKeys}
+                available={Object.keys(bench)}/>
+            )}
           </div>
         </div>
         <NavChart series={win.nav} perfSeries={win.perf} benchmarks={bench}
-          unit={unit} dollars={win.pnl}/>
+          benchKeys={benchKeys} unit={unit} dollars={win.pnl}/>
         {/* Drawdown stays in percent under both units: a decline from peak is a
             portfolio-level ratio, and the combined view reads it the same way. */}
         <div className="pf-strip-head">
@@ -1491,7 +1516,7 @@ function Portfolio() {
         {alphaShown && (
           <>
             <div className="pf-strip-head">
-              <span className="pf-strip-label">alpha vs spx · cumulative</span>
+              <span className="pf-strip-label">alpha vs {primaryName} · cumulative</span>
               <span className="pf-strip-meta">
                 now {alphaShownNow >= 0 ? '+' : ''}
                 {(usd && alphaD) ? fmtUSD(alphaShownNow) : fmtPctBare(alphaShownNow)}
@@ -1500,7 +1525,8 @@ function Portfolio() {
             <AlphaStrip alpha={alphaShown} unit={(usd && alphaD) ? 'usd' : 'pct'}/>
           </>
         )}
-        <RollingStrip fullSeries={ext.perf} perfSeries={win.perf} benchSeries={spxSeries}/>
+        <RollingStrip fullSeries={ext.perf} perfSeries={win.perf} benchSeries={primarySeries}
+          benchName={primaryName}/>
       </div>
 
       <div className="pf-row">
@@ -1535,7 +1561,7 @@ function Portfolio() {
       {capture && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">capture vs spx</span>
+            <span className="pf-panel-title">capture vs {primaryName}</span>
             {/* A net-short book prints negative capture — it moves against the
                 index rather than damping it — so say what the sign means. */}
             <span className="pf-panel-meta">
@@ -1545,14 +1571,14 @@ function Portfolio() {
           <div className="pf-stats pf-stats-capture">
             <StatTile label="up capture"
               value={capture.upCapture != null ? fmtPctBare(capture.upCapture, 0) : '—'}
-              kicker="of spx gains on its up days"/>
+              kicker={`of ${primaryName} gains on its up days`}/>
             <StatTile label="down capture"
               value={capture.downCapture != null ? fmtPctBare(capture.downCapture, 0) : '—'}
-              kicker="of spx losses on its down days"/>
+              kicker={`of ${primaryName} losses on its down days`}/>
             <StatTile label="bull beta" value={fmtNum(capture.bullBeta)}
-              kicker="slope · spx up days"/>
+              kicker={`slope · ${primaryName} up days`}/>
             <StatTile label="bear beta" value={fmtNum(capture.bearBeta)}
-              kicker="slope · spx down days"/>
+              kicker={`slope · ${primaryName} down days`}/>
           </div>
         </div>
       )}

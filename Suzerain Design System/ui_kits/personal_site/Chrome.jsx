@@ -554,11 +554,139 @@ function HistoryPicker({ quarters, value, onPick }) {
   );
 }
 
+// ---------- benchmarks ----------
+// One registry for every page that draws a benchmark line. The keys match
+// data/benchmarks.json (scripts/benchmarks/fetch-benchmarks.py owns the closes;
+// nothing here reaches the network), so a ticker added there shows up in the
+// menu by adding a row here — and a key the file doesn't carry is skipped
+// rather than drawn empty.
+//
+// Colours avoid the violet→pink range: that gradient is the portfolio's own
+// line on both charts, and a benchmark wearing it would read as part of the
+// book rather than the thing the book is measured against.
+const SZ_BENCHES = [
+  { key: 'spx', label: 'spx', name: 's&p 500',          group: 'equity',        color: '#5eead4' },
+  { key: 'qqq', label: 'qqq', name: 'nasdaq 100',       group: 'equity',        color: '#60a5fa' },
+  { key: 'vti', label: 'vti', name: 'total us market',  group: 'equity',        color: '#4ade80' },
+  { key: 'iwm', label: 'iwm', name: 'russell 2000',     group: 'equity',        color: '#a3e635' },
+  { key: 'vt',  label: 'vt',  name: 'total world',      group: 'equity',        color: '#22d3ee' },
+  { key: 'aor', label: 'aor', name: '60/40 allocation', group: 'bonds & blends', color: '#facc15' },
+  { key: 'bnd', label: 'bnd', name: 'us agg bonds',     group: 'bonds & blends', color: '#94a3b8' },
+  { key: 'tlt', label: 'tlt', name: '20y+ treasuries',  group: 'bonds & blends', color: '#cbd5e1' },
+  { key: 'gld', label: 'gld', name: 'gold',             group: 'alternatives',  color: '#fbbf24' },
+  { key: 'btc', label: 'btc', name: 'bitcoin',          group: 'alternatives',  color: '#f97316' },
+];
+const SZ_BENCH_DEFAULT = ['spx'];
+const SZ_BENCH_BY_KEY = Object.fromEntries(SZ_BENCHES.map(b => [b.key, b]));
+
+// Registry order, not click order, so the chart's line colours and the legend's
+// reading order don't depend on which one you happened to tick first — and so
+// `primary` (the key every "vs" statistic anchors on) is stable.
+function szBenchSort(keys) {
+  const want = new Set(keys || []);
+  return SZ_BENCHES.filter(b => want.has(b.key)).map(b => b.key);
+}
+// The benchmark the labelled statistics follow: beta, the alpha strip, capture,
+// the monthly bars. First selected, and spx when the selection is empty — those
+// panels always have something to name, and deselecting everything is a request
+// for a clean chart, not for the analytics to disappear.
+function szBenchPrimary(keys) {
+  const sorted = szBenchSort(keys);
+  return sorted.length ? sorted[0] : SZ_BENCH_DEFAULT[0];
+}
+function szBenchColor(key) {
+  return (SZ_BENCH_BY_KEY[key] || {}).color || '#5eead4';
+}
+function szBenchLabel(key) {
+  return (SZ_BENCH_BY_KEY[key] || {}).label || key;
+}
+
+// The "benchmarks" control that sits after the range selector. Multi-select:
+// the chart drew two lines before this existed, and picking one comparison
+// shouldn't cost you the ability to hold two side by side. `available` is the
+// set of keys the loaded feed actually carries.
+function BenchPicker({ value, onChange, available }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const has = available ? new Set(available) : null;
+  const items = SZ_BENCHES.filter(b => !has || has.has(b.key));
+  if (!items.length) return null;
+  const sel = new Set(value || []);
+  const toggle = (key) => {
+    const next = sel.has(key) ? (value || []).filter(k => k !== key) : [...(value || []), key];
+    onChange(szBenchSort(next));
+  };
+  // The button keeps its name whatever is ticked — the legend under the chart
+  // already spells out which lines are drawn, in the colours they're drawn in,
+  // so repeating them here would be the same list twice. It only counts.
+  const count = items.filter(b => sel.has(b.key)).length;
+  // Lit only once the reader has moved off the default. Lighting it whenever a
+  // benchmark is drawn would mean lighting it on every page load, next to a
+  // range strip where the lit button is the one telling you what's selected.
+  const moved = szBenchSort(value).join() !== SZ_BENCH_DEFAULT.join();
+  const groups = [];
+  for (const b of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.name === b.group) last.items.push(b);
+    else groups.push({ name: b.group, items: [b] });
+  }
+
+  return (
+    <div className="pf-range-history pf-range-bench" ref={ref}>
+      <button type="button" className={`pf-range-btn${moved ? ' active' : ''}`}
+        aria-haspopup="listbox" aria-expanded={open}
+        onClick={() => setOpen(o => !o)}>
+        benchmarks{count > 1 ? ` ${count}` : ''} <span className="pf-range-caret">▾</span>
+      </button>
+      {open && (
+        <div className="pf-range-menu pf-bench-menu" role="listbox" aria-multiselectable="true">
+          {groups.map(g => (
+            <React.Fragment key={g.name}>
+              <div className="pf-range-menu-head">{g.name}</div>
+              {g.items.map(b => (
+                <button key={b.key} type="button" role="option" aria-selected={sel.has(b.key)}
+                  className={`pf-range-menu-item${sel.has(b.key) ? ' active' : ''}`}
+                  onClick={() => toggle(b.key)}>
+                  <span className="pf-bench-tick">
+                    <i className="pf-bench-swatch"
+                      style={{ background: sel.has(b.key) ? b.color : 'rgba(229,225,241,0.18)' }}/>
+                    {b.label}
+                  </span>
+                  <span className="pf-range-menu-span">{b.name}</span>
+                </button>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 window.Chrome = Chrome;
 window.Cursor = Cursor;
 window.useDecode = useDecode;
 window.useCursor = useCursor;
 window.HistoryPicker = HistoryPicker;
+window.BenchPicker = BenchPicker;
+window.SZ_BENCHES = SZ_BENCHES;
+window.SZ_BENCH_DEFAULT = SZ_BENCH_DEFAULT;
+window.szBenchSort = szBenchSort;
+window.szBenchPrimary = szBenchPrimary;
+window.szBenchColor = szBenchColor;
+window.szBenchLabel = szBenchLabel;
 window.UnitToggle = UnitToggle;
 window.UnitBar = UnitBar;
 window.useUnitSlot = useUnitSlot;

@@ -669,6 +669,19 @@
   .pf-range-menu-item:hover { color: var(--fg-1); background: rgba(167,139,250,0.14); }
   .pf-range-menu-item.active { color: var(--fg-1); background: rgba(167,139,250,0.2); }
   .pf-range-menu-span { color: var(--fg-4); letter-spacing: 0.04em; text-transform: none; }
+  /* benchmark picker — same menu chrome as the history picker, but multi-select,
+     so it sits apart from the range buttons the way the panel-scoped unit switch
+     does: these choose what the series is drawn against, not over what window */
+  .pf-range-bench {
+    margin-left: 8px; padding-left: 10px;
+    border-left: 1px solid var(--border-soft);
+  }
+  .pf-bench-menu { min-width: 208px; }
+  /* One head per group, so every head after the first needs air above it */
+  .pf-bench-menu .pf-range-menu-head:not(:first-child) { margin-top: 7px; }
+  /* The tick IS the swatch: it carries the line's colour when on and an empty
+     rule when off, so the menu reads as the chart's legend before you commit */
+  .pf-bench-tick { display: inline-flex; align-items: center; gap: 8px; }
   /* combined-view risk panel: flat divided columns, not nested stat cards */
   .cmb-risk-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
   .cmb-risk-grid .pf-stat {

@@ -47,7 +47,10 @@ const CMB_DAY_MS = 86400000;
 const CMB_C_TOTAL = '#8b5cf6';  // saturated violet (violet-500) — the aggregate line
 const CMB_C_IBKR  = '#a78bfa';  // brand purple — brokerage
 const CMB_C_PM    = '#ff4fd8';  // brand pink — prediction markets
-const CMB_BENCH = { spx: '#5eead4', vt: '#facc15' };  // matches the portfolio tab
+// Benchmark colours/labels/order come from the shared registry (SZ_BENCHES in
+// Chrome.jsx), the same one the ibkr tab and the picker read.
+const cmbBenchColor = (key) => (window.szBenchColor ? window.szBenchColor(key) : '#5eead4');
+const cmbBenchLabel = (key) => (window.szBenchLabel ? window.szBenchLabel(key) : key);
 
 function cmbUSD(n) {
   if (n == null || isNaN(n)) return '—';
@@ -86,10 +89,11 @@ function cmbFmt(v, unit) {
 // winNotional × (index return), so dividing by that notional recovers the index
 // exactly — and they are not components of this book, so chaining them against
 // its capital base would be meaningless.
-function cmbPctSeries(series, notional) {
+function cmbPctSeries(series, notional, benchKeys) {
   if (!series || series.length < 2) return null;
+  const keys = benchKeys && benchKeys.length ? benchKeys : ['spx'];
   const bench = (src, dst) => {
-    for (const k of ['spx', 'vt']) {
+    for (const k of keys) {
       if (src[k] != null && notional) dst[k] = src[k] / notional;
     }
   };
@@ -517,7 +521,7 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
 }
 
 // ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
-function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, unit }) {
+function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, unit, primary }) {
   const benches = bench || [];
   const base = ddNotional != null ? ddNotional : benchNotional;
   const pct = unit === 'pct' && !!pctSeries;
@@ -626,7 +630,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         <path d={linePath('pm')} fill="none" stroke={CMB_C_PM} strokeWidth="1" opacity="0.3"/>
         {benches.map(b => (
           <path key={b.key} d={linePath(b.key)} fill="none"
-            stroke={CMB_BENCH[b.key] || '#5eead4'} strokeWidth="1" opacity="0.45"/>
+            stroke={cmbBenchColor(b.key)} strokeWidth="1" opacity="0.45"/>
         ))}
 
         <path d={areaPath} fill="url(#cmb-nav-fill)"/>
@@ -677,7 +681,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.ibkr)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className={`cmb-tt-num ${hp.pm >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.pm)}</span></div>
           {benches.map(b => hp[b.key] != null && (
-            <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{fmt(hp[b.key])}</span></div>
+            <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: cmbBenchColor(b.key) }}/>{cmbBenchLabel(b.key)}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{fmt(hp[b.key])}</span></div>
           ))}
         </div>
       )}
@@ -689,7 +693,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         {/* The notional only explains anything in dollars — in percent the
             benchmark line IS the index's own return, on no notional at all. */}
         {benches.map(b => (
-          <span key={b.key}><i className="pf-bench-swatch" style={{ background: CMB_BENCH[b.key] }}/>{b.label.toLowerCase()}{(!pct && base) ? ` · on ${cmbUSDk(base)}` : ''}</span>
+          <span key={b.key}><i className="pf-bench-swatch" style={{ background: cmbBenchColor(b.key) }}/>{cmbBenchLabel(b.key)}{(!pct && base) ? ` · on ${cmbUSDk(base)}` : ''}</span>
         ))}
       </div>
     )}
@@ -698,7 +702,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
     <CmbDrawdownStrip series={series} notional={base}
       markers={markers} cur={cur} onPick={setAnnot}/>
     <CmbAlphaStrip series={plot} markers={markers} cur={cur} onPick={setAnnot}
-      unit={pct ? 'pct' : 'usd'}/>
+      unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
     </>
   );
 }
@@ -707,7 +711,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
 // curve (window-start capital base + cumulative combined P&L). data.series is
 // calendar-daily (cmbSampleDaily fills every day), so we annualize by 365 — not
 // the 252 the IBKR tab uses on its trading-day perfSeries. rf assumed 0.
-function cmbRisk(series, notional) {
+function cmbRisk(series, notional, benchKey = 'spx') {
   if (!series || series.length < 21 || !notional || notional <= 0) return null;
   const PER = 365;
   const eq = series.map(p => notional + p.v);
@@ -727,10 +731,11 @@ function cmbRisk(series, notional) {
     if (dd < maxDD) maxDD = dd;
   }
 
-  // Beta vs SPX, if the benchmark line is present (spx equity = notional + $spx).
+  // Beta vs the chosen benchmark, if its column is present (benchmark equity =
+  // notional + that column's dollars).
   let beta = null, r2 = null;
-  if (series[0].spx != null) {
-    const beq = series.map(p => notional + (p.spx || 0));
+  if (series[0][benchKey] != null) {
+    const beq = series.map(p => notional + (p[benchKey] || 0));
     const a = [], b = [];
     for (let i = 1; i < eq.length; i++) {
       if (eq[i - 1] > 0 && beq[i - 1] > 0) { a.push(eq[i] / eq[i - 1] - 1); b.push(beq[i] / beq[i - 1] - 1); }
@@ -853,15 +858,15 @@ function cmbPerfSeries(series, notional) {
   return series.map(p => ({ d: p.d, v: (notional + (p.v || 0)) / notional - 1 }));
 }
 
-// The benchmark goes in as raw closes (data.benchmarks.spx.series) rather than
-// the windowed spx dollar column. rebaseBenchmark() rebases whatever it is given
-// to the first date it is asked about, and the dollar column is only defined
-// across the current window — feeding that to a full-series rolling lookback
-// makes every pre-window day back-fill to a constant, i.e. a flat benchmark, and
-// the regression at the window's left edge silently reads against a straight
-// line. Raw closes span the whole history, so every lookback sees real returns.
-// (The two are equivalent inside a window: notional + spx$ = notional*close/base,
-// so consecutive ratios are identical.)
+// The benchmark goes in as raw closes (data.benchmarks[primary].series) rather
+// than its windowed dollar column. rebaseBenchmark() rebases whatever it is
+// given to the first date it is asked about, and the dollar column is only
+// defined across the current window — feeding that to a full-series rolling
+// lookback makes every pre-window day back-fill to a constant, i.e. a flat
+// benchmark, and the regression at the window's left edge silently reads against
+// a straight line. Raw closes span the whole history, so every lookback sees
+// real returns. (The two are equivalent inside a window: notional + bench$ =
+// notional*close/base, so consecutive ratios are identical.)
 
 // Diamond event marker, shared by the main chart and the strips so a log entry
 // reads at the same x across all three (see .cmb-annot-sq styling).
@@ -1112,11 +1117,16 @@ function cmbBenchWindow(benchSeries, notional, dates) {
 }
 
 // Slice the combined $ series to a trailing range and rebase the P&L streams
-// (v/ibkr/pm) to the window start. Benchmark lines (spx/vt) are *rebuilt* from raw
-// closes on the window-start equity, so they track the selected timeframe rather
-// than the 1y-ago capital/base. Returns the window-start equity as `notional`,
-// which also keeps the drawdown strip's % correct for the sub-window.
-function cmbWindow(series, notional, range, benchmarks) {
+// (v/ibkr/pm) to the window start. Benchmark lines are *rebuilt* from raw closes
+// on the window-start equity, so they track the selected timeframe rather than
+// the 1y-ago capital/base. Returns the window-start equity as `notional`, which
+// also keeps the drawdown strip's % correct for the sub-window.
+//
+// `benchKeys` is what the picker has selected, plus the primary if the reader
+// cleared the selection — the alpha strip, beta and monthly bars read a column
+// off this series, so the primary's column has to exist even when no benchmark
+// line is drawn.
+function cmbWindow(series, notional, range, benchmarks, benchKeys) {
   if (!series || series.length < 2) return { series, notional };
   const last = series[series.length - 1].d;
   const cutoff = cmbRangeCutoff(range, last);
@@ -1145,7 +1155,7 @@ function cmbWindow(series, notional, range, benchmarks) {
     return q;
   });
   const dates = out.map(p => p.d);
-  for (const key of ['spx', 'vt']) {
+  for (const key of (benchKeys && benchKeys.length ? benchKeys : ['spx'])) {
     let vals = null;
     if (benchmarks && benchmarks[key] && benchmarks[key].series) {
       vals = cmbBenchWindow(benchmarks[key].series, winNotional, dates);
@@ -1159,18 +1169,18 @@ function cmbWindow(series, notional, range, benchmarks) {
   return { series: out, notional: winNotional };
 }
 
-// ---------- combined rolling alpha strip (total $ minus SPX $, zero-centered) ----------
-function CmbAlphaStrip({ series, markers, cur, onPick, unit }) {
+// ---------- combined rolling alpha strip (total $ minus the benchmark's $, zero-centered) ----------
+function CmbAlphaStrip({ series, markers, cur, onPick, unit, benchKey = 'spx' }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   const pct = unit === 'pct';
   const fmt = (v) => cmbFmt(v, unit);
-  if (!series || series.length < 2 || series[0].spx == null) return null;
+  if (!series || series.length < 2 || series[0][benchKey] == null) return null;
   // In percent both terms are already returns, so the subtraction is in
   // percentage points and needs no rounding to cents.
   const alpha = series.map(p => ({
     d: p.d,
-    v: pct ? p.v - (p.spx || 0) : +(p.v - (p.spx || 0)).toFixed(2),
+    v: pct ? p.v - (p[benchKey] || 0) : +(p.v - (p[benchKey] || 0)).toFixed(2),
   }));
   const last = alpha[alpha.length - 1].v;
   const vals = alpha.map(p => p.v);
@@ -1199,7 +1209,7 @@ function CmbAlphaStrip({ series, markers, cur, onPick, unit }) {
   return (
     <>
       <div className="pf-strip-head">
-        <span className="pf-strip-label">alpha vs spx · cumulative</span>
+        <span className="pf-strip-label">alpha vs {cmbBenchLabel(benchKey)} · cumulative</span>
         <span className="pf-strip-meta">now {fmt(last)}</span>
       </div>
       <div className="pm-chart-wrap">
@@ -1312,21 +1322,21 @@ function CmbDeployBar({ ibkr, poly }) {
 // ---------- Monthly P&L, split by book ----------
 // Each month's contribution per series = the change in that series' cumulative
 // (deposit-adjusted) P&L between the month's last observation and the prior
-// month's. `total` is the net of both books; `spx` is the benchmark's dollar
-// return on the same notional, present only when the benchmark overlay loaded.
+// month's. `total` is the net of both books; `bench` is the chosen benchmark's
+// dollar return on the same notional, present only when its overlay loaded.
 // Grouped bars around a shared zero line so signs read directly.
-function cmbMonthly(series) {
+function cmbMonthly(series, benchKey = 'spx') {
   if (!series || series.length < 2) return [];
-  const end = new Map();                    // 'YYYY-MM' -> {ibkr, pm, spx}
-  for (const p of series) end.set(p.d.slice(0, 7), { ibkr: p.ibkr || 0, pm: p.pm || 0, spx: p.spx });
+  const end = new Map();                    // 'YYYY-MM' -> {ibkr, pm, bench}
+  for (const p of series) end.set(p.d.slice(0, 7), { ibkr: p.ibkr || 0, pm: p.pm || 0, bench: p[benchKey] });
   const keys = [...end.keys()].sort();
   const out = [];
-  let prev = { ibkr: series[0].ibkr || 0, pm: series[0].pm || 0, spx: series[0].spx };
+  let prev = { ibkr: series[0].ibkr || 0, pm: series[0].pm || 0, bench: series[0][benchKey] };
   for (const k of keys) {
     const e = end.get(k);
     const row = { ym: k, ibkr: e.ibkr - prev.ibkr, pm: e.pm - prev.pm };
     row.total = row.ibkr + row.pm;
-    if (e.spx != null && prev.spx != null) row.spx = e.spx - prev.spx;
+    if (e.bench != null && prev.bench != null) row.bench = e.bench - prev.bench;
     out.push(row);
     prev = e;
   }
@@ -1340,28 +1350,28 @@ function cmbMonthly(series) {
 // what carries visual weight; keeping it at 0.13 is what lets three columns
 // per month stay lighter than the two solid ones this replaced.
 //
-// spx sits BETWEEN the books, not after them: each book is then adjacent to
-// the benchmark it's judged against. `total` isn't drawn at all — it's the sum
-// of the two books, so as a third bar it was the answer printed beside its own
-// working, and it set the vertical scale while adding nothing. It lives in the
-// hover tooltip instead.
-const CMB_BAR_META = [
-  { key: 'ibkr', label: 'ibkr',       color: CMB_C_IBKR },
-  { key: 'spx',  label: 'spx',        color: CMB_BENCH.spx },
-  { key: 'pm',   label: 'polymarket', color: CMB_C_PM },
+// The benchmark sits BETWEEN the books, not after them: each book is then
+// adjacent to the thing it's judged against. `total` isn't drawn at all — it's
+// the sum of the two books, so as a third bar it was the answer printed beside
+// its own working, and it set the vertical scale while adding nothing. It lives
+// in the hover tooltip instead.
+const cmbBarMeta = (benchKey) => [
+  { key: 'ibkr',  label: 'ibkr',                    color: CMB_C_IBKR },
+  { key: 'bench', label: cmbBenchLabel(benchKey),   color: cmbBenchColor(benchKey) },
+  { key: 'pm',    label: 'polymarket',              color: CMB_C_PM },
 ];
 
-function CmbMonthlyBars({ series, unit }) {
+function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
   const svgRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
   // In percent the series carries additive contributions, so differencing month
   // ends still gives columns that sum to the window's total return — the same
   // arithmetic that works on cumulative dollars.
   const fmt = (v) => cmbFmt(v, unit);
-  const months = cmbMonthly(series);
+  const months = cmbMonthly(series, benchKey);
   if (months.length < 2) return null;
-  const hasSpx = months.some(m => m.spx != null);
-  const bars = CMB_BAR_META.filter(b => b.key !== 'spx' || hasSpx);
+  const hasBench = months.some(m => m.bench != null);
+  const bars = cmbBarMeta(benchKey).filter(b => b.key !== 'bench' || hasBench);
   const nb = bars.length;
   const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 22;
 
@@ -1463,8 +1473,10 @@ function CmbMonthlyBars({ series, unit }) {
           {/* Rows follow the on-chart column order so the tooltip reads left
               to right the same way the marks do. */}
           <div className="pf-tt-bench" style={{ color: CMB_C_IBKR }}>ibkr {fmt(hovered.ibkr)}</div>
-          {hovered.spx != null && (
-            <div className="pf-tt-bench" style={{ color: CMB_BENCH.spx }}>spx {fmt(hovered.spx)}</div>
+          {hovered.bench != null && (
+            <div className="pf-tt-bench" style={{ color: cmbBenchColor(benchKey) }}>
+              {cmbBenchLabel(benchKey)} {fmt(hovered.bench)}
+            </div>
           )}
           <div className="pf-tt-bench" style={{ color: CMB_C_PM }}>poly {fmt(hovered.pm)}</div>
           <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {fmt(hovered.total)}</div>
@@ -1488,9 +1500,13 @@ function Combined({ setView }) {
   const [range, setRange] = useCmbState('1Y');
   // '$' or '%' for every P&L figure on the page. Percent by default, matching
   // the ibkr view: a return on a stated capital base is the comparable figure,
-  // and it is the one that reads against the spx/vt lines drawn beside it.
+  // and it is the one that reads against the benchmark lines drawn beside it.
   // Dollars are one click away.
   const [unit, setUnit] = useCmbState('pct');
+  // What the book is drawn against — same control and same default as the ibkr
+  // tab, kept per-view rather than shared so the two pages can be read side by
+  // side against different benchmarks.
+  const [benchKeys, setBenchKeys] = useCmbState(window.SZ_BENCH_DEFAULT || ['spx']);
 
   useCmbEffect(() => {
     let cancelled = false;
@@ -1629,35 +1645,47 @@ function Combined({ setView }) {
 
   const go = (v) => setView ? () => setView(v) : undefined;
   const pct1 = (v) => (v * 100).toFixed(1) + '%';
+  // The benchmark every "vs" figure on this page is measured against: first
+  // selected, spx when the selection is empty. Its dollar column has to exist on
+  // the windowed series even if no line is drawn for it, hence benchCols.
+  const primary = window.szBenchPrimary ? window.szBenchPrimary(benchKeys) : 'spx';
+  const primaryName = cmbBenchLabel(primary);
+  const benchCols = benchKeys.length ? benchKeys : [primary];
   // Range selector windows the chart, its strips, AND the risk panel.
-  const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks);
+  const win = cmbWindow(data.series, data.benchNotional, range, data.benchmarks, benchCols);
   // Completed quarters the combined series actually covers end to end.
   const quarters = (window.szQuarters && data.series.length)
     ? window.szQuarters(data.series[0].d, data.series[data.series.length - 1].d)
     : [];
   const HistoryPicker = window.HistoryPicker;
-  const risk = cmbRisk(win.series, win.notional);
+  const BenchPicker = window.BenchPicker;
+  const risk = cmbRisk(win.series, win.notional, primary);
   // Shared risk panels, on the combined equity curve. The overview samples every
   // calendar day (prediction markets trade weekends), so vol annualizes on 365.
   const SZ = window.SZ_RISK || {};
   const cPerf = cmbPerfSeries(win.series, win.notional);
   const cFullPerf = cmbPerfSeries(data.series, data.benchNotional);
-  const cSpx = (data.benchmarks && data.benchmarks.spx && data.benchmarks.spx.series) || null;
-  const cCapture = (cPerf && cSpx && SZ.pfCapture) ? SZ.pfCapture(cPerf, cSpx) : null;
+  const cBench = (data.benchmarks && data.benchmarks[primary] && data.benchmarks[primary].series) || null;
+  const cCapture = (cPerf && cBench && SZ.pfCapture) ? SZ.pfCapture(cPerf, cBench) : null;
   const cEpisodes = (cPerf && SZ.pfDrawdownEpisodes) ? SZ.pfDrawdownEpisodes(cPerf) : [];
   // Endpoint of the rebased window = each stream's P&L over the selected range,
   // so the headline + summary tiles track the timeframe on the chart.
   const wLast = (win.series && win.series.length) ? win.series[win.series.length - 1] : { v: 0, ibkr: 0, pm: 0 };
   const wTotal = wLast.v || 0, wIbkr = wLast.ibkr || 0, wPm = wLast.pm || 0;
-  const wSpxD = wLast.spx != null ? +(wLast.v - wLast.spx).toFixed(2) : null;
-  const wSpxPts = (wSpxD != null && win.notional) ? (wSpxD / win.notional) * 100 : null;
+  const wBenchD = wLast[primary] != null ? +(wLast.v - wLast[primary]).toFixed(2) : null;
+  const wBenchPts = (wBenchD != null && win.notional) ? (wBenchD / win.notional) * 100 : null;
+  // Only selections that actually produced a column get a line: a key the feed
+  // is missing would otherwise plot as a path of NaNs.
+  const drawnBench = (win.series && win.series.length)
+    ? benchKeys.filter(k => win.series[0][k] != null).map(k => ({ key: k }))
+    : [];
   const pos = wTotal >= 0;
   const rangeSub = range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range);
   const rangeNote = data.bdExtra ? `${cmbRangeLabel(range)} · trading + rewards` : `${cmbRangeLabel(range)} trading`;
   // Percent is a chained TWR on the real per-day capital base — the same
   // construction the ibkr and polymarket views use, so a return means one thing
   // across all three pages.
-  const pctSeries = cmbPctSeries(win.series, win.notional);
+  const pctSeries = cmbPctSeries(win.series, win.notional, benchCols);
   const pct = unit === 'pct' && !!pctSeries;
   const shown = pct ? pctSeries : win.series;
   const sLast = (shown && shown.length) ? shown[shown.length - 1] : { v: 0, ibkr: 0, pm: 0 };
@@ -1699,11 +1727,11 @@ function Combined({ setView }) {
           note={pct ? `${rangeNote} · contribution` : rangeNote}/>
         {/* In % the tile's own value IS the points figure it used to carry as a
             kicker, so the kicker takes the dollars instead of restating it. */}
-        {wSpxD != null && (
-          <CmbStat label="vs spx"
-            value={pct ? cmbPctFmt(sLast.v - (sLast.spx || 0)) : cmbSigned(wSpxD)}
-            tone={wSpxD >= 0 ? 'pos' : 'neg'}
-            note={pct ? `${cmbSigned(wSpxD)} in dollars` : `${wSpxPts >= 0 ? '+' : ''}${wSpxPts.toFixed(1)}% on notional`}/>
+        {wBenchD != null && (
+          <CmbStat label={`vs ${primaryName}`}
+            value={pct ? cmbPctFmt(sLast.v - (sLast[primary] || 0)) : cmbSigned(wBenchD)}
+            tone={wBenchD >= 0 ? 'pos' : 'neg'}
+            note={pct ? `${cmbSigned(wBenchD)} in dollars` : `${wBenchPts >= 0 ? '+' : ''}${wBenchPts.toFixed(1)}% on notional`}/>
         )}
       </div>
 
@@ -1720,13 +1748,21 @@ function Combined({ setView }) {
               {HistoryPicker && (
                 <HistoryPicker quarters={quarters} value={range} onPick={setRange}/>
               )}
+              {BenchPicker && data.bench && data.bench.length > 0 && (
+                <BenchPicker value={benchKeys} onChange={setBenchKeys}
+                  available={data.bench.map(b => b.key)}/>
+              )}
             </div>
           </div>
-          <CmbChart series={win.series} pctSeries={pctSeries} log={data.log} bench={data.bench}
+          {/* `bench` is the drawn set — the selection only, so clearing it leaves
+              a clean chart even though the primary's column is still carried on
+              the series for the strips and tiles below. */}
+          <CmbChart series={win.series} pctSeries={pctSeries} log={data.log}
+            bench={drawnBench} primary={primary}
             benchNotional={data.benchNotional} ddNotional={win.notional} unit={pct ? 'pct' : 'usd'}/>
           {SZ.RollingStrip && cPerf && (
             <SZ.RollingStrip fullSeries={cFullPerf || cPerf} perfSeries={cPerf}
-              benchSeries={cSpx} periods={365}/>
+              benchSeries={cBench} benchName={primaryName} periods={365}/>
           )}
         </div>
       )}
@@ -1742,7 +1778,7 @@ function Combined({ setView }) {
             <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
             <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
-              note={risk.beta != null && risk.r2 != null ? `vs spx · r² ${risk.r2.toFixed(2)}` : 'vs spx'}/>
+              note={risk.beta != null && risk.r2 != null ? `vs ${primaryName} · r² ${risk.r2.toFixed(2)}` : `vs ${primaryName}`}/>
             {/* Full overlap, not the selected range — at 1M this would be ~21
                 sessions and the estimate would be noise. Its own note carries the
                 window so the tile stays honest next to four range-scoped ones. */}
@@ -1764,15 +1800,15 @@ function Combined({ setView }) {
         </div>
       )}
 
-      {cmbMonthly(win.series).length > 1 && (
+      {cmbMonthly(win.series, primary).length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">monthly pnl · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">
-              ibkr · spx · polymarket{pct ? ' · contribution to return' : ''}
+              ibkr · {primaryName} · polymarket{pct ? ' · contribution to return' : ''}
             </span>
           </div>
-          <CmbMonthlyBars series={shown} unit={pct ? 'pct' : 'usd'}/>
+          <CmbMonthlyBars series={shown} unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
         </div>
       )}
 
@@ -1790,7 +1826,7 @@ function Combined({ setView }) {
       {cCapture && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">capture vs spx</span>
+            <span className="pf-panel-title">capture vs {primaryName}</span>
             <span className="pf-panel-meta">
               {cCapture.upDays} up · {cCapture.downDays} down sessions · negative = moved opposite
             </span>
@@ -1798,16 +1834,16 @@ function Combined({ setView }) {
           <div className="cmb-risk-grid">
             <CmbStat label="up capture"
               value={cCapture.upCapture != null ? pct1(cCapture.upCapture) : '—'}
-              note="of spx gains on its up days"/>
+              note={`of ${primaryName} gains on its up days`}/>
             <CmbStat label="down capture"
               value={cCapture.downCapture != null ? pct1(cCapture.downCapture) : '—'}
-              note="of spx losses on its down days"/>
+              note={`of ${primaryName} losses on its down days`}/>
             <CmbStat label="bull beta"
               value={cCapture.bullBeta != null ? cCapture.bullBeta.toFixed(2) : '—'}
-              note="slope · spx up days"/>
+              note={`slope · ${primaryName} up days`}/>
             <CmbStat label="bear beta"
               value={cCapture.bearBeta != null ? cCapture.bearBeta.toFixed(2) : '—'}
-              note="slope · spx down days"/>
+              note={`slope · ${primaryName} down days`}/>
           </div>
         </div>
       )}
