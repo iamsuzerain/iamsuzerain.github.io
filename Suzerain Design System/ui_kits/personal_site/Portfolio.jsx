@@ -1417,14 +1417,11 @@ function Portfolio() {
             <span>auto-updated {updatedStr}</span>
           </div>
           {/* Renders nothing here: the switch itself is drawn in the nav, which
-              stays put while the analytics stack below runs past the fold. The
-              note is the notional the dollar benchmarks are valued on — the NAV
-              this window opened at, not today's — and travels with it so the
-              percentages are never denominator-less on screen. */}
+              stays put while the analytics stack below runs past the fold. No
+              note — the notional the dollar benchmarks are valued on is already
+              in the chart's own legend, beside the lines it applies to. */}
           {PfUnitBar && win.pnl && (
-            <PfUnitBar value={unit} onChange={setUnit}
-              note={usd && win.nav && win.nav.length > 0 && win.nav[0].v > 0
-                ? `on ${fmtUSD(win.nav[0].v, true)} at ${pfRangeLabel(range)} start` : null}/>
+            <PfUnitBar value={unit} onChange={setUnit}/>
           )}
         </div>
       </div>
