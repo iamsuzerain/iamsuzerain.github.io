@@ -466,11 +466,11 @@ function UnitToggle({ value, onChange }) {
 // Where a switch governs a whole page — ibkr and overview — it used to sit in
 // that page's head, and the head scrolls away within a screen. Reading a
 // percentage eight panels down meant scrolling back to the top to see it in
-// dollars. The nav is the one strip that stays, so those two draw there, and
-// the note naming the base goes with them: szPctOf's rule (never a percentage
-// whose denominator is off-screen) then holds at any scroll position instead of
-// only at the top of the page. Panel-scoped switches stay in their panel head —
-// see polymarket, where the switch governs one chart.
+// dollars. The nav is the one strip that stays, so those two draw there. The
+// optional note beside the switch is for whatever the reader needs in the same
+// glance — the method under %, say. Not the notional: the chart legend already
+// prints that next to the lines valued on it. Panel-scoped switches stay in
+// their panel head — see polymarket, where the switch governs one chart.
 //
 // A module-level slot rather than state lifted through App, because Nav is
 // App's sibling, not its child: the two views own their unit as before and only

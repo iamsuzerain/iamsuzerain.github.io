@@ -166,11 +166,12 @@
   }
 
   /* ========== Nav ========== */
-  /* Wraps at every width, not just the phone breakpoint below. Once the unit
-     switch joined the row, widths in the 800–1200 band ran out of room, and an
-     unwrapped flex row resolves that by crushing the one shrinkable item — the
-     note naming the denominator, which is exactly the thing that must not
-     disappear. Wrapping drops the switch to its own row instead. */
+  /* Wraps at every width, not just at the phone breakpoint below, where the
+     items are ordered onto their own row. Now that the unit switch shares the
+     row, a narrow desktop can run out of room, and an unwrapped flex row
+     resolves that by crushing its one shrinkable item — the note beside the
+     switch, which is the part carrying the meaning. Wrapping drops the switch
+     to its own row instead. */
   .sz-nav {
     display: flex; align-items: center; gap: 28px;
     flex-wrap: wrap; row-gap: 10px;
@@ -212,8 +213,7 @@
   /* $ / % switch, published into the nav by whichever view owns one. It sits
      here rather than in that view's head because it governs the headline, the
      stat row and every chart below them — all of which outrun the fold, while
-     the nav is sticky. The base it divides by rides beside it whenever % is on,
-     so the percentage is never denominator-less at any scroll position.
+     the nav is sticky. An optional note rides beside it — see UnitBar.
      margin-left:auto is a no-op on desktop, where .sz-nav-items already eats
      the slack; it does the work once the nav wraps and the items drop away to
      their own row. */
