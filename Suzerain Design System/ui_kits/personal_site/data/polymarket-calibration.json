@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T07:00:24Z",
+  "generatedAt": "2026-08-16T07:02:49Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -712,9 +712,9 @@
   },
   "openBook": {
     "n": 48,
-    "cost": 206422.72,
-    "mark": 183028.81,
-    "unrealized": -23393.91
+    "cost": 228654.68,
+    "mark": 205660.23,
+    "unrealized": -22994.45
   },
   "excluded": {
     "hedged": {
