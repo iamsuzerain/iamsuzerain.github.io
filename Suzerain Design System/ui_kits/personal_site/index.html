@@ -343,13 +343,6 @@
     background: var(--violet-400); border-color: var(--violet-400);
     color: var(--ink-0); box-shadow: 0 0 24px rgba(167,139,250,0.4);
   }
-  /* Borderless, but the same warm white as the button beside it: violet-300 on
-     the city photo is a low-contrast accent on a busy, bright-in-places
-     background, and these two are the hero's only route into the tracker. The
-     violet moves to :hover, where it is the affordance rather than the resting
-     state. */
-  .sz-btn-ghost { border-color: transparent; color: var(--fg-1); }
-  .sz-btn-ghost:hover { color: var(--violet-300); border-color: transparent; }
 
   /* ========== Hero ========== */
   /* Hero + About sit directly over the city photo (no panel),
@@ -446,7 +439,6 @@
     font-family: var(--font-sans); font-size: 17px;
     color: var(--fg-3); max-width: 560px; margin: 0 0 36px;
   }
-  .sz-hero-cta { display: flex; gap: 12px; margin-bottom: 64px; }
   .sz-hero-footer {
     font-family: var(--font-mono); font-size: 12px;
     color: var(--fg-3); letter-spacing: 0.04em;

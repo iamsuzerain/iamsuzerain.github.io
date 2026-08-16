@@ -14,7 +14,10 @@ function logBody(entry) {
   );
 }
 
-function Hero({ setView }) {
+// No CTA row under the sub. It was overview / ibkr / polymarket, which is three
+// of the seven destinations the nav already carries — and the nav is on screen
+// at the same moment, one line above it.
+function Hero() {
   const c = window.CONTENT.home;
   return (
     <section className="sz-hero">
@@ -22,11 +25,6 @@ function Hero({ setView }) {
       <h1 className="sz-hero-name">{c.name}<Cursor /></h1>
       <p className="sz-hero-tag">{c.tag}</p>
       <p className="sz-hero-sub">{c.sub}</p>
-      <div className="sz-hero-cta">
-        <button className="sz-btn" style={{ borderColor: 'transparent' }} onClick={() => setView('combined')}>▸ overview</button>
-        <button className="sz-btn sz-btn-ghost" onClick={() => setView('portfolio')}>ibkr →</button>
-        <button className="sz-btn sz-btn-ghost" onClick={() => setView('polymarket')}>polymarket →</button>
-      </div>
       <div className="sz-log">
         {c.log.map((entry, i) => (
           <div key={i} className="sz-log-entry">
