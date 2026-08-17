@@ -7,9 +7,10 @@ Usage (run from the personal_site folder):
 Options:
   --slug   override the auto-generated slug
   --date   YYYY-MM-DD (default: today)
-  --log    also add a brief homepage log entry with this text;
-           if the text contains the post title, the title becomes the link,
-           otherwise a "more →" link is appended
+  --log    also add a log entry with this text, tied to the post by slug.
+           The two then render as one row (post title over the log text) in
+           the hero log and the thoughts archive; without it the post shows
+           up in both on its own, blurbed with --summary.
 
 Then: write the body in data/posts/<slug>.md, commit, push.
 """
@@ -75,18 +76,11 @@ def main():
 
     if args.log:
         content = load(CONTENT)
-        href = f'#/thoughts/{slug}'
-        body = args.log
-        if args.title in body:
-            link = OrderedDict([('text', args.title), ('href', href)])
-        else:
-            body = body.rstrip() + ' more →'
-            link = OrderedDict([('text', 'more →'), ('href', href)])
         content['home']['log'].insert(0, OrderedDict([
-            ('date', args.date), ('body', body), ('link', link),
+            ('date', args.date), ('body', args.log.rstrip()), ('slug', slug),
         ]))
         save(CONTENT, content)
-        print(f'logged   homepage entry linking to {href}')
+        print(f'logged   log entry tied to {slug}')
 
     print(f'\nnext: edit {md.relative_to(ROOT)}, then commit & push.')
 
