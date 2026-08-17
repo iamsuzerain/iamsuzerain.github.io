@@ -1,10 +1,17 @@
 name: deploy-pages
 
 on:
+  # Manual commits only. A push made with the default GITHUB_TOKEN does not fire
+  # workflows, so this trigger never sees the refresh bots — they arrive via
+  # workflow_run below, which must therefore list every one of them.
   push:
     branches: [main]
   workflow_run:
-    workflows: [betmoar-breakdown-refresh, portfolio-refresh, polymarket-pnl-refresh]
+    workflows:
+      - betmoar-breakdown-refresh
+      - portfolio-refresh
+      - polymarket-pnl-refresh
+      - polymarket-calibration-refresh
     types: [completed]
   workflow_dispatch: {}
 

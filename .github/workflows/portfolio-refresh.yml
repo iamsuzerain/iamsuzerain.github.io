@@ -6,10 +6,11 @@ on:
     - cron: '0 9 * * 1-6'   # weekdays + Saturday, 09:00 GMT
   workflow_dispatch: {}
 
-# Allow the workflow to push the updated JSON back to the repo.
+# Allow the workflow to push the updated JSON back to the repo. `actions: write`
+# was only ever needed to dispatch deploy-pages by hand; deploy-pages now picks
+# this workflow up via workflow_run, so nothing here dispatches anything.
 permissions:
   contents: write
-  actions: write
 
 jobs:
   refresh:
@@ -69,11 +70,3 @@ jobs:
             echo "push rejected (attempt $attempt) — rebasing onto origin/main"
             git pull --rebase -X theirs origin main
           done
-          echo "CHANGED=true" >> "$GITHUB_ENV"
-
-      - name: trigger deploy
-        if: env.CHANGED == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run deploy-pages.yml --repo ${{ github.repository }} --ref main
