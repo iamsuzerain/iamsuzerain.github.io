@@ -1,7 +1,17 @@
 // Portfolio.jsx — IBKR Flex Query dashboard (reads data/portfolio.json)
 // Globals: React, useDecode
 
-const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo, useRef: usePortRef } = React;
+const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo } = React;
+
+// Chart machinery (Chart.jsx, loaded ahead of this file). The panels below own
+// their own bodies — overlays, warm-up rules, distribution bins — but the box,
+// the scales, the hover maths and the gradient stops are shared with the
+// polymarket and overview views.
+const {
+  szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
+  useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzTooltip,
+  SzAxisX, SzStripHead, SzToggle,
+} = window;
 
 function fmtUSD(n, compact = false) {
   if (n == null || isNaN(n)) return '—';
@@ -457,30 +467,6 @@ function pfDrawdownEpisodes(perf, limit = 5) {
   return eps.sort((a, b) => a.depth - b.depth).slice(0, limit);
 }
 
-// ---------- Monotone cubic spline (Fritsch-Carlson) ----------
-function smoothPath(xs, ys) {
-  const n = xs.length;
-  if (n < 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
-  if (n === 2) return `M${xs[0].toFixed(2)},${ys[0].toFixed(2)} L${xs[1].toFixed(2)},${ys[1].toFixed(2)}`;
-  const delta = new Array(n - 1);
-  for (let i = 0; i < n - 1; i++) delta[i] = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]);
-  const m = new Array(n);
-  m[0] = delta[0];
-  for (let i = 1; i < n - 1; i++) m[i] = (delta[i - 1] + delta[i]) / 2;
-  m[n - 1] = delta[n - 2];
-  for (let i = 0; i < n - 1; i++) {
-    if (Math.abs(delta[i]) < 1e-10) { m[i] = 0; m[i + 1] = 0; continue; }
-    const a = m[i] / delta[i], b = m[i + 1] / delta[i], s = a * a + b * b;
-    if (s > 9) { const t = 3 / Math.sqrt(s); m[i] *= t; m[i + 1] *= t; }
-  }
-  let path = `M${xs[0].toFixed(2)},${ys[0].toFixed(2)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const dx = (xs[i + 1] - xs[i]) / 3;
-    path += ` C${(xs[i] + dx).toFixed(2)},${(ys[i] + m[i] * dx).toFixed(2)} ${(xs[i + 1] - dx).toFixed(2)},${(ys[i + 1] - m[i + 1] * dx).toFixed(2)} ${xs[i + 1].toFixed(2)},${ys[i + 1].toFixed(2)}`;
-  }
-  return path;
-}
-
 // Align a benchmark's daily closes to the perf series dates (forward-fill) and
 // rebase to the first matched close, yielding cumulative % return per perf date.
 function rebaseBenchmark(benchSeries, perfDates) {
@@ -510,10 +496,13 @@ const benchLabel = (key) => (window.szBenchLabel ? window.szBenchLabel(key) : ke
 const benchOrder = (keys) => (window.szBenchSort ? window.szBenchSort(keys) : (keys || []));
 
 // ---------- Performance chart (deposit-adjusted TWR %) ----------
+// Taller than the strips below it and the only one here carrying x-axis labels,
+// hence the 28px foot.
+const PF_NAV_FRAME = szFrame(220, 16, 28);
+
 function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) {
-  const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 28;
-  const svgRef = usePortRef(null);
-  const [hover, setHover] = usePortState(null);
+  const F = PF_NAV_FRAME;
+  const hv = useChartHover(F);
 
   // Use deposit-adjusted TWR series when available, otherwise fall back to raw NAV %
   const base = series[0].v;
@@ -549,70 +538,32 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
 
   const values = plot.map(p => p.v);
   for (const o of overlays) values.push(...ovVals(o));
-  const min = Math.min(...values), max = Math.max(...values);
-  const pad = (max - min) * 0.08 || 0.005;
-  const y0 = min - pad, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (perf.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  // Unanchored: this curve is already rebased to 0 at the window start, so zero
+  // is inside the data by construction and does not need forcing into frame.
+  const { y0, y1 } = szDomain(values, { pad: 0.08, floor: 0.005 });
+  const { x, y } = szScales(F, perf.length, y0, y1);
 
   const linePath = smoothPath(plot.map((_, i) => x(i)), plot.map(p => y(p.v)));
-  const areaPath = linePath + ` L${x(plot.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const areaPath = szAreaPath(linePath, x(0), x(plot.length - 1), y(0));
 
-  const tickEvery = Math.max(1, Math.floor(perf.length / 5));
-  const ticks = perf.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const ticks = szTicks(perf, 5);
   const gridLines = [y1, (y0 + y1) / 2, y0];
-  const yLabels = [
-    { v: y1 },
-    { v: y0 },
-  ];
 
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(perf.length - 1, Math.round(t * (perf.length - 1))));
-    setHover(idx);
-  }
-
-  const hovered = hover != null ? plot[hover] : null;
+  const hovered = hv.i != null ? plot[hv.i] : null;
   const zeroY = y(0);
 
   return (
     <React.Fragment>
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className="pf-navchart"
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id="pf-nav-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
-          </linearGradient>
-          {/* Vertical, value-keyed: pink where the line runs high, violet where low. */}
-          <linearGradient id="pf-nav-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8"/>
-            <stop offset="100%" stopColor="#a78bfa"/>
-          </linearGradient>
-        </defs>
+      <SzChartSvg frame={F} hover={hv} n={perf.length}>
+        <SzChartDefs ramp="nav" id="pf-nav"/>
         {gridLines.map((v, i) => (
           <line key={i}
-            x1={PAD_L} x2={W - PAD_R}
+            x1={F.PAD_L} x2={F.W - F.PAD_R}
             y1={y(v)} y2={y(v)}
             stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
         ))}
-        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <SzRule frame={F} y={zeroY}/>
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
         {overlays.map(o => (
           <path key={o.key}
@@ -620,39 +571,24 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
             fill="none" stroke={o.color} strokeOpacity="0.55" strokeWidth="1.25"/>
         ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
-        {hovered && (
-          <g>
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#a78bfa" stroke="#0a0612" strokeWidth="1.5"/>
-          </g>
-        )}
-      </svg>
+        {hovered && <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#a78bfa"/>}
+      </SzChartSvg>
       <div className="pf-axis-y">
-        {yLabels.map((yl, i) => (
-          <span key={i} style={{ top: `${(y(yl.v) / H) * 100}%` }}>{fmtV(yl.v)}</span>
+        {[y1, y0].map((v, i) => (
+          <span key={i} style={{ top: `${(y(v) / F.H) * 100}%` }}>{fmtV(v)}</span>
         ))}
       </div>
-      <div className="pf-axis-x">
-        {ticks.map((t, i) => (
-          <span key={i}
-            className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
-            style={{ left: `${(x(t.i) / W) * 100}%` }}>{t.d}</span>
-        ))}
-      </div>
+      <SzAxisX frame={F} ticks={ticks} x={x}/>
       {hovered && (
-        <div className="pm-tooltip" style={{
-          left: `${(x(hover) / W) * 100}%`,
-          top: `${(y(hovered.v) / H) * 100}%`,
-        }}>
+        <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
           <div className="pm-tt-date">{hovered.d}</div>
           <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmtV(hovered.v)}</div>
           {overlays.map(o => (
             <div key={o.key} className="pf-tt-bench" style={{ color: o.color }}>
-              {o.label} {fmtV(ovVals(o)[hover])}
+              {o.label} {fmtV(ovVals(o)[hv.i])}
             </div>
           ))}
-        </div>
+        </SzTooltip>
       )}
     </div>
     {overlays.length > 0 && (
@@ -770,73 +706,38 @@ function StatTile({ label, value, change, changeText, kicker }) {
 }
 
 // ---------- Underwater (drawdown) strip ----------
-function DrawdownStrip({ perfSeries }) {
-  const svgRef = usePortRef(null);
-  const [hover, setHover] = usePortState(null);
-  if (!perfSeries || perfSeries.length < 2) return null;
-  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 6, PAD_B = 12;
-  const dd = drawdownSeries(perfSeries);
-  const min = Math.min(0, ...dd.map(p => p.v));
-  const x = (i) => PAD_L + (i / (dd.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - min) / (0 - min || 1)) * (H - PAD_T - PAD_B);
-  const line = smoothPath(dd.map((_, i) => x(i)), dd.map(p => y(p.v)));
-  const area = line + ` L${x(dd.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+// The underwater strip hangs off a hard ceiling at 0 rather than being centred,
+// so it gets 2px less headroom than the strips that straddle their reference.
+const PF_DD_FRAME = szFrame(60, 6, 12);
+const PF_STRIP_FRAME = szFrame(60, 8, 12);
 
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(dd.length - 1, Math.round(t * (dd.length - 1))));
-    setHover(idx);
-  }
-  const hovered = hover != null ? dd[hover] : null;
+function DrawdownStrip({ perfSeries }) {
+  const F = PF_DD_FRAME;
+  const hv = useChartHover(F);
+  if (!perfSeries || perfSeries.length < 2) return null;
+  const dd = drawdownSeries(perfSeries);
+  // Domain runs from the deepest drawdown up to a fixed 0 — this series is
+  // non-positive by construction, so the top of the box is the running peak.
+  const min = Math.min(0, ...dd.map(p => p.v));
+  const { x, y } = szScales(F, dd.length, min, 0);
+  const line = smoothPath(dd.map((_, i) => x(i)), dd.map(p => y(p.v)));
+  const area = szAreaPath(line, x(0), x(dd.length - 1), y(0));
+  const hovered = hv.i != null ? dd[hv.i] : null;
 
   return (
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        className="pf-navchart"
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id="pf-dd-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
-            <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
-          </linearGradient>
-          <linearGradient id="pf-dd-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff8ad4"/>
-            <stop offset="100%" stopColor="#ff4fd8"/>
-          </linearGradient>
-        </defs>
-        <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
-          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+      <SzChartSvg frame={F} hover={hv} n={dd.length}>
+        <SzChartDefs ramp="dd" id="pf-dd"/>
+        <SzRule frame={F} y={y(0)}/>
         <path d={area} fill="url(#pf-dd-fill)"/>
         <path d={line} fill="none" stroke="url(#pf-dd-stroke)" strokeWidth="1.35"/>
-        {hovered && (
-          <g>
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#0a0612" strokeWidth="1.5"/>
-          </g>
-        )}
-      </svg>
+        {hovered && <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#ff6ec4"/>}
+      </SzChartSvg>
       {hovered && (
-        <div className="pm-tooltip" style={{
-          left: `${(x(hover) / W) * 100}%`,
-          top: `${(y(hovered.v) / H) * 100}%`,
-        }}>
+        <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
           <div className="pm-tt-date">{hovered.d}</div>
           <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{fmtPctBare(hovered.v)}</div>
-        </div>
+        </SzTooltip>
       )}
     </div>
   );
@@ -844,81 +745,36 @@ function DrawdownStrip({ perfSeries }) {
 
 // ---------- Rolling alpha strip (cumulative TWR minus SPX, zero-centered) ----------
 function AlphaStrip({ alpha, unit }) {
-  const svgRef = usePortRef(null);
-  const [hover, setHover] = usePortState(null);
+  const F = PF_STRIP_FRAME;
+  const hv = useChartHover(F);
   if (!alpha || alpha.length < 2) return null;
   const usd = unit === 'usd';
-  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
-  const vals = alpha.map(p => p.v);
-  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  // Floor scales with the units: 0.002 is a fifth of a percentage point in
-  // ratio terms and two-tenths of a cent in dollars, which would collapse a
-  // flat dollar strip onto the zero line.
-  const pad = (hi - lo) * 0.12 || (usd ? 1 : 0.002);
-  const y0 = lo - pad, y1 = hi + pad;
-  const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  // Anchored both ways so the zero line stays drawn even on a window that never
+  // crossed it — "behind the whole way" is the reading, and it needs the rule.
+  const { y0, y1 } = szDomain(alpha.map(p => p.v),
+    { pad: 0.12, floor: usd ? 1 : 0.002, min: 0, max: 0 });
+  const { x, y } = szScales(F, alpha.length, y0, y1);
   const line = smoothPath(alpha.map((_, i) => x(i)), alpha.map(p => y(p.v)));
   const zeroY = y(0);
-  const area = line + ` L${x(alpha.length - 1).toFixed(2)},${zeroY.toFixed(2)} L${x(0).toFixed(2)},${zeroY.toFixed(2)} Z`;
-
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(alpha.length - 1, Math.round(t * (alpha.length - 1))));
-    setHover(idx);
-  }
-  const hovered = hover != null ? alpha[hover] : null;
+  const area = szAreaPath(line, x(0), x(alpha.length - 1), zeroY);
+  const hovered = hv.i != null ? alpha[hv.i] : null;
 
   return (
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        className="pf-navchart"
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id="pf-alpha-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
-            <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
-          </linearGradient>
-          <linearGradient id="pf-alpha-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#93c5fd"/>
-            <stop offset="100%" stopColor="#3b82f6"/>
-          </linearGradient>
-        </defs>
-        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+      <SzChartSvg frame={F} hover={hv} n={alpha.length}>
+        <SzChartDefs ramp="alpha" id="pf-alpha"/>
+        <SzRule frame={F} y={zeroY}/>
         <path d={area} fill="url(#pf-alpha-fill)"/>
         <path d={line} fill="none" stroke="url(#pf-alpha-stroke)" strokeWidth="1.35"/>
-        {hovered && (
-          <g>
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#0a0612" strokeWidth="1.5"/>
-          </g>
-        )}
-      </svg>
+        {hovered && <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#60a5fa"/>}
+      </SzChartSvg>
       {hovered && (
-        <div className="pm-tooltip" style={{
-          left: `${(x(hover) / W) * 100}%`,
-          top: `${(y(hovered.v) / H) * 100}%`,
-        }}>
+        <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
           <div className="pm-tt-date">{hovered.d}</div>
           <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>
             {hovered.v >= 0 ? '+' : ''}{usd ? fmtUSD(hovered.v) : fmtPctBare(hovered.v)}
           </div>
-        </div>
+        </SzTooltip>
       )}
     </div>
   );
@@ -932,12 +788,15 @@ function ReturnDistribution({ perfSeries }) {
   const hist = m && pfHistogram(rets, m);
   if (!hist) return null;
 
-  const W = 920, H = 180, PAD_L = 8, PAD_R = 8, PAD_T = 12, PAD_B = 24;
+  const F = szFrame(180, 12, 24);
+  const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = F;
   const { bins } = hist;
   const maxCount = Math.max(...bins.map(b => Math.max(b.count, b.expected)), 1);
+  // x is bin-indexed, not point-indexed — bars occupy a slot, they don't sit on
+  // a coordinate — so this is the one chart here that doesn't take szScales' x.
   const bw = (W - PAD_L - PAD_R) / bins.length;
   const x = (i) => PAD_L + i * bw;
-  const y = (c) => PAD_T + (1 - c / maxCount) * (H - PAD_T - PAD_B);
+  const { y } = szScales(F, bins.length, 0, maxCount);
   const base = y(0);
   const zeroX = PAD_L + (bins.findIndex(b => b.lo >= 0)) * bw;
 
@@ -1032,9 +891,9 @@ function ReturnDistribution({ perfSeries }) {
 
 // ---------- Rolling risk strip ----------
 function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', periods = 252 }) {
+  const F = PF_STRIP_FRAME;
   const [metric, setMetric] = usePortState('beta');
-  const svgRef = usePortRef(null);
-  const [hover, setHover] = usePortState(null);
+  const hv = useChartHover(F);
 
   const available = Object.keys(PF_ROLL_METRICS)
     .filter(k => (benchSeries ? true : !PF_ROLL_METRICS[k].bench));
@@ -1044,107 +903,70 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', 
   if (!roll) return null;
 
   const { series, window: win, firstIdx } = roll;
-  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
   const vals = series.filter(p => p.v != null).map(p => p.v);
-  const lo = Math.min(spec.zero, ...vals), hi = Math.max(spec.zero, ...vals);
-  const pad = (hi - lo) * 0.12 || 0.01;
-  const y0 = lo - pad, y1 = hi + pad;
+  // Anchored at the metric's reference (1 for beta, 0 for vol/corr) so "at the
+  // benchmark" is always a visible line rather than an off-screen implication.
+  const { y0, y1 } = szDomain(vals, { pad: 0.12, floor: 0.01, min: spec.zero, max: spec.zero });
   // x spans every perf date, including the blank warm-up, so this strip lines up
   // column-for-column with the chart and strips above it.
-  const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const { x, y } = szScales(F, series.length, y0, y1);
   const drawn = series.map((p, i) => ({ p, i })).filter(o => o.p.v != null);
   const line = smoothPath(drawn.map(o => x(o.i)), drawn.map(o => y(o.p.v)));
   const refY = y(spec.zero);
 
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    setHover(Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1)))));
-  }
   // Only the filled part of the axis carries a reading; hovering the warm-up
   // shows the crosshair (so it still tracks the charts above) but no value.
-  const hovered = hover != null && series[hover] && series[hover].v != null
-    ? series[hover] : null;
+  const hovered = hv.i != null && series[hv.i] && series[hv.i].v != null
+    ? series[hv.i] : null;
   const now = vals.length ? vals[vals.length - 1] : null;
 
   return (
     <React.Fragment>
-      <div className="pf-strip-head">
-        <span className="pf-strip-label">
-          rolling {spec.label}{spec.bench ? ` vs ${benchName}` : ''} · {win}-session
-        </span>
+      <SzStripHead label={`rolling ${spec.label}${spec.bench ? ` vs ${benchName}` : ''} · ${win}-session`}>
         <div className="pf-strip-toggle">
           <div className="pf-range">
-            {available.map(k => (
-              <button key={k} type="button"
-                className={`pf-range-btn${active === k ? ' active' : ''}`}
-                onClick={() => setMetric(k)}>{k}</button>
-            ))}
+            <SzToggle options={available} value={active} onChange={setMetric}/>
           </div>
           <span className="pf-strip-meta">now {spec.fmt(now)}</span>
         </div>
-      </div>
+      </SzStripHead>
       <div className="pm-chart-wrap">
-        <svg ref={svgRef} className="pf-navchart" viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          onMouseMove={onMove} onMouseLeave={() => setHover(null)}
-          onTouchStart={onMove} onTouchMove={onMove} onTouchEnd={() => setHover(null)}>
-          <defs>
-            {/* Horizontal for the same reason as the overview's correlation strip:
-                this axis is anchored at spec.zero, not at the data, so a metric
-                sitting far from its anchor gets squeezed into a sliver of the
-                height — beta is the default and anchors at 1, so a book running
-                beta near zero leaves the line ~8% of the plot tall, far too
-                little vertical travel for a value-keyed ramp to register.
-                Violet family rather than the pink one: this strip sits directly
-                under the P&L chart, and reusing that chart's gradient made the
-                two read as the same series. */}
-            <linearGradient id="pf-roll-stroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#c4b5fd"/>
-              <stop offset="100%" stopColor="#8b5cf6"/>
-            </linearGradient>
-            <linearGradient id="pf-roll-fill" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.16"/>
-              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.16"/>
-            </linearGradient>
-          </defs>
+        <SzChartSvg frame={F} hover={hv} n={series.length}>
+          {/* The 'roll' ramp runs horizontally — see SZ_GRADIENTS. Concretely:
+              this axis is anchored at spec.zero, not at the data, so a metric
+              sitting far from its anchor gets squeezed into a sliver of the
+              height. Beta is the default and anchors at 1, so a book running
+              beta near zero leaves the line ~8% of the plot tall, far too little
+              vertical travel for a value-keyed ramp to register. It is also the
+              violet family rather than the pink one: this strip sits directly
+              under the P&L chart, and reusing that chart's gradient made the two
+              read as the same series. */}
+          <SzChartDefs ramp="roll" id="pf-roll"/>
           {/* Guarded: a lookback that has not filled yet leaves `drawn` empty,
               and closing an area path off a missing endpoint would throw. */}
           {drawn.length > 1 && (
-            <path d={`${line} L${x(drawn[drawn.length - 1].i).toFixed(2)},${refY.toFixed(2)} L${x(drawn[0].i).toFixed(2)},${refY.toFixed(2)} Z`}
+            <path d={szAreaPath(line, x(drawn[0].i), x(drawn[drawn.length - 1].i), refY)}
               fill="url(#pf-roll-fill)"/>
           )}
-          <line x1={PAD_L} x2={W - PAD_R} y1={refY} y2={refY}
-            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+          <SzRule frame={F} y={refY}/>
           {/* Where the lookback window finishes filling — left of it the metric
               simply does not exist yet, rather than being zero. */}
           {firstIdx > 0 && (
-            <line x1={x(firstIdx)} x2={x(firstIdx)} y1={PAD_T} y2={H - PAD_B}
+            <line x1={x(firstIdx)} x2={x(firstIdx)} y1={F.PAD_T} y2={F.H - F.PAD_B}
               stroke="rgba(167,139,250,0.22)" strokeDasharray="1 4"/>
           )}
           <path d={line} fill="none" stroke="url(#pf-roll-stroke)" strokeWidth="1.35"/>
-          {hover != null && (
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+          {/* cy null over the warm-up: hairline only, nothing to mark. */}
+          {hv.i != null && (
+            <SzCrosshair frame={F} x={x(hv.i)}
+              cy={hovered ? y(hovered.v) : null} fill="#a78bfa"/>
           )}
-          {hovered && (
-            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#a78bfa"
-              stroke="#0a0612" strokeWidth="1.5"/>
-          )}
-        </svg>
+        </SzChartSvg>
         {hovered && (
-          <div className="pm-tooltip" style={{
-            left: `${(x(hover) / W) * 100}%`,
-            top: `${(y(hovered.v) / H) * 100}%`,
-          }}>
+          <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
             <div className="pm-tt-date">{hovered.d}</div>
             <div className="pm-tt-val">{spec.fmt(hovered.v)}</div>
-          </div>
+          </SzTooltip>
         )}
       </div>
     </React.Fragment>
@@ -1490,11 +1312,7 @@ function Portfolio() {
         <div className="pf-panel-head">
           <span className="pf-panel-title">performance · {pfRangeLabel(range)}</span>
           <div className="pf-range">
-            {PF_RANGES.map(r => (
-              <button key={r} type="button"
-                className={`pf-range-btn${range === r ? ' active' : ''}`}
-                onClick={() => setRange(r)}>{r.toLowerCase()}</button>
-            ))}
+            <SzToggle options={PF_RANGES} value={range} onChange={setRange}/>
             {PfHistoryPicker && (
               <PfHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
             )}
@@ -1639,7 +1457,3 @@ window.SZ_RISK = {
   pfMoments,
   pfDailyReturns,
 };
-
-// The curve shape itself, so the overview's charts smooth the same way these do
-// rather than keeping a second copy of the spline that can drift from this one.
-window.szSmoothPath = smoothPath;

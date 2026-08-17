@@ -7,11 +7,15 @@ const {
   useRef: useCmbRef,
 } = React;
 
-// Monotone cubic spline, borrowed from the IBKR tab (Portfolio.jsx) so both
-// books' charts carry the same rounded curve. Falls back to straight segments
-// if that file somehow isn't loaded — a jagged chart beats a blank one.
-const smoothPath = window.szSmoothPath || ((xs, ys) =>
-  xs.map((v, i) => `${i === 0 ? 'M' : 'L'}${v.toFixed(2)},${ys[i].toFixed(2)}`).join(' '));
+// Chart machinery (Chart.jsx, loaded ahead of this file) — the same box,
+// scales, hover maths and gradient stops the ibkr and polymarket charts use.
+// The spline in particular is shared rather than re-derived, so both books'
+// curves round the same way.
+const {
+  szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
+  useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzCrosshairLine,
+  SzTooltip, SzAxisX, SzAxisZero, SzStripHead, SzToggle,
+} = window;
 
 const CMB_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   ? window.SZ_ID.wallets
@@ -521,7 +525,16 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
 }
 
 // ---------- total pnl sparkline (violet→magenta) with pinned log markers ----------
+// The tallest chart on the site — it carries two component lines, n benchmark
+// lines and the aggregate, so it gets 20px more than the ibkr curve.
+const CMB_CHART_FRAME = szFrame(240, 20, 32);
+const CMB_DD_FRAME = szFrame(60, 6, 12);
+const CMB_CORR_FRAME = szFrame(76, 8, 14);
+const CMB_STRIP_FRAME = szFrame(60, 8, 12);
+const CMB_BARS_FRAME = szFrame(200, 14, 22);
+
 function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, unit, primary }) {
+  const F = CMB_CHART_FRAME;
   const benches = bench || [];
   const base = ddNotional != null ? ddNotional : benchNotional;
   const pct = unit === 'pct' && !!pctSeries;
@@ -530,9 +543,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
   // dollar copy because the drawdown strip rebuilds an equity curve from it.
   const plot = pct ? pctSeries : series;
   const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
-  const W = 920, H = 240, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
-  const svgRef = useCmbRef(null);
-  const [hover, setHover] = useCmbState(null);
+  const hv = useChartHover(F);
   const [annot, setAnnot] = useCmbState(null);
   const markers = cmbMarkers(plot, log).sort((a, b) => a.i - b.i);
   const cur = annot || (markers.length ? markers[markers.length - 1] : null);
@@ -543,42 +554,24 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
     all.push(p.v, p.ibkr, p.pm);
     for (const b of benches) if (p[b.key] != null) all.push(p[b.key]);
   }
-  const min = Math.min(...all, 0), max = Math.max(...all);
-  // Ratios need a ratio-scale floor: the dollar `|| 1` is a hundred percentage
-  // points, which would flatten a whole window onto the zero line.
-  const pad = (max - min) * 0.08 || (pct ? 0.01 : 1);
-  const y0 = min - pad, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (plot.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  // Floor anchored at 0 so the zero line is always drawn; the ratio floor is a
+  // hundredth rather than the dollar `1`, which is a hundred percentage points
+  // and would flatten a whole window onto that line.
+  const { y0, y1 } = szDomain(all, { pad: 0.08, floor: pct ? 0.01 : 1, min: 0 });
+  const { x, y } = szScales(F, plot.length, y0, y1);
 
-  // Monotone cubic spline (smoothPath, shared with the IBKR tab) rather than
-  // straight segments: same curve family on both books' charts, and monotone
-  // means the fitted curve never overshoots a turning point, so the area fill
-  // can't bulge past a peak the data never reached.
   const linePath = (key) =>
     smoothPath(plot.map((_, i) => x(i)), plot.map(p => y(p[key])));
   const totalPath = linePath('v');
-  const areaPath = totalPath + ` L${x(plot.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const areaPath = szAreaPath(totalPath, x(0), x(plot.length - 1), y(0));
   const zeroY = y(0);
 
-  const tickEvery = Math.max(1, Math.floor(plot.length / 6));
-  const ticks = plot.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const ticks = szTicks(plot, 6);
   const spanDays = plot.length > 1 ? cmbEpochDay(plot[plot.length - 1].d) - cmbEpochDay(plot[0].d) : 0;
   const axisMode = spanDays <= 95 ? 'day'
     : (plot[0].d.slice(0, 4) === plot[plot.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
 
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(plot.length - 1, Math.round(t * (plot.length - 1))));
-    setHover(idx);
-  }
-
-  const hp = hover != null ? plot[hover] : null;
+  const hp = hv.i != null ? plot[hv.i] : null;
 
   return (
     <>
@@ -599,31 +592,10 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
       </div>
     )}
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className="pf-navchart pm-chart-svg"
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id="cmb-nav-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
-          </linearGradient>
-          {/* Vertical, value-keyed: pink where the line runs high, violet where low. */}
-          <linearGradient id="cmb-nav-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8"/>
-            <stop offset="100%" stopColor="#a78bfa"/>
-          </linearGradient>
-        </defs>
+      <SzChartSvg frame={F} hover={hv} n={plot.length} className="pf-navchart pm-chart-svg">
+        <SzChartDefs ramp="nav" id="cmb-nav"/>
 
-        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-          stroke="rgba(229,225,241,0.2)" strokeDasharray="2 4"/>
+        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.2)" dash="2 4"/>
 
         {/* component lines — faint, recessed beneath the aggregate */}
         <path d={linePath('ibkr')} fill="none" stroke={CMB_C_IBKR} strokeWidth="1" opacity="0.3"/>
@@ -636,46 +608,30 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         <path d={areaPath} fill="url(#cmb-nav-fill)"/>
         <path d={totalPath} fill="none" stroke="url(#cmb-nav-stroke)" strokeWidth="1.75"/>
 
+        {/* Hairline under every dot, then the two components, then the aggregate
+            on top — this is the only chart here reading three series at once, so
+            it spells the crosshair out rather than taking the packaged one. */}
         {hp && (
           <g>
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hp.ibkr)} r="2.5" fill={CMB_C_IBKR} opacity="0.6"/>
-            <circle cx={x(hover)} cy={y(hp.pm)} r="2.5" fill={CMB_C_PM} opacity="0.6"/>
-            <circle cx={x(hover)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#f5f0ff" strokeWidth="1.5"/>
+            <SzCrosshairLine frame={F} x={x(hv.i)}/>
+            <circle cx={x(hv.i)} cy={y(hp.ibkr)} r="2.5" fill={CMB_C_IBKR} opacity="0.6"/>
+            <circle cx={x(hv.i)} cy={y(hp.pm)} r="2.5" fill={CMB_C_PM} opacity="0.6"/>
+            <circle cx={x(hv.i)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#f5f0ff" strokeWidth="1.5"/>
           </g>
         )}
 
         {/* log event markers — click to pin to the caption below */}
-        {markers.map((m, k) => {
-          const active = cur && cur.i === m.i;
-          const s = active ? 6 : 5;
-          const cx = x(m.i), cy = y(m.v);
-          return (
-            <g key={k} className={`cmb-annot${active ? ' active' : ''}`}
-              onClick={() => setAnnot(m)}>
-              <rect x={cx - 8} y={cy - 8} width="16" height="16" fill="transparent"/>
-              <rect className="cmb-annot-sq" x={cx - s / 2} y={cy - s / 2} width={s} height={s}
-                transform={`rotate(45 ${cx} ${cy})`}/>
-            </g>
-          );
-        })}
-      </svg>
-
-      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>{pct ? '0%' : '$0'}</div>
-      <div className="pf-axis-x">
-        {ticks.map((t, i) => (
-          <span key={i}
-            className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
-            style={{ left: `${(x(t.i) / W) * 100}%` }}>{cmbAxisLabel(t.d, axisMode)}</span>
+        {markers.map((m, k) => (
+          <CmbAnnotDot key={k} cx={x(m.i)} cy={y(m.v)}
+            active={cur && cur.i === m.i} onClick={() => setAnnot(m)}/>
         ))}
-      </div>
+      </SzChartSvg>
+
+      <SzAxisZero frame={F} y={zeroY}>{pct ? '0%' : '$0'}</SzAxisZero>
+      <SzAxisX frame={F} ticks={ticks} x={x} label={(t) => cmbAxisLabel(t.d, axisMode)}/>
 
       {hp && (
-        <div className="pm-tooltip cmb-tooltip" style={{
-          left: `${(x(hover) / W) * 100}%`,
-          top: `${(y(hp.v) / H) * 100}%`,
-        }}>
+        <SzTooltip frame={F} x={x(hv.i)} y={y(hp.v)} className="cmb-tooltip">
           <div className="pm-tt-date">{cmbFullDate(hp.d)}</div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_TOTAL }}/>total<span className={`cmb-tt-num ${hp.v >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.v)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className={`cmb-tt-num ${hp.ibkr >= 0 ? 'pos' : 'neg'}`}>{fmt(hp.ibkr)}</span></div>
@@ -683,7 +639,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
           {benches.map(b => hp[b.key] != null && (
             <div key={b.key} className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: cmbBenchColor(b.key) }}/>{cmbBenchLabel(b.key)}<span className={`cmb-tt-num ${hp[b.key] >= 0 ? 'pos' : 'neg'}`}>{fmt(hp[b.key])}</span></div>
           ))}
-        </div>
+        </SzTooltip>
       )}
 
     </div>
@@ -886,8 +842,8 @@ function CmbAnnotDot({ cx, cy, active, onClick, size = 5 }) {
 // window-start capital base (benchNotional) plus cumulative combined P&L, then
 // measure the % decline from its running peak. Splined to match CmbChart.
 function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
-  const svgRef = useCmbRef(null);
-  const [hover, setHover] = useCmbState(null);
+  const F = CMB_DD_FRAME;
+  const hv = useChartHover(F);
   if (!series || series.length < 2 || !notional || notional <= 0) return null;
 
   let peak = notional + series[0].v;
@@ -900,54 +856,21 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
   const maxDD = min, curDD = dd[dd.length - 1].v;
   const pct = (v) => (v * 100).toFixed(1) + '%';
 
-  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 6, PAD_B = 12;
-  const x = (i) => PAD_L + (i / (dd.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - min) / (0 - min || 1)) * (H - PAD_T - PAD_B);
+  // Deepest drawdown up to a fixed 0 — non-positive by construction, so the top
+  // of the box is the running peak.
+  const { x, y } = szScales(F, dd.length, min, 0);
   const line = smoothPath(dd.map((_, i) => x(i)), dd.map(p => y(p.v)));
-  const area = line + ` L${x(dd.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
-
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(dd.length - 1, Math.round(t * (dd.length - 1))));
-    setHover(idx);
-  }
-  const hovered = hover != null ? dd[hover] : null;
+  const area = szAreaPath(line, x(0), x(dd.length - 1), y(0));
+  const hovered = hv.i != null ? dd[hv.i] : null;
 
   return (
     <>
-      <div className="pf-strip-head">
-        <span className="pf-strip-label">underwater · drawdown from peak</span>
-        <span className="pf-strip-meta">max {pct(maxDD)} · now {pct(curDD)}</span>
-      </div>
+      <SzStripHead label="underwater · drawdown from peak"
+        meta={`max ${pct(maxDD)} · now ${pct(curDD)}`}/>
       <div className="pm-chart-wrap">
-        <svg
-          ref={svgRef}
-          className="pf-navchart"
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          onMouseMove={onMove}
-          onMouseLeave={() => setHover(null)}
-          onTouchStart={onMove}
-          onTouchMove={onMove}
-          onTouchEnd={() => setHover(null)}
-        >
-          <defs>
-            <linearGradient id="cmb-dd-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,79,216,0.02)"/>
-              <stop offset="100%" stopColor="rgba(255,79,216,0.22)"/>
-            </linearGradient>
-            <linearGradient id="cmb-dd-stroke" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ff8ad4"/>
-              <stop offset="100%" stopColor="#ff4fd8"/>
-            </linearGradient>
-          </defs>
-          <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
-            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <SzChartSvg frame={F} hover={hv} n={dd.length}>
+          <SzChartDefs ramp="dd" id="cmb-dd"/>
+          <SzRule frame={F} y={y(0)}/>
           <path d={area} fill="url(#cmb-dd-fill)"/>
           <path d={line} fill="none" stroke="url(#cmb-dd-stroke)" strokeWidth="1.35"/>
           {(markers || []).map((m, k) => m.i < dd.length && (
@@ -955,21 +878,15 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
               active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
           ))}
           {hovered && (
-            <g>
-              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff6ec4" stroke="#f5f0ff" strokeWidth="1.5"/>
-            </g>
+            <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)}
+              fill="#ff6ec4" ring="#f5f0ff"/>
           )}
-        </svg>
+        </SzChartSvg>
         {hovered && (
-          <div className="pm-tooltip cmb-tooltip" style={{
-            left: `${(x(hover) / W) * 100}%`,
-            top: `${(y(hovered.v) / H) * 100}%`,
-          }}>
+          <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)} className="cmb-tooltip">
             <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
             <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{pct(hovered.v)}</div>
-          </div>
+          </SzTooltip>
         )}
       </div>
     </>
@@ -984,99 +901,55 @@ function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
 // Single neutral line, no pos/neg tinting: low correlation is the *good* outcome
 // here, and the site's green/pink polarity would say the opposite.
 function CmbCorrStrip({ roll }) {
-  const svgRef = useCmbRef(null);
-  const [hover, setHover] = useCmbState(null);
+  const F = CMB_CORR_FRAME;
+  const hv = useChartHover(F);
   if (!roll || roll.length < 2) return null;
 
   const peak = Math.max(0.5, ...roll.map(p => Math.abs(p.v)));
   const dom = Math.min(1, Math.ceil(peak * 4) / 4);
-  const W = 920, H = 76, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 14;
-  const x = (i) => PAD_L + (i / (roll.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v + dom) / (2 * dom)) * (H - PAD_T - PAD_B);
+  // Fixed symmetric band rather than szDomain's data-fitted one — see the note
+  // above: the honest picture is a line sitting on zero, and an auto-scaled axis
+  // would zoom that into a mountain range.
+  const { x, y } = szScales(F, roll.length, -dom, dom);
   const line = smoothPath(roll.map((_, i) => x(i)), roll.map(p => y(p.v)));
   // Filled to the zero line rather than the floor: this series crosses zero, so
   // an area anchored at the bottom would read as a level when it is a deviation.
-  const area = line + ` L${x(roll.length - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
+  const area = szAreaPath(line, x(0), x(roll.length - 1), y(0));
   const fmt = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
-
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    setHover(Math.max(0, Math.min(roll.length - 1, Math.round(t * (roll.length - 1)))));
-  }
-  const hovered = hover != null ? roll[hover] : null;
+  const hovered = hv.i != null ? roll[hv.i] : null;
 
   return (
     <>
-      <div className="pf-strip-head">
-        <span className="pf-strip-label">ibkr ↔ polymarket · rolling {CMB_CORR_ROLL}-session correlation</span>
-        <span className="pf-strip-meta">
-          band ±{dom.toFixed(2)} · now {fmt(roll[roll.length - 1].v)}
-        </span>
-      </div>
+      <SzStripHead
+        label={`ibkr ↔ polymarket · rolling ${CMB_CORR_ROLL}-session correlation`}
+        meta={`band ±${dom.toFixed(2)} · now ${fmt(roll[roll.length - 1].v)}`}/>
       <div className="pm-chart-wrap">
-        <svg
-          ref={svgRef}
-          className="pf-navchart"
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          onMouseMove={onMove}
-          onMouseLeave={() => setHover(null)}
-          onTouchStart={onMove}
-          onTouchMove={onMove}
-          onTouchEnd={() => setHover(null)}
-        >
-          <defs>
-            {/* Horizontal, unlike every other chart here, and deliberately so.
-                A vertical ramp keys colour to value, which needs vertical travel
-                to be visible — this series lives inside ±0.2 of a ±0.5 band, so
-                the whole pink→violet range compressed into ~13px and read as one
-                flat tone. Running it left→right across the full 920px guarantees
-                the ramp shows however flat the line goes.
-                It also drops a problem the vertical version carried: with colour
-                keyed to value, pink marked *higher* correlation — the worse
-                outcome, and the inverse of what pink means on the P&L charts.
-                Keyed to time instead, it makes no claim at all. */}
-            <linearGradient id="cmb-corr-stroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#a78bfa"/>
-              <stop offset="100%" stopColor="#ff4fd8"/>
-            </linearGradient>
-            <linearGradient id="cmb-corr-fill" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.18"/>
-              <stop offset="100%" stopColor="#ff4fd8" stopOpacity="0.18"/>
-            </linearGradient>
-          </defs>
+        <SzChartSvg frame={F} hover={hv} n={roll.length}>
+          {/* The 'corr' ramp runs left→right — see SZ_GRADIENTS. This series
+              lives inside ±0.2 of a ±0.5 band, so a value-keyed vertical ramp
+              compressed the whole pink→violet range into ~13px and read as one
+              flat tone; worse, it painted *higher* correlation pink, the worse
+              outcome here and the inverse of what pink means on the P&L charts.
+              Keyed to time instead, it makes no claim at all. */}
+          <SzChartDefs ramp="corr" id="cmb-corr"/>
           {/* ±0.25 guides, so the eye can judge how flat "flat" is */}
           {[dom / 2, -dom / 2].map((g, k) => (
-            <line key={k} x1={PAD_L} x2={W - PAD_R} y1={y(g)} y2={y(g)}
-              stroke="rgba(229,225,241,0.07)"/>
+            <SzRule key={k} frame={F} y={y(g)} stroke="rgba(229,225,241,0.07)" dash={null}/>
           ))}
           <path d={area} fill="url(#cmb-corr-fill)"/>
-          <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
-            stroke="rgba(229,225,241,0.22)" strokeDasharray="3 5"/>
+          <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.22)"/>
           <path d={line} fill="none" stroke="url(#cmb-corr-stroke)" strokeWidth="1.4"
             strokeLinejoin="round" strokeLinecap="round"/>
           {hovered && (
-            <g>
-              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill={CMB_C_TOTAL}
-                stroke="#f5f0ff" strokeWidth="1.5"/>
-            </g>
+            <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)}
+              fill={CMB_C_TOTAL} ring="#f5f0ff"/>
           )}
-        </svg>
+        </SzChartSvg>
         {hovered && (
-          <div className="pm-tooltip cmb-tooltip" style={{
-            left: `${(x(hover) / W) * 100}%`,
-            top: `${(y(hovered.v) / H) * 100}%`,
-          }}>
+          <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)} className="cmb-tooltip">
             <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
             <div className="pm-tt-val">{fmt(hovered.v)}</div>
-          </div>
+          </SzTooltip>
         )}
       </div>
     </>
@@ -1171,8 +1044,8 @@ function cmbWindow(series, notional, range, benchmarks, benchKeys) {
 
 // ---------- combined rolling alpha strip (total $ minus the benchmark's $, zero-centered) ----------
 function CmbAlphaStrip({ series, markers, cur, onPick, unit, benchKey = 'spx' }) {
-  const svgRef = useCmbRef(null);
-  const [hover, setHover] = useCmbState(null);
+  const F = CMB_STRIP_FRAME;
+  const hv = useChartHover(F);
   const pct = unit === 'pct';
   const fmt = (v) => cmbFmt(v, unit);
   if (!series || series.length < 2 || series[0][benchKey] == null) return null;
@@ -1183,59 +1056,24 @@ function CmbAlphaStrip({ series, markers, cur, onPick, unit, benchKey = 'spx' })
     v: pct ? p.v - (p[benchKey] || 0) : +(p.v - (p[benchKey] || 0)).toFixed(2),
   }));
   const last = alpha[alpha.length - 1].v;
-  const vals = alpha.map(p => p.v);
-  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  const pad = (hi - lo) * 0.12 || (pct ? 0.01 : 1);
-  const y0 = lo - pad, y1 = hi + pad;
-  const W = 920, H = 60, PAD_L = 8, PAD_R = 8, PAD_T = 8, PAD_B = 12;
-  const x = (i) => PAD_L + (i / (alpha.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  // Anchored both ways so the zero line stays drawn even on a window spent
+  // entirely behind the benchmark.
+  const { y0, y1 } = szDomain(alpha.map(p => p.v),
+    { pad: 0.12, floor: pct ? 0.01 : 1, min: 0, max: 0 });
+  const { x, y } = szScales(F, alpha.length, y0, y1);
   const line = smoothPath(alpha.map((_, i) => x(i)), alpha.map(p => y(p.v)));
   const zeroY = y(0);
-  const area = line + ` L${x(alpha.length - 1).toFixed(2)},${zeroY.toFixed(2)} L${x(0).toFixed(2)},${zeroY.toFixed(2)} Z`;
-
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(alpha.length - 1, Math.round(t * (alpha.length - 1))));
-    setHover(idx);
-  }
-  const hovered = hover != null ? alpha[hover] : null;
+  const area = szAreaPath(line, x(0), x(alpha.length - 1), zeroY);
+  const hovered = hv.i != null ? alpha[hv.i] : null;
 
   return (
     <>
-      <div className="pf-strip-head">
-        <span className="pf-strip-label">alpha vs {cmbBenchLabel(benchKey)} · cumulative</span>
-        <span className="pf-strip-meta">now {fmt(last)}</span>
-      </div>
+      <SzStripHead label={`alpha vs ${cmbBenchLabel(benchKey)} · cumulative`}
+        meta={`now ${fmt(last)}`}/>
       <div className="pm-chart-wrap">
-        <svg
-          ref={svgRef}
-          className="pf-navchart"
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          onMouseMove={onMove}
-          onMouseLeave={() => setHover(null)}
-          onTouchStart={onMove}
-          onTouchMove={onMove}
-          onTouchEnd={() => setHover(null)}
-        >
-          <defs>
-            <linearGradient id="cmb-alpha-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(96,165,250,0.22)"/>
-              <stop offset="100%" stopColor="rgba(96,165,250,0.02)"/>
-            </linearGradient>
-            <linearGradient id="cmb-alpha-stroke" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#93c5fd"/>
-              <stop offset="100%" stopColor="#3b82f6"/>
-            </linearGradient>
-          </defs>
-          <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-            stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <SzChartSvg frame={F} hover={hv} n={alpha.length}>
+          <SzChartDefs ramp="alpha" id="cmb-alpha"/>
+          <SzRule frame={F} y={zeroY}/>
           <path d={area} fill="url(#cmb-alpha-fill)"/>
           <path d={line} fill="none" stroke="url(#cmb-alpha-stroke)" strokeWidth="1.35"/>
           {(markers || []).map((m, k) => m.i < alpha.length && (
@@ -1243,21 +1081,15 @@ function CmbAlphaStrip({ series, markers, cur, onPick, unit, benchKey = 'spx' })
               active={cur && cur.i === m.i} onClick={onPick ? () => onPick(m) : undefined}/>
           ))}
           {hovered && (
-            <g>
-              <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-                stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-              <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#60a5fa" stroke="#f5f0ff" strokeWidth="1.5"/>
-            </g>
+            <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)}
+              fill="#60a5fa" ring="#f5f0ff"/>
           )}
-        </svg>
+        </SzChartSvg>
         {hovered && (
-          <div className="pm-tooltip cmb-tooltip" style={{
-            left: `${(x(hover) / W) * 100}%`,
-            top: `${(y(hovered.v) / H) * 100}%`,
-          }}>
+          <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)} className="cmb-tooltip">
             <div className="pm-tt-date">{cmbFullDate(hovered.d)}</div>
             <div className={`pm-tt-val ${hovered.v < 0 ? 'neg' : 'pos'}`}>{fmt(hovered.v)}</div>
-          </div>
+          </SzTooltip>
         )}
       </div>
     </>
@@ -1373,17 +1205,18 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
   const hasBench = months.some(m => m.bench != null);
   const bars = cmbBarMeta(benchKey).filter(b => b.key !== 'bench' || hasBench);
   const nb = bars.length;
-  const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 22;
+  const F = CMB_BARS_FRAME;
+  const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = F;
 
   // Fit the range to what's actually drawn rather than pinning zero to the
   // vertical centre with a symmetric ±maxAbs. The books are lopsided (a
   // trailing year runs roughly -43k..+79k), so forced symmetry left a third of
   // the plot permanently empty and shortened every column to pay for it.
   const vals = months.flatMap(m => bars.map(b => m[b.key]).filter(v => v != null));
-  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
-  const pad = (hi - lo) * 0.08 || 1;
-  const y0 = lo - pad, y1 = hi + pad;
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  const { y0, y1 } = szDomain(vals, { pad: 0.08, floor: 1, min: 0, max: 0 });
+  // Columns sit in slots rather than on coordinates, so only the y scale comes
+  // from the shared pair — x is built from `slot` below.
+  const { y } = szScales(F, months.length, y0, y1);
   const zeroY = y(0);
 
   const slot = (W - PAD_L - PAD_R) / months.length;
@@ -1418,8 +1251,7 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
         onTouchMove={onMove}
         onTouchEnd={() => setHover(null)}
       >
-        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-          stroke="rgba(229,225,241,0.18)" strokeDasharray="3 5"/>
+        <SzRule frame={F} y={zeroY}/>
 
         {/* Faint rule at each year boundary — a bare run of month abbreviations
             with two januaries in view can't say which year it's in. */}
@@ -1740,11 +1572,7 @@ function Combined({ setView }) {
           <div className="pf-panel-head">
             <span className="pf-panel-title">total pnl · {cmbRangeLabel(range)}</span>
             <div className="pf-range">
-              {CMB_RANGES.map(r => (
-                <button key={r} type="button"
-                  className={`pf-range-btn${range === r ? ' active' : ''}`}
-                  onClick={() => setRange(r)}>{r.toLowerCase()}</button>
-              ))}
+              <SzToggle options={CMB_RANGES} value={range} onChange={setRange}/>
               {HistoryPicker && (
                 <HistoryPicker quarters={quarters} value={range} onPick={setRange}/>
               )}

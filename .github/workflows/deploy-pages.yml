@@ -51,7 +51,7 @@ jobs:
         working-directory: Suzerain Design System/ui_kits/personal_site
         run: |
           : > app.min.js
-          for f in Chrome Nav Hero About Portfolio Polymarket Combined Politics Writing App; do
+          for f in Chrome Chart Nav Hero About Portfolio Polymarket Combined Politics Writing App; do
             npx -y esbuild@0.25.0 "$f.jsx" --format=iife --minify >> app.min.js
           done
           # Stamp the bundle with the commit sha. Pages serves app.min.js with
