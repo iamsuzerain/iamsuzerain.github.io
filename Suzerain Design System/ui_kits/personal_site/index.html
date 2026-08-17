@@ -1245,6 +1245,12 @@
   .cmb-annot-cap-head {
     display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
   }
+  /* Collapsed: the date bar alone, its rule and tint dropped so a dismissed
+     note reads as a handle rather than as an empty card. */
+  .cmb-annot-cap.collapsed {
+    padding: 6px 10px; background: transparent; border-left-color: var(--ink-4);
+  }
+  .cmb-annot-cap.collapsed .cmb-annot-cap-head { margin-bottom: 0; }
   .cmb-annot-nav {
     flex: none; width: 22px; height: 22px; line-height: 1;
     background: transparent; border: 1px solid var(--ink-4); border-radius: var(--r-1);
