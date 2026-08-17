@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="suzerain — personal site: portfolio, prediction markets, and live trading dashboards.">
+<!-- The site publishes live NAV, position-level holdings and dated transfers, so
+     it is deliberately not for search. robots.txt carries `Disallow: /`, but that
+     only asks a crawler not to fetch — a crawler that fetches anyway (and every
+     one that ignores robots.txt does) needs to be told not to index, and that is
+     this tag. The pair is belt and braces, not redundancy. Note the interaction:
+     a crawler that honours the Disallow never fetches the page and so never reads
+     this line, which is why the URL can still surface bare if linked externally.
+     Link previews are unaffected — unfurlers read the og: tags below regardless. -->
+<meta name="robots" content="noindex, nofollow">
 <meta property="og:title" content="suzerain">
 <meta property="og:description" content="Portfolio, prediction markets, and live trading dashboards.">
 <meta property="og:type" content="website">
