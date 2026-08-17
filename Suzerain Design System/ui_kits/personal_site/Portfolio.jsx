@@ -10,7 +10,7 @@ const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo }
 const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
   useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzTooltip,
-  SzAxisX, SzStripHead, SzToggle,
+  SzAxisX, SzKeyReadout, SzStripHead, SzToggle,
 } = window;
 
 function fmtUSD(n, compact = false) {
@@ -552,6 +552,22 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
   const hovered = hv.i != null ? plot[hv.i] : null;
   const zeroY = y(0);
 
+  // The account level at the hovered column, latest when the cursor is off.
+  // `series` is raw NAV — deposits and all — which is exactly why it isn't a
+  // curve here: charting it would draw every funding step as if it were a
+  // return. As a number under the cursor it's just the level behind the return,
+  // and `plot` is index-aligned with it by construction above.
+  // The `|| last` is not belt-and-braces: a hover index survives a range change,
+  // so switching max → 1m can leave it past the end of the new series. The
+  // crosshair and tooltip already blank themselves in that state; the reading
+  // falls back to the latest point rather than taking the key down with it.
+  const navHover = hv.i != null ? series[hv.i] : null;
+  const navPt = navHover || series[series.length - 1];
+  // Dollar readings live on the dollar side. In percent this curve is a return
+  // series that never mentions a level, so a nav figure in its key is a unit the
+  // chart isn't drawn in.
+  const showNav = usd && !!navPt;
+
   return (
     <React.Fragment>
     <div className="pm-chart-wrap">
@@ -571,7 +587,13 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
             fill="none" stroke={o.color} strokeOpacity="0.55" strokeWidth="1.25"/>
         ))}
         <path d={linePath} fill="none" stroke="url(#pf-nav-stroke)" strokeWidth="1.75"/>
-        {hovered && <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#a78bfa"/>}
+        {/* Benchmarks get the same dot the portfolio line does, one weight down:
+            they're overlays you read against, and the tooltip already quotes a
+            value for each one at this column. */}
+        {hovered && (
+          <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#a78bfa"
+            dots={overlays.map(o => ({ key: o.key, cy: y(ovVals(o)[hv.i]), fill: o.color }))}/>
+        )}
       </SzChartSvg>
       <div className="pf-axis-y">
         {[y1, y0].map((v, i) => (
@@ -591,12 +613,26 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
         </SzTooltip>
       )}
     </div>
-    {overlays.length > 0 && (
+    {/* The key carries the nav reading, so it stays even with every benchmark
+        switched off. */}
+    {(overlays.length > 0 || showNav) && (
       <div className="pf-bench-legend">
-        <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
+        {showNav && (
+          <SzKeyReadout label="nav" value={fmtUSD(navPt.v)} live={!!navHover}/>
+        )}
+        {/* One statement of the stake the benchmark lines are drawn on, next to
+            the nav reading it would otherwise be mistaken for. Per-row it was
+            the same number printed once per benchmark. */}
+        {usd && overlays.length > 0 && (
+          <SzKeyReadout label="benchmarks on" value={fmtUSD(notional, true)} note="at open"/>
+        )}
+        {/* Swatches only earn their place once there is a second line to tell
+            the first one from. */}
+        {overlays.length > 0 && (
+          <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>portfolio</span>
+        )}
         {overlays.map(o => (
-          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.color }}/>{o.label}
-            {usd ? ` · on ${fmtUSD(notional, true)}` : ''}</span>
+          <span key={o.key}><i className="pf-bench-swatch" style={{ background: o.color }}/>{o.label}</span>
         ))}
       </div>
     )}

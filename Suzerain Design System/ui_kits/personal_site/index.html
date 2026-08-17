@@ -1126,7 +1126,10 @@
 
   /* Benchmark overlay legend (portfolio chart) */
   .pf-bench-legend {
-    display: flex; gap: 16px; justify-content: flex-end;
+    /* Wraps rather than squeezing: with the nav reading holding the left end,
+       a phone-width key and two or three benchmarks used to shrink the swatch
+       rows past their text and spill off the right edge. */
+    display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: flex-end;
     margin-top: 6px; padding-right: 4px;
     font-family: var(--font-mono); font-size: 10px;
     color: rgba(229,225,241,0.55); letter-spacing: 0.08em;
@@ -1135,6 +1138,22 @@
   .pf-bench-swatch {
     display: inline-block; width: 14px; height: 2px; border-radius: 1px;
   }
+  /* Live reading in the key (SzKeyReadout) — the NAV at the hovered column.
+     margin-right:auto parks it at the left end of a key that is otherwise
+     right-aligned; tabular figures keep the row still while the value changes
+     under the cursor. */
+  .pf-bench-legend .pf-key-readout { margin-right: auto; }
+  /* Two readings in one key (the nav, and the capital the benchmarks are staked
+     on) stay together at its left end: only the last of them takes the auto
+     margin that pushes the swatches right. Where :has() is missing the rule
+     drops and they split the gap instead — untidy, not broken. */
+  .pf-bench-legend .pf-key-readout:has(+ .pf-key-readout) { margin-right: 0; }
+  .pf-key-val {
+    color: var(--fg-2); font-weight: 500;
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+    transition: color 160ms ease;
+  }
+  .pf-key-readout.live .pf-key-val { color: var(--fg-1); }
 
   /* Total view: multi-series tooltip, clickable stat tiles */
   .cmb-tooltip { display: flex; flex-direction: column; gap: 3px; }
