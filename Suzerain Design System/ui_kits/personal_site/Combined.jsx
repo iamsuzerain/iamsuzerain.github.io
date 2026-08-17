@@ -13,8 +13,8 @@ const {
 // curves round the same way.
 const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
-  useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzCrosshairLine,
-  SzTooltip, SzAxisX, SzAxisZero, SzStripHead, SzToggle,
+  useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair,
+  SzTooltip, SzAxisX, SzAxisZero, SzKeyReadout, SzStripHead, SzToggle,
 } = window;
 
 const CMB_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
@@ -380,6 +380,29 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // Rebase each to its value at the window start so the chart shows P&L over the year.
   const ibkrBase = ibkr[0], pmBase = pm[0];
 
+  // All-source polymarket income (maker/lp/yield/…) as a dated curve rather than
+  // a flat ramp, then rebased to the window start so the chart still reads as
+  // P&L earned over the window. Only applied when polymarket has data; points
+  // before the breakdown history begins are still estimates.
+  //
+  // The anchor is szPnlLifeStartDay, not pmPts[0].day: the raw feed opens with a
+  // long flat stretch before the first trade (182 days as of writing), and using
+  // the raw first row stretched the pre-history ramp across it. That put a
+  // different slope on the ramp than the polymarket view's — which trims the
+  // flat run before charting — so the same pre-seam rewards split differently
+  // across the same 12mo boundary on the two pages.
+  //
+  // Built here rather than after the capital base below because the base now
+  // reads it: income lands in the account, so it moves the level exactly as
+  // trading P&L does.
+  const hasPm = pmPts.length > 0;
+  const rewardsAt = window.szPmIncomeCurve(
+    (bd && bd.rows) || [],
+    hasPm ? window.szPnlLifeStartDay(pmRows) : start,
+    (bd && bd.total) || 0, today);
+  const rewardsBase = hasPm ? rewardsAt(start) : 0;
+  const extra = hasPm ? +(rewardsAt(today) - rewardsBase).toFixed(2) : 0;
+
   // Capital base on any given day = that day's real IBKR NAV + every
   // IBKR→Polymarket transfer made on or before it (content.json pmTransfers).
   // Money moved to Polymarket has left the IBKR NAV but is still capital you
@@ -449,7 +472,41 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     }
     return pmNavByDay.get(pmNavDays[best]);
   };
-  const baseAt = (day) => navAt(day) + pmCapitalAt(day);
+  // Both level feeds stop before the P&L does. IBKR posts at the close, so a
+  // weekend has no rows at all; a polymarket scrape on day D reports through the
+  // close of D-1 (szPmSnapshotDay). The P&L legs meanwhile run to today off the
+  // live user-pnl API. Carried forward flat, that left the nav reading pinned to
+  // Friday while the number beside it moved every day.
+  //
+  // So past its last measured day each half is carried by its own P&L move
+  // instead: level(D) = last measured level + (P&L(D) − P&L(that day)). Absent a
+  // cash flow that is not an approximation — a book's level moves by its P&L,
+  // definitionally — and it is a different thing from the reconstruction the
+  // note above warns off. That one derived the *whole* base curve from returns
+  // and so accumulated every deposit and transfer of the year; this spans the
+  // day or three between the last scrape and now, and every measured level still
+  // wins wherever one exists. A flow inside that gap is still missed, and
+  // corrects itself the moment the next scrape lands.
+  //
+  // The IBKR half is symmetric but usually inert: its P&L and its NAV come off
+  // the same file, so when the level stops the P&L has stopped too and the delta
+  // is zero. It is written this way for the case where they don't.
+  const atDay = (arr, day) => arr[Math.max(0, Math.min(arr.length - 1, day - start))];
+  const lastNavDay = navDays.length ? navDays[navDays.length - 1] : null;
+  const lastPmNavDay = pmNavDays.length ? pmNavDays[pmNavDays.length - 1] : null;
+  const pmEarnedAt = (day) => atDay(pm, day) + (hasPm ? rewardsAt(day) : 0);
+  const extendable = (lastDay) => lastDay != null && lastDay >= start && lastDay <= today;
+  const ibkrLevelAt = (day) => {
+    const level = navAt(day);
+    if (!extendable(lastNavDay) || day <= lastNavDay) return level;
+    return level + (atDay(ibkr, day) - atDay(ibkr, lastNavDay));
+  };
+  const pmLevelAt = (day) => {
+    const level = pmCapitalAt(day);
+    if (!extendable(lastPmNavDay) || day <= lastPmNavDay) return level;
+    return level + (pmEarnedAt(day) - pmEarnedAt(lastPmNavDay));
+  };
+  const baseAt = (day) => ibkrLevelAt(day) + pmLevelAt(day);
   const notional = baseAt(start);
   const bench = [];
   if (benchmarks && notional) {
@@ -458,24 +515,6 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
       if (vals) bench.push({ key, label: b.label, vals });
     }
   }
-  // All-source polymarket income (maker/lp/yield/…) as a dated curve rather than
-  // a flat ramp, then rebased to the window start so the chart still reads as
-  // P&L earned over the window. Only applied when polymarket has data; points
-  // before the breakdown history begins are still estimates.
-  //
-  // The anchor is szPnlLifeStartDay, not pmPts[0].day: the raw feed opens with a
-  // long flat stretch before the first trade (182 days as of writing), and using
-  // the raw first row stretched the pre-history ramp across it. That put a
-  // different slope on the ramp than the polymarket view's — which trims the
-  // flat run before charting — so the same pre-seam rewards split differently
-  // across the same 12mo boundary on the two pages.
-  const hasPm = pmPts.length > 0;
-  const rewardsAt = window.szPmIncomeCurve(
-    (bd && bd.rows) || [],
-    hasPm ? window.szPnlLifeStartDay(pmRows) : start,
-    (bd && bd.total) || 0, today);
-  const rewardsBase = hasPm ? rewardsAt(start) : 0;
-  const extra = hasPm ? +(rewardsAt(today) - rewardsBase).toFixed(2) : 0;
   const series = [];
   for (let k = 0; k < ibkr.length; k++) {
     const day = start + k;
@@ -486,7 +525,9 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
       ibkr: +(ibkr[k] - ibkrBase).toFixed(2),
       pm: +((pm[k] - pmBase) + ramp).toFixed(2),
       // Real capital base that day, so a sub-window can read its own base off
-      // its first point instead of reconstructing one from returns.
+      // its first point instead of reconstructing one from returns. Measured
+      // wherever the level feeds reach, which is every day but the last few
+      // (see baseAt).
       base: +baseAt(day).toFixed(2),
     };
     for (const b of bench) pt[b.key] = +b.vals[k].toFixed(2);
@@ -573,6 +614,24 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
 
   const hp = hv.i != null ? plot[hv.i] : null;
 
+  // Book NAV at the hovered column — ibkr's real NAV plus polymarket's, carried
+  // per point as `base` (see baseAt). It reads off `series` rather than `plot`
+  // because the percent copy is a return series with no level in it; the two are
+  // index-aligned by construction (cmbPctSeries maps one row to one row). No
+  // fallback to notional + p.v: that adds every deposit and transfer back in as
+  // if it were profit, which is the whole reason `base` is carried.
+  // A hover index outlives a range change, so it can point past the end of a
+  // shorter window: fall back to the latest point there, the same way the
+  // crosshair blanks rather than reading a row that isn't in frame.
+  const navHover = hv.i != null ? series[hv.i] : null;
+  const navPt = navHover || series[series.length - 1];
+  const navNow = navPt && navPt.base != null ? navPt.base : null;
+  // Dollars belong to the dollar reading. In percent the chart makes no claim
+  // about the level — it is a chained return series, where the level is only the
+  // denominator of each day's move — so a dollar figure in that key is a second
+  // unit the reader has to reconcile against a curve that never mentions it.
+  const showNav = !pct && navNow != null;
+
   return (
     <>
     {/* Event-log caption sits above the chart, not under the strips. Below, it
@@ -608,16 +667,22 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         <path d={areaPath} fill="url(#cmb-nav-fill)"/>
         <path d={totalPath} fill="none" stroke="url(#cmb-nav-stroke)" strokeWidth="1.75"/>
 
-        {/* Hairline under every dot, then the two components, then the aggregate
-            on top — this is the only chart here reading three series at once, so
-            it spells the crosshair out rather than taking the packaged one. */}
+        {/* Hairline under every dot, then the components and benchmarks, then
+            the aggregate on top. Every line this chart draws is dotted — the
+            benchmarks are read off the crosshair exactly like the component
+            curves are, and marking only some of them made them look like
+            backdrop rather than series. */}
         {hp && (
-          <g>
-            <SzCrosshairLine frame={F} x={x(hv.i)}/>
-            <circle cx={x(hv.i)} cy={y(hp.ibkr)} r="2.5" fill={CMB_C_IBKR} opacity="0.6"/>
-            <circle cx={x(hv.i)} cy={y(hp.pm)} r="2.5" fill={CMB_C_PM} opacity="0.6"/>
-            <circle cx={x(hv.i)} cy={y(hp.v)} r="4" fill="#a78bfa" stroke="#f5f0ff" strokeWidth="1.5"/>
-          </g>
+          <SzCrosshair frame={F} x={x(hv.i)} cy={y(hp.v)} fill="#a78bfa" ring="#f5f0ff"
+            dots={[
+              { key: 'ibkr', cy: y(hp.ibkr), fill: CMB_C_IBKR },
+              { key: 'pm', cy: y(hp.pm), fill: CMB_C_PM },
+              ...benches.map(b => ({
+                key: b.key,
+                cy: hp[b.key] != null ? y(hp[b.key]) : null,
+                fill: cmbBenchColor(b.key),
+              })),
+            ]}/>
         )}
 
         {/* log event markers — click to pin to the caption below */}
@@ -643,13 +708,24 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
       )}
 
     </div>
-    {benches.length > 0 && (
+    {(benches.length > 0 || showNav) && (
       <div className="pf-bench-legend">
-        <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
+        {showNav && (
+          <SzKeyReadout label="nav" value={cmbUSD(navNow)} live={!!navHover}/>
+        )}
         {/* The notional only explains anything in dollars — in percent the
-            benchmark line IS the index's own return, on no notional at all. */}
+            benchmark line IS the index's own return, on no notional at all.
+            Said once, next to the nav reading it invites comparison with: every
+            benchmark is staked on the same capital, so repeating it per row
+            printed one number n times and left it looking like a stale nav. */}
+        {!pct && base && benches.length > 0 && (
+          <SzKeyReadout label="benchmarks on" value={cmbUSDk(base)} note="at open"/>
+        )}
+        {benches.length > 0 && (
+          <span><i className="pf-bench-swatch" style={{ background: 'linear-gradient(90deg,#a78bfa,#ff4fd8)' }}/>total</span>
+        )}
         {benches.map(b => (
-          <span key={b.key}><i className="pf-bench-swatch" style={{ background: cmbBenchColor(b.key) }}/>{cmbBenchLabel(b.key)}{(!pct && base) ? ` · on ${cmbUSDk(base)}` : ''}</span>
+          <span key={b.key}><i className="pf-bench-swatch" style={{ background: cmbBenchColor(b.key) }}/>{cmbBenchLabel(b.key)}</span>
         ))}
       </div>
     )}

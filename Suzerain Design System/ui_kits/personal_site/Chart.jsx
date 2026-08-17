@@ -221,10 +221,23 @@ function SzCrosshairLine({ frame, x }) {
 // Hairline plus the dot on the series. `cy == null` draws the line only, which
 // is what the rolling strip wants over its warm-up stretch: the crosshair still
 // tracks the charts above it, but there is no value there to mark.
-function SzCrosshair({ frame, x, cy, fill, ring = '#0a0612', r = 4 }) {
+//
+// `dots` are the companion series read at the same column — the component curves
+// on the combined chart, the benchmark overlays wherever they appear. Every line
+// a chart draws gets marked, because a crosshair that dots some lines and not
+// others reads as if the undotted ones aren't part of the reading. They sit
+// under the primary dot at the recessed weight their lines carry, so the series
+// the chart is *about* is still the one the eye lands on. Each entry is
+// { key, cy, fill } with optional r/opacity; a null cy skips that dot the same
+// way a null primary does.
+function SzCrosshair({ frame, x, cy, fill, ring = '#0a0612', r = 4, dots }) {
   return (
     <g>
       <SzCrosshairLine frame={frame} x={x}/>
+      {(dots || []).map(d => d.cy != null && (
+        <circle key={d.key} cx={x} cy={d.cy} r={d.r || 2.5} fill={d.fill}
+          opacity={d.opacity == null ? 0.6 : d.opacity}/>
+      ))}
       {cy != null && (
         <circle cx={x} cy={cy} r={r} fill={fill} stroke={ring} strokeWidth="1.5"/>
       )}
@@ -266,6 +279,31 @@ function SzAxisZero({ frame, y, children }) {
       style={{ left: `${(frame.PAD_L / frame.W) * 100}%`, top: `${(y / frame.H) * 100}%` }}>
       {children}
     </div>
+  );
+}
+
+// A reading that tracks the crosshair, pinned to the left of a chart's key.
+//
+// This exists so a level that would otherwise want its own panel — the NAV
+// behind a P&L curve — can be read off the chart that is already drawn. A
+// second chart of the account level would be a redundant restatement of the
+// curve above it, deposits and all; one number at the hovered column is the
+// part of it you actually can't already see.
+//
+// Idle it shows the latest point, so the key still reads as the book's current
+// level when the cursor is elsewhere. `live` (the cursor is on the chart) only
+// lifts the colour: the crosshair and tooltip already say which day it is, so
+// the readout doesn't repeat the date and doesn't change width as you move.
+// `note` is a qualifier the value can't carry on its own — "at open" on a
+// benchmark's notional, which is a level from one particular column rather than
+// the one under the cursor. It stays outside the <b> so it reads at the key's
+// own dim weight, and it is the difference between two dollar figures sitting
+// side by side making sense and looking like a contradiction.
+function SzKeyReadout({ label, value, note, live }) {
+  return (
+    <span className={`pf-key-readout${live ? ' live' : ''}`}>
+      {label}<b className="pf-key-val">{value}</b>{note}
+    </span>
   );
 }
 
@@ -320,5 +358,6 @@ window.SzCrosshairLine = SzCrosshairLine;
 window.SzTooltip = SzTooltip;
 window.SzAxisX = SzAxisX;
 window.SzAxisZero = SzAxisZero;
+window.SzKeyReadout = SzKeyReadout;
 window.SzStripHead = SzStripHead;
 window.SzToggle = SzToggle;
