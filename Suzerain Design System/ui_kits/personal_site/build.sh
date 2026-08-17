@@ -15,7 +15,7 @@ cd "$(dirname "$0")"
 
 OUT=dist
 # Load order must match the <script> tags in index.html.
-COMPONENTS="Chrome Nav Hero About Portfolio Polymarket Combined Politics Writing App"
+COMPONENTS="Chrome Chart Nav Hero About Portfolio Polymarket Combined Politics Writing App"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"

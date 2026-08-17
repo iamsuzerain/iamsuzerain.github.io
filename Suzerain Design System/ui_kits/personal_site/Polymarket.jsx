@@ -8,6 +8,14 @@ const {
   useRef: usePmRef,
 } = React;
 
+// Chart machinery (Chart.jsx, loaded ahead of this file) — the same box,
+// scales, hover maths and gradient stops the ibkr and overview charts use.
+const {
+  szLinePath, szFrame, szScales, szDomain, szAreaPath, szTicks,
+  useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzCrosshairLine,
+  SzTooltip, SzAxisX, SzAxisZero, SzToggle,
+} = window;
+
 const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   ? window.SZ_ID.wallets
   : [window.SZ_ID.wallet];
@@ -625,27 +633,34 @@ function pmTwrSeries(series, navAt) {
   return out;
 }
 
+// Taller foot than the ibkr chart's 28: this one carries peak/trough callouts
+// that can sit near the bottom of the plot.
+const PM_SPARK_FRAME = szFrame(220, 20, 32);
+
 function PmSpark({ series, unit }) {
+  const F = PM_SPARK_FRAME;
   const pct = unit === 'pct';
   const fmt = (v) => pct ? pmPct(v) : (v >= 0 ? '+' : '') + pmUSD(v);
   const fmtCompact = (v) => pct ? pmPct(v) : pmUSDCompact(v);
-  const W = 920, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 20, PAD_B = 32;
-  const svgRef = usePmRef(null);
-  const [hover, setHover] = usePmState(null);
+  const hv = useChartHover(F);
 
   const values = series.map(p => p.v);
-  const min = Math.min(...values, 0), max = Math.max(...values);
-  const pad = (max - min) * 0.08 || 1;
-  const y0 = min - pad, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (series.length - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
+  // Floor anchored at 0 but not the ceiling: a book that has only ever made
+  // money should still show the $0 line it started from, while a window that
+  // ran negative throughout keeps its own top rather than reserving space for
+  // a zero it never reached.
+  const { y0, y1, lo: min, hi: max } = szDomain(values, { pad: 0.08, floor: 1, min: 0 });
+  const { x, y } = szScales(F, series.length, y0, y1);
 
-  const line = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
-  const area = line + ` L${x(series.length - 1).toFixed(2)},${H - PAD_B} L${x(0).toFixed(2)},${H - PAD_B} Z`;
+  // Unsplined, unlike the ibkr curve: this is a daily cumulative total that
+  // steps rather than flows, and a spline would invent intraday shape.
+  const line = szLinePath(series, x, y);
+  // Closed to the floor of the box, not to the zero line — the fill reads as
+  // the area under the curve rather than as a signed deviation.
+  const area = szAreaPath(line, x(0), x(series.length - 1), F.H - F.PAD_B);
   const zeroY = y(0);
 
-  const tickEvery = Math.max(1, Math.floor(series.length / 6));
-  const ticks = series.map((p, i) => ({ i, d: p.d })).filter((_, i) => i % tickEvery === 0);
+  const ticks = szTicks(series, 6);
   const spanDays = pmSpanDays(series[0].d, series[series.length - 1].d);
   const axisMode = spanDays <= 95 ? 'day'
     : (series[0].d.slice(0, 4) === series[series.length - 1].d.slice(0, 4) ? 'month' : 'monthyear');
@@ -653,82 +668,33 @@ function PmSpark({ series, unit }) {
   const maxIdx = values.indexOf(max);
   const minIdx = values.indexOf(min);
 
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(series.length - 1, Math.round(t * (series.length - 1))));
-    setHover(idx);
-  }
-
-  const hovered = hover != null ? series[hover] : null;
+  const hovered = hv.i != null ? series[hv.i] : null;
 
   return (
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className="pf-navchart pm-chart-svg"
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          <linearGradient id="pm-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.32"/>
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
-          </linearGradient>
-          {/* Vertical, value-keyed: bright pink where the line runs high, violet
-              where it runs low — the "violet bottom → pink top" look, robust to a
-              choppy/declining line (unlike a left→right horizontal gradient). */}
-          <linearGradient id="pm-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8"/>
-            <stop offset="100%" stopColor="#a78bfa"/>
-          </linearGradient>
-        </defs>
+      <SzChartSvg frame={F} hover={hv} n={series.length} className="pf-navchart pm-chart-svg">
+        <SzChartDefs ramp="nav" id="pm"/>
 
-        <line x1={PAD_L} x2={W - PAD_R} y1={zeroY} y2={zeroY}
-          stroke="rgba(229,225,241,0.2)" strokeDasharray="2 4"/>
+        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.2)" dash="2 4"/>
         <path d={area} fill="url(#pm-fill)"/>
         <path d={line} fill="none" stroke="url(#pm-stroke)" strokeWidth="1.75"/>
 
         <circle cx={x(maxIdx)} cy={y(max)} r="2.5" fill="#a78bfa" opacity="0.7"/>
         <circle cx={x(minIdx)} cy={y(min)} r="2.5" fill="#ff9ae8" opacity="0.7"/>
 
-        {hovered && (
-          <g>
-            <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-              stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-            <circle cx={x(hover)} cy={y(hovered.v)} r="4" fill="#ff4fd8" stroke="#0a0612" strokeWidth="1.5"/>
-          </g>
-        )}
-      </svg>
+        {hovered && <SzCrosshair frame={F} x={x(hv.i)} cy={y(hovered.v)} fill="#ff4fd8"/>}
+      </SzChartSvg>
 
-      <div className="pm-peak" style={{ left: `${(x(maxIdx) / W) * 100}%`, top: `${(y(max) / H) * 100}%` }}>peak {fmtCompact(max)}</div>
-      <div className="pm-trough" style={{ left: `${(x(minIdx) / W) * 100}%`, top: `${(y(min) / H) * 100}%` }}>trough {fmtCompact(min)}</div>
-      <div className="pf-axis-zero" style={{ left: `${(PAD_L / W) * 100}%`, top: `${(zeroY / H) * 100}%` }}>{pct ? '0%' : '$0'}</div>
-      <div className="pf-axis-x">
-        {ticks.map((t, i) => (
-          <span key={i}
-            className={i === 0 ? 'start' : i === ticks.length - 1 ? 'end' : ''}
-            style={{ left: `${(x(t.i) / W) * 100}%` }}>{pmAxisLabel(t.d, axisMode)}</span>
-        ))}
-      </div>
+      <div className="pm-peak" style={{ left: `${(x(maxIdx) / F.W) * 100}%`, top: `${(y(max) / F.H) * 100}%` }}>peak {fmtCompact(max)}</div>
+      <div className="pm-trough" style={{ left: `${(x(minIdx) / F.W) * 100}%`, top: `${(y(min) / F.H) * 100}%` }}>trough {fmtCompact(min)}</div>
+      <SzAxisZero frame={F} y={zeroY}>{pct ? '0%' : '$0'}</SzAxisZero>
+      <SzAxisX frame={F} ticks={ticks} x={x} label={(t) => pmAxisLabel(t.d, axisMode)}/>
 
       {hovered && (
-        <div className="pm-tooltip" style={{
-          left: `${(x(hover) / W) * 100}%`,
-          top: `${(y(hovered.v) / H) * 100}%`,
-        }}>
+        <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
           <div className="pm-tt-date">{fmtDate(hovered.d)}</div>
           <div className={`pm-tt-val ${hovered.v >= 0 ? 'pos' : 'neg'}`}>{fmt(hovered.v)}</div>
-        </div>
+        </SzTooltip>
       )}
     </div>
   );
@@ -899,10 +865,8 @@ function PmCategoryPanel({ byCategory, openBook }) {
       <div className="pf-panel-head">
         <span className="pf-panel-title">attribution · by market type</span>
         <div className="pf-range">
-          {[['pnl', 'p&l'], ['volume', 'stake']].map(([k, lbl]) => (
-            <button key={k} className={`pf-range-btn${sort === k ? ' active' : ''}`}
-              onClick={() => setSort(k)}>{lbl}</button>
-          ))}
+          <SzToggle options={[['pnl', 'p&l'], ['volume', 'stake']]}
+            value={sort} onChange={setSort}/>
         </div>
       </div>
 
@@ -1155,12 +1119,9 @@ function PmCalibration({ cal }) {
       <div className="pf-panel-head">
         <span className="pf-panel-title">calibration · win rate vs implied odds</span>
         <div className="pf-range">
-          <button type="button" className={`pf-range-btn${series === 'settlement' ? ' active' : ''}`}
-            onClick={() => setSeries('settlement')}>resolved</button>
-          {hasExit && (
-            <button type="button" className={`pf-range-btn${series === 'exit' ? ' active' : ''}`}
-              onClick={() => setSeries('exit')}>swing trades</button>
-          )}
+          <SzToggle
+            options={[['settlement', 'resolved']].concat(hasExit ? [['exit', 'swing trades']] : [])}
+            value={series} onChange={setSeries}/>
         </div>
       </div>
 
@@ -1221,9 +1182,11 @@ function pmRewardsTotal(r) {
   return (r.lp || 0) + (r.maker || 0) + (r.taker || 0)
     + (r.yield || 0) + (r.sponsored || 0);
 }
+const PM_REWARDS_FRAME = szFrame(200, 16, 14);
+
 function PmRewardsChart({ rows }) {
-  const svgRef = usePmRef(null);
-  const [hover, setHover] = usePmState(null);
+  const F = PM_REWARDS_FRAME;
+  const hv = useChartHover(F);
   if (!rows || rows.length < 2) return null;
   // The betmoar figures are cumulative *lifetime* totals, and the snapshot cron
   // only started on rows[0].d — so lifetime rewards were already well above zero
@@ -1244,80 +1207,47 @@ function PmRewardsChart({ rows }) {
       series: rows.map(r => ({ d: r.d, v: pmRewardsTotal(r) - pmRewardsTotal(first) })) },
   ];
   const n = rows.length;
-  const W = 920, H = 200, PAD_L = 8, PAD_R = 8, PAD_T = 16, PAD_B = 14;
   const allV = lines.flatMap(l => l.series.map(p => p.v));
+  // Asymmetric on purpose: these are cumulative income curves rebased to 0 on
+  // the first tracked day, so they only go up. The floor is the zero line
+  // itself — padding underneath it would float the whole band off its baseline
+  // — while the ceiling gets headroom for the topmost label.
   const min = Math.min(...allV, 0), max = Math.max(...allV);
-  const pad = (max - min) * 0.1 || 1;
-  const y0 = min, y1 = max + pad;
-  const x = (i) => PAD_L + (i / (n - 1)) * (W - PAD_L - PAD_R);
-  const y = (v) => PAD_T + (1 - (v - y0) / (y1 - y0)) * (H - PAD_T - PAD_B);
-  const path = (s) => s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(2)},${y(p.v).toFixed(2)}`).join(' ');
-
-  function onMove(e) {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * W;
-    const t = (px - PAD_L) / (W - PAD_L - PAD_R);
-    const idx = Math.max(0, Math.min(n - 1, Math.round(t * (n - 1))));
-    setHover(idx);
-  }
+  const y0 = min, y1 = max + ((max - min) * 0.1 || 1);
+  const { x, y } = szScales(F, n, y0, y1);
+  const path = (s) => szLinePath(s, x, y);
 
   return (
     <React.Fragment>
     <div className="pm-chart-wrap">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        className="pf-navchart"
-        preserveAspectRatio="none"
-        onMouseMove={onMove}
-        onMouseLeave={() => setHover(null)}
-        onTouchStart={onMove}
-        onTouchMove={onMove}
-        onTouchEnd={() => setHover(null)}
-      >
-        <defs>
-          {/* Same vertical ramp the main P&L charts use: pink where the line
-              runs high, violet where it runs low. */}
-          <linearGradient id="pm-rewards-stroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8"/>
-            <stop offset="100%" stopColor="#a78bfa"/>
-          </linearGradient>
-          <linearGradient id="pm-rewards-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff4fd8" stopOpacity="0.22"/>
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0"/>
-          </linearGradient>
-        </defs>
-        <line x1={PAD_L} x2={W - PAD_R} y1={y(0)} y2={y(0)}
-          stroke="rgba(229,225,241,0.14)" strokeDasharray="3 5"/>
-        {hover != null && (
-          <line x1={x(hover)} x2={x(hover)} y1={PAD_T} y2={H - PAD_B}
-            stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
-        )}
+      <SzChartSvg frame={F} hover={hv} n={n}>
+        <SzChartDefs ramp="rewards" id="pm-rewards"/>
+        <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.14)"/>
+        {/* Crosshair below the curves and its dots above them, so the hairline
+            never cuts across a line it is meant to be reading. */}
+        {hv.i != null && <SzCrosshairLine frame={F} x={x(hv.i)}/>}
         {/* Area under the total only — one filled band, so the component lines
             stay legible on top of it rather than three washes overlapping. */}
         {lines.filter(l => l.fill).map(l => (
           <path key={`${l.key}-fill`}
-            d={`${path(l.series)} L${x(n - 1).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`}
+            d={szAreaPath(path(l.series), x(0), x(n - 1), y(0))}
             fill={l.fill}/>
         ))}
         {lines.map(l => (
           <path key={l.key} d={path(l.series)} fill="none"
             stroke={l.stroke || l.color} strokeWidth={l.width || 1.5}/>
         ))}
-        {hover != null && lines.map(l => (
-          <circle key={l.key} cx={x(hover)} cy={y(l.series[hover].v)} r="3.5"
+        {hv.i != null && lines.map(l => (
+          <circle key={l.key} cx={x(hv.i)} cy={y(l.series[hv.i].v)} r="3.5"
             fill={l.color} stroke="#f5f0ff" strokeWidth="1"/>
         ))}
-      </svg>
-      {hover != null && (
-        <div className="pm-tooltip" style={{ left: `${(x(hover) / W) * 100}%`, top: '4%' }}>
-          <div className="pm-tt-date">{rows[hover].d}</div>
+      </SzChartSvg>
+      {hv.i != null && (
+        <div className="pm-tooltip" style={{ left: `${(x(hv.i) / F.W) * 100}%`, top: '4%' }}>
+          <div className="pm-tt-date">{rows[hv.i].d}</div>
           {lines.map(l => (
             <div key={l.key} className="pf-tt-bench" style={{ color: l.color }}>
-              {l.label} +{pmUSD(l.series[hover].v)}
+              {l.label} +{pmUSD(l.series[hv.i].v)}
             </div>
           ))}
         </div>
@@ -1601,11 +1531,8 @@ function Polymarket() {
                   : <> · <span className="sz-dim">daily snapshot</span></>)}
               </span>
               <div className="pf-range">
-                {shownRanges.map(r => (
-                  <button key={r} type="button"
-                    className={`pf-range-btn${range === r ? ' active' : ''}`}
-                    onClick={() => setRange(r)}>{labelFor(r).toLowerCase()}</button>
-                ))}
+                <SzToggle options={shownRanges} value={range} onChange={setRange}
+                  label={(r) => labelFor(r).toLowerCase()}/>
                 {PmHistoryPicker && (
                   <PmHistoryPicker quarters={quarters} value={range} onPick={setRange}/>
                 )}
