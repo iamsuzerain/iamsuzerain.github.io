@@ -9,6 +9,11 @@ function parseRoute() {
 // Only home.log and about.links are indexed/mapped at render; the rest read as
 // undefined and render empty until content arrives.
 window.CONTENT = window.CONTENT || { about: { links: [] }, home: { log: [] }, projects: [] };
+// The log and the post manifest are merged into one stream (see Hero.jsx), so
+// both load here rather than inside a view: the hero needs the posts to render
+// a post row, and the archive needs the log to render a note. Null until it
+// lands; POSTS_ERR distinguishes "still loading" from "never arriving".
+window.POSTS = window.POSTS || null;
 
 function App() {
   const [route, setRoute] = React.useState(parseRoute);
@@ -20,10 +25,15 @@ function App() {
   }, []);
   // Load content after first paint, then re-render to fill it in.
   React.useEffect(() => {
+    const bump = () => bumpContent(t => t + 1);
     fetch('data/content.json', { cache: 'no-store' })
       .then(r => r.json())
-      .then(data => { window.CONTENT = data; bumpContent(t => t + 1); })
+      .then(data => { window.CONTENT = data; bump(); })
       .catch(() => {});
+    fetch('data/posts/index.json', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => { window.POSTS = data.posts; bump(); })
+      .catch(() => { window.POSTS_ERR = true; bump(); });
   }, []);
   const setView = (v) => { window.location.hash = v === 'hero' ? '/' : `/${v}`; };
   const views = {

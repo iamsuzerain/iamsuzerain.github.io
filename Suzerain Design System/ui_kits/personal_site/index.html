@@ -389,22 +389,11 @@
     --selection-bg: var(--violet-400);
   }
   /* ========== Writing ========== */
-  .sz-post-list { list-style: none; margin: 32px 0 0; padding: 0; }
-  .sz-post-row { border-top: 1px solid rgba(236,230,245,0.14); }
-  .sz-post-row:last-child { border-bottom: 1px solid rgba(236,230,245,0.14); }
-  .sz-post-row a {
-    display: grid; grid-template-columns: 110px 1fr;
-    grid-template-areas: "date title" "date summary";
-    gap: 2px 20px; padding: 18px 4px;
-    text-decoration: none; color: var(--fg-hero);
-  }
-  .sz-post-row a:hover .sz-post-title { color: var(--violet-300); }
-  .sz-post-date {
-    grid-area: date; font-family: var(--font-mono); font-size: 11px;
-    letter-spacing: 0.1em; color: var(--fg-3); padding-top: 4px;
-  }
-  .sz-post-title { grid-area: title; font-size: 18px; font-weight: 500; }
-  .sz-post-summary { grid-area: summary; font-size: 13px; color: var(--fg-3); line-height: 1.5; }
+  /* The archive is the hero's log without the cut at three: same .sz-log-entry
+     rows, no glass card under them. A list of its own would have meant two type
+     scales for one stream — post rows in 18/13 and notes in 16 — since half the
+     rows here are notes rather than links to a post. */
+  .sz-stream { margin: 32px 0 0; }
   .sz-post-back {
     display: inline-block; font-family: var(--font-mono); font-size: 11px;
     letter-spacing: 0.12em; text-transform: uppercase;
@@ -494,6 +483,16 @@
   }
   .sz-log-entry:first-child { padding-top: 0; }
   .sz-log-entry:last-child { padding-bottom: 0; border-bottom: none; }
+  /* Rows that carry a post are the whole row a link, so the title and the body
+     under it are one target. The body keeps its own colour — only the title
+     moves on hover, which is what says "this one continues". */
+  a.sz-log-entry { text-decoration: none; color: inherit; }
+  .sz-log-title {
+    font-family: var(--font-sans); font-size: 18px; font-weight: 500;
+    color: var(--fg-hero); letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  a.sz-log-entry:hover .sz-log-title { color: var(--violet-300); }
   .sz-log-date {
     font-family: var(--font-mono); font-size: 11px;
     letter-spacing: 0.1em; color: rgba(236,230,245,0.45);
@@ -510,6 +509,15 @@
     border-bottom: 1px solid rgba(167,139,250,0.4);
   }
   .sz-log-body a:hover { border-bottom-color: var(--violet-300); }
+  /* The last entry above this keeps its border — the rule reads as the bottom
+     of the log rather than a divider between two entries. */
+  .sz-log-more {
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--fg-3); text-decoration: none;
+    padding-top: 24px;
+  }
+  .sz-log-more:hover { color: var(--violet-300); }
 
   .sz-rss {
     margin-top: 32px; padding: 16px 0;

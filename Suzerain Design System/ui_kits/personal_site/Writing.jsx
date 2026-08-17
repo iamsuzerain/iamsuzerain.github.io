@@ -1,5 +1,8 @@
-// Writing.jsx — post list + markdown reader
-// Globals: React, Cursor, marked
+// Writing.jsx — the thoughts archive + markdown reader
+// Globals: React, Cursor, marked, window.CONTENT + window.POSTS (App.jsx),
+// window.buildStream + window.StreamEntry (Hero.jsx).
+// The list is the whole stream — notes and posts in one column, the same rows
+// the hero log shows, minus the glass card and the cut at three.
 
 const { useState: useWrState, useEffect: useWrEffect } = React;
 
@@ -9,22 +12,17 @@ function wrFmtDate(iso) {
   return `${mo} ${d}, ${y}`;
 }
 
-function WrList({ posts }) {
+function WrList({ stream }) {
+  const WrStreamEntry = window.StreamEntry;
   return (
     <section className="sz-prose">
       <div className="sz-kicker">◆ thoughts</div>
       <h2 className="sz-h2">notes from the desk.</h2>
-      <ul className="sz-post-list">
-        {posts.map(p => (
-          <li key={p.slug} className="sz-post-row">
-            <a href={`#/thoughts/${p.slug}`}>
-              <span className="sz-post-date">{p.date}</span>
-              <span className="sz-post-title">{p.title}</span>
-              <span className="sz-post-summary">{p.summary}</span>
-            </a>
-          </li>
+      <div className="sz-stream">
+        {stream.map(entry => (
+          <WrStreamEntry key={`${entry.date}/${entry.slug || ''}`} entry={entry} />
         ))}
-      </ul>
+      </div>
     </section>
   );
 }
@@ -43,16 +41,12 @@ function WrPost({ post, body }) {
 }
 
 function Writing({ slug }) {
-  const [posts, setPosts] = useWrState(null);
   const [body, setBody] = useWrState(null);
   const [err, setErr] = useWrState(null);
 
-  useWrEffect(() => {
-    fetch('data/posts/index.json', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => setPosts(d.posts))
-      .catch(() => setErr('posts unavailable'));
-  }, []);
+  // The manifest is fetched once by App.jsx — the hero needs it too, so it
+  // can't live here. App re-renders the tree when it lands.
+  const posts = window.POSTS;
 
   // Only fetch slugs that exist in the manifest — the slug comes from the URL.
   const post = posts && slug ? posts.find(p => p.slug === slug) : null;
@@ -68,10 +62,11 @@ function Writing({ slug }) {
     return () => { cancelled = true; };
   }, [post && post.slug]);
 
-  if (err) return (
+  const fail = err || (window.POSTS_ERR ? 'posts unavailable' : null);
+  if (fail) return (
     <section className="sz-prose">
       <div className="sz-kicker">◆ thoughts</div>
-      <h2 className="sz-h2">{err}.</h2>
+      <h2 className="sz-h2">{fail}.</h2>
       <a className="sz-post-back" href="#/thoughts">← thoughts</a>
     </section>
   );
@@ -88,7 +83,9 @@ function Writing({ slug }) {
       <a className="sz-post-back" href="#/thoughts">← thoughts</a>
     </section>
   );
-  return post ? <WrPost post={post} body={body} /> : <WrList posts={posts} />;
+  return post
+    ? <WrPost post={post} body={body} />
+    : <WrList stream={window.buildStream(window.CONTENT.home.log, posts)} />;
 }
 
 window.Writing = Writing;
