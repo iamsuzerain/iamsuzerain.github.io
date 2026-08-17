@@ -654,7 +654,11 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
             full width of that field, which is a long trip between two buttons
             that are one control. */}
         <div className="cmb-annot-cap-head">
-          <div className="cmb-annot-cap-date">{cmbFullDate(cur.date)}</div>
+          {/* Collapsed the bar names the control rather than the entry behind
+              it: with the arrows gone the date labels nothing you can read or
+              step through, and the pinned entry is already the one marker
+              wearing the active stroke on the chart. */}
+          <div className="cmb-annot-cap-date">{capHidden ? 'log' : cmbFullDate(cur.date)}</div>
           {/* Stepping through entries you cannot read is a control without a
               purpose, so collapsed leaves the date and the toggle alone. */}
           {!capHidden && (
