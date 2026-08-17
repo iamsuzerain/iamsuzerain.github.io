@@ -586,9 +586,17 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
   const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
   const hv = useChartHover(F);
   const [annot, setAnnot] = useCmbState(null);
+  // The caption defaults to the newest entry rather than to nothing, so it is
+  // always sitting above the chart whether or not you asked for it. Collapsing
+  // leaves the date bar behind instead of removing the block: gone entirely, the
+  // chart would jump up the page and there would be no way back to a note you
+  // hadn't already pinned.
+  const [capHidden, setCapHidden] = useCmbState(false);
   const markers = cmbMarkers(plot, log).sort((a, b) => a.i - b.i);
   const cur = annot || (markers.length ? markers[markers.length - 1] : null);
   const curIdx = cur ? markers.findIndex(m => m.i === cur.i) : -1;
+  // Picking a marker is a request to read it, so it reopens a collapsed caption.
+  const pickAnnot = (m) => { setAnnot(m); setCapHidden(false); };
 
   const all = [];
   for (const p of plot) {
@@ -639,15 +647,29 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         strips that are meant to read as one column against the chart — and it
         appears and disappears on click, shifting everything under it. */}
     {cur && (
-      <div className="cmb-annot-cap cmb-annot-cap-top">
+      <div className={`cmb-annot-cap cmb-annot-cap-top${capHidden ? ' collapsed' : ''}`}>
+        {/* Date leads, controls group at the right — the arrangement SzStripHead
+            uses, and the one the log rows and post kickers already read in. The
+            date's flex:1 does the pushing. Prev and next had been split by the
+            full width of that field, which is a long trip between two buttons
+            that are one control. */}
         <div className="cmb-annot-cap-head">
-          <button className="cmb-annot-nav" disabled={curIdx <= 0}
-            onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
           <div className="cmb-annot-cap-date">{cmbFullDate(cur.date)}</div>
-          <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
-            onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
+          {/* Stepping through entries you cannot read is a control without a
+              purpose, so collapsed leaves the date and the toggle alone. */}
+          {!capHidden && (
+            <button className="cmb-annot-nav" disabled={curIdx <= 0}
+              onClick={() => setAnnot(markers[curIdx - 1])} aria-label="previous entry">←</button>
+          )}
+          {!capHidden && (
+            <button className="cmb-annot-nav" disabled={curIdx >= markers.length - 1}
+              onClick={() => setAnnot(markers[curIdx + 1])} aria-label="next entry">→</button>
+          )}
+          <button className="cmb-annot-nav" onClick={() => setCapHidden(!capHidden)}
+            aria-expanded={!capHidden}
+            aria-label={capHidden ? 'show note' : 'hide note'}>{capHidden ? '+' : '−'}</button>
         </div>
-        <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>
+        {!capHidden && <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>}
       </div>
     )}
     <div className="pm-chart-wrap">
@@ -688,7 +710,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         {/* log event markers — click to pin to the caption below */}
         {markers.map((m, k) => (
           <CmbAnnotDot key={k} cx={x(m.i)} cy={y(m.v)}
-            active={cur && cur.i === m.i} onClick={() => setAnnot(m)}/>
+            active={cur && cur.i === m.i} onClick={() => pickAnnot(m)}/>
         ))}
       </SzChartSvg>
 
@@ -732,8 +754,8 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
     {/* Always the dollar series: this rebuilds an equity curve from notional +
         cumulative P&L, and reads as a percentage under both settings anyway. */}
     <CmbDrawdownStrip series={series} notional={base}
-      markers={markers} cur={cur} onPick={setAnnot}/>
-    <CmbAlphaStrip series={plot} markers={markers} cur={cur} onPick={setAnnot}
+      markers={markers} cur={cur} onPick={pickAnnot}/>
+    <CmbAlphaStrip series={plot} markers={markers} cur={cur} onPick={pickAnnot}
       unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
     </>
   );
