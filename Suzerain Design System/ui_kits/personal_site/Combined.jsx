@@ -1402,7 +1402,7 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
         ))}
       </div>
       {hovered && (
-        <div className="pm-tooltip" style={{ left: `${(cx(hover) / W) * 100}%`, top: '6%' }}>
+        <SzTooltip frame={F} x={cx(hover)} top="6%">
           <div className="pm-tt-date">{hovered.ym}</div>
           {/* Rows follow the on-chart column order so the tooltip reads left
               to right the same way the marks do. */}
@@ -1414,7 +1414,7 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
           )}
           <div className="pf-tt-bench" style={{ color: CMB_C_PM }}>poly {fmt(hovered.pm)}</div>
           <div className={`pm-tt-val ${hovered.total >= 0 ? 'pos' : 'neg'}`}>total {fmt(hovered.total)}</div>
-        </div>
+        </SzTooltip>
       )}
     </div>
     <div className="pf-bench-legend">

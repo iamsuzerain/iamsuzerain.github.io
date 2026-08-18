@@ -901,16 +901,13 @@ function ReturnDistribution({ perfSeries }) {
           <span className="end" style={{ left: '100%' }}>{fmtPctBare(bins[bins.length - 1].hi, 1)}</span>
         </div>
         {hb && (
-          <div className="pm-tooltip" style={{
-            left: `${((x(bins.indexOf(hb)) + bw / 2) / W) * 100}%`,
-            top: `${(y(hb.count) / H) * 100}%`,
-          }}>
+          <SzTooltip frame={F} x={x(bins.indexOf(hb)) + bw / 2} y={y(hb.count)}>
             <div className="pm-tt-date">{fmtPctBare(hb.lo, 1)} … {fmtPctBare(hb.hi, 1)}</div>
             <div className={`pm-tt-val ${hb.lo < 0 ? 'neg' : 'pos'}`}>{hb.count} sessions</div>
             <div className="pf-tt-bench" style={{ color: '#5eead4' }}>
               normal {hb.expected.toFixed(1)}
             </div>
-          </div>
+          </SzTooltip>
         )}
       </div>
       <div className="pf-dist-stats">
