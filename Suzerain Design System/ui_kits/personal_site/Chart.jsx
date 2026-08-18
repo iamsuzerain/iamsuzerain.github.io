@@ -249,10 +249,48 @@ function SzCrosshair({ frame, x, cy, fill, ring = '#0a0612', r = 4, dots }) {
 // These sit in .pm-chart-wrap alongside the svg rather than inside it, so they
 // get real text rendering and don't inherit preserveAspectRatio="none"'s
 // horizontal stretch. Positions convert from viewBox units to percentages.
-function SzTooltip({ frame, x, y, className = '', children }) {
+
+// The tooltip is centred on its column, and at the first and last column that
+// centre is 8px from the edge of the box — so half the tooltip hung outside it.
+// On a desktop column the spill landed in the card's padding and only looked
+// careless; on a phone, where the tooltip can be half the screen wide, it ran
+// off the viewport, which meant the newest point — the one most worth reading —
+// was the one you couldn't read.
+//
+// So the box is clamped to the wrap and the arrow shifted back by the same
+// amount, keeping it over the column the reading belongs to. The shift is
+// measured rather than assumed in css because the width is the content's own: a
+// strip's single line and the combined chart's four rows are not the same box,
+// and one fixed half-width would shove the narrow ones inward for nothing.
+function useSzTooltipClamp(leftFrac) {
+  const ref = React.useRef(null);
+  // Deliberately no dep array. The width follows the content, which changes
+  // column to column — a dep list keyed on position alone would go stale the
+  // moment a longer figure came under the cursor at the same x.
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    const wrap = el && el.offsetParent;   // .pm-chart-wrap, the left% basis
+    if (!wrap) return;
+    const w = el.offsetWidth, box = wrap.clientWidth;
+    const centre = leftFrac * box;
+    // A tooltip wider than the wrap has nothing to be clamped to; centring it
+    // at least splits the overhang evenly rather than piling it on one side.
+    const want = w >= box
+      ? box / 2
+      : Math.min(Math.max(centre, w / 2), box - w / 2);
+    el.style.setProperty('--tt-shift', `${(want - centre).toFixed(1)}px`);
+  });
+  return ref;
+}
+
+// `top` pins the box to a fixed height in the wrap instead of to the mark, for
+// the two column charts whose mark is a whole column rather than a point on a
+// line; those pass it and leave `y` out.
+function SzTooltip({ frame, x, y, top, className = '', children }) {
+  const ref = useSzTooltipClamp(x / frame.W);
   return (
-    <div className={`pm-tooltip${className ? ' ' + className : ''}`}
-      style={{ left: `${(x / frame.W) * 100}%`, top: `${(y / frame.H) * 100}%` }}>
+    <div ref={ref} className={`pm-tooltip${className ? ' ' + className : ''}`}
+      style={{ left: `${(x / frame.W) * 100}%`, top: top || `${(y / frame.H) * 100}%` }}>
       {children}
     </div>
   );

@@ -1099,7 +1099,10 @@
   .pm-trough { color: #ff9ae8; transform: translate(-50%, 80%); }
   .pm-tooltip {
     position: absolute;
-    transform: translate(-50%, calc(-100% - 14px));
+    /* --tt-shift is set per hover by useSzTooltipClamp in Chart.jsx: the
+       distance the box has to move to stay inside the chart wrap at either
+       end. 0 for every column that already fits, which is most of them. */
+    transform: translate(calc(-50% + var(--tt-shift, 0px)), calc(-100% - 14px));
     background: rgba(12,8,20,0.95);
     border: 1px solid rgba(167,139,250,0.35);
     border-radius: var(--r-1);
@@ -1111,7 +1114,11 @@
     box-shadow: 0 4px 20px rgba(0,0,0,0.6);
   }
   .pm-tooltip::after {
-    content: ''; position: absolute; bottom: -5px; left: 50%;
+    /* Un-shifted by the same amount, so the arrow stays over the column even
+       when the box has slid inward — clamped to the box's own width so it
+       can't detach from the tooltip it belongs to. */
+    content: ''; position: absolute; bottom: -5px;
+    left: clamp(10px, calc(50% - var(--tt-shift, 0px)), calc(100% - 10px));
     transform: translateX(-50%) rotate(45deg);
     width: 8px; height: 8px;
     background: rgba(12,8,20,0.95);

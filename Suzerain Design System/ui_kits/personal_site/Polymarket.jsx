@@ -1077,10 +1077,8 @@ function PmCalScatter({ buckets }) {
           const b = pts[hover];
           const edge = b.winRate - b.avgImplied;
           return (
-            <div className="pm-tooltip cmb-tooltip" style={{
-              left: `${(x(b.avgImplied) / VW) * 100}%`,
-              top: `${(y(b.winRate) / VH) * 100}%`,
-            }}>
+            <SzTooltip frame={{ W: VW, H: VH }} x={x(b.avgImplied)} y={y(b.winRate)}
+              className="cmb-tooltip">
               <div className="pm-tt-date">{Math.round(b.lo * 100)}–{Math.round(b.hi * 100)}¢ · {b.n} positions{b.pushes ? ` · ${b.pushes} push` : ''}</div>
               <div className="cmb-tt-row">staked<span className="cmb-tt-num">{pmUSD(b.volume, true)}</span></div>
               {b.grossPnl != null && (
@@ -1092,7 +1090,7 @@ function PmCalScatter({ buckets }) {
               <div className="cmb-tt-row">won<span className="cmb-tt-num">{pmPct1(b.winRate)}</span></div>
               <div className="cmb-tt-row">priced<span className="cmb-tt-num">{pmPct1(b.avgImplied)}</span></div>
               <div className="cmb-tt-row">edge<span className={`cmb-tt-num ${edge >= 0 ? 'pos' : 'neg'}`}>{(edge >= 0 ? '+' : '') + (edge * 100).toFixed(1) + 'pp'}</span></div>
-            </div>
+            </SzTooltip>
           );
         })()}
       </div>
@@ -1243,14 +1241,14 @@ function PmRewardsChart({ rows }) {
         ))}
       </SzChartSvg>
       {hv.i != null && (
-        <div className="pm-tooltip" style={{ left: `${(x(hv.i) / F.W) * 100}%`, top: '4%' }}>
+        <SzTooltip frame={F} x={x(hv.i)} top="4%">
           <div className="pm-tt-date">{rows[hv.i].d}</div>
           {lines.map(l => (
             <div key={l.key} className="pf-tt-bench" style={{ color: l.color }}>
               {l.label} +{pmUSD(l.series[hv.i].v)}
             </div>
           ))}
-        </div>
+        </SzTooltip>
       )}
     </div>
     <div className="pf-bench-legend">
