@@ -1624,6 +1624,15 @@ function Combined({ setView }) {
   const shown = pct ? pctSeries : win.series;
   const sLast = (shown && shown.length) ? shown[shown.length - 1] : { v: 0, ibkr: 0, pm: 0 };
   const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
+  // Tone follows the figure actually printed. In percent a book carries its
+  // compounding-weighted contribution, which can end the window on the far side
+  // of zero from its dollars — a leg down early on a large base and up later on
+  // a small one nets negative in cash while contributing a positive return.
+  // Colouring off the dollars there painted a +0.05% tile red.
+  const tone = (v) => (v == null ? undefined : v >= 0 ? 'pos' : 'neg');
+  const vIbkr = pct ? sLast.ibkr : wIbkr;
+  const vPm = pct ? sLast.pm : wPm;
+  const vBench = pct ? (wBenchD == null ? null : sLast.v - (sLast[primary] || 0)) : wBenchD;
   const UnitBar = window.UnitBar;
 
   return (
@@ -1655,16 +1664,16 @@ function Combined({ setView }) {
             the two still add to the headline exactly (see cmbPctSeries). A
             return on the book's own capital would be a different question, and
             one the polymarket page already answers. */}
-        <CmbStat label="ibkr" value={fmt(pct ? sLast.ibkr : wIbkr)} tone={wIbkr >= 0 ? 'pos' : 'neg'} onClick={go('portfolio')}
+        <CmbStat label="ibkr" value={fmt(vIbkr)} tone={tone(vIbkr)} onClick={go('portfolio')}
           note={pct ? 'deposit-adjusted · contribution' : 'deposit-adjusted'}/>
-        <CmbStat label="polymarket" value={fmt(pct ? sLast.pm : wPm)} tone={wPm >= 0 ? 'pos' : 'neg'} onClick={go('polymarket')}
+        <CmbStat label="polymarket" value={fmt(vPm)} tone={tone(vPm)} onClick={go('polymarket')}
           note={pct ? `${rangeNote} · contribution` : rangeNote}/>
         {/* In % the tile's own value IS the points figure it used to carry as a
             kicker, so the kicker takes the dollars instead of restating it. */}
         {wBenchD != null && (
           <CmbStat label={`vs ${primaryName}`}
-            value={pct ? cmbPctFmt(sLast.v - (sLast[primary] || 0)) : cmbSigned(wBenchD)}
-            tone={wBenchD >= 0 ? 'pos' : 'neg'}
+            value={pct ? cmbPctFmt(vBench) : cmbSigned(wBenchD)}
+            tone={tone(vBench)}
             note={pct ? `${cmbSigned(wBenchD)} in dollars` : `${wBenchPts >= 0 ? '+' : ''}${wBenchPts.toFixed(1)}% on notional`}/>
         )}
       </div>
