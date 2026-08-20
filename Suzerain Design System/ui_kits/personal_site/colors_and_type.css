@@ -101,16 +101,44 @@
   --font-display: 'JetBrains Mono', var(--font-mono);
 
   /* ---------- Type scale ---------- */
-  --fs-xs:   11px;
+  /* Two ladders, because the site has two kinds of text.
+
+     LABEL TIER — mono, uppercase, tracked. This is what the interface is built
+     from: axis ticks, stat kickers, legend keys, table headers, meta rows. Two
+     thirds of the site's type sits here, and --fs-label is its single most
+     common size. index.html writes most of these as px literals rather than
+     through the tokens; the tokens are the vocabulary, not yet the mechanism.
+
+     HEADING TIER — consumed by the bare h1/h2/h3 rules further down, which are
+     what style *authored markdown*. A post's `##` gets --fs-2xl today, because
+     .sz-post-body sets colour and margin on headings but not size. These are
+     live, not decoration — do not prune them for looking unreferenced.
+
+     Between them sits the reading tier. Body is --fs-base.
+
+     Not tokens: the two clamp() heads (the hero name at clamp(48px,11vw,120px)
+     and its tagline) and the one-off display sizes in index.html (18/22/26/30).
+     Those are layout decisions, not scale steps. */
+
+  /* label tier */
+  --fs-micro:  9px;   /* floor for anything with letters in it */
+  --fs-label: 10px;   /* the site's most common size */
+  --fs-xs:    11px;
+  --fs-meta:  12px;
+
+  /* reading tier */
   --fs-sm:   13px;
-  --fs-base: 15px;
+  --fs-base: 15px;   /* body */
   --fs-md:   17px;
+
+  /* heading tier — authored markdown */
   --fs-lg:   20px;
-  --fs-xl:   24px;
-  --fs-2xl:  32px;
-  --fs-3xl:  44px;
-  --fs-4xl:  60px;
-  --fs-5xl:  84px;
+  --fs-xl:   24px;   /* h3 */
+  --fs-2xl:  32px;   /* h2 — the level posts actually use */
+  --fs-3xl:  44px;   /* .sz-h2, the page/post title (written as a literal) */
+  --fs-4xl:  60px;   /* h1. Note: larger than the 44px post title above it,
+                        so a `#` in a post body would outrank its own heading.
+                        No post uses `#` today. Worth reconciling before one does. */
 
   --lh-tight: 1.1;
   --lh-snug:  1.3;
@@ -123,30 +151,44 @@
   --tracking-mono: 0.14em;  /* for monospace caps labels */
 
   /* ---------- Spacing ---------- */
-  --s-0: 0;
-  --s-1: 4px;
-  --s-2: 8px;
-  --s-3: 12px;
-  --s-4: 16px;
-  --s-5: 24px;
-  --s-6: 32px;
-  --s-7: 48px;
-  --s-8: 64px;
-  --s-9: 96px;
-  --s-10: 128px;
+  /* Named by their value, not by a step index. The old --s-1..--s-10 ladder
+     numbered a 4px ramp, which made --s-2 mean 8px and quietly implied the
+     in-between values didn't exist — while the site leans on them heavily:
+     14px and 10px are as common as 16px and 8px. It is a 2px grid with a 4px
+     preference, because a data panel packs tighter than a 4px ramp allows.
+
+     The site writes these as px literals; one rule below references a token.
+     128px is gone — nothing on the site is that far apart. */
+  --s-0:   0;
+  --s-2:   2px;
+  --s-4:   4px;
+  --s-6:   6px;
+  --s-8:   8px;    /* joint most common */
+  --s-10: 10px;
+  --s-12: 12px;
+  --s-14: 14px;
+  --s-16: 16px;    /* joint most common */
+  --s-18: 18px;
+  --s-20: 20px;
+  --s-24: 24px;
+  --s-32: 32px;    /* section rhythm */
+  --s-40: 40px;
+  --s-48: 48px;
+  --s-64: 64px;
+  --s-96: 96px;
 
   /* ---------- Radii ---------- */
-  /* The personal site uses exactly two: --r-1 for every cornered surface
-     (panels, cards, badges, menus, buttons, code) and --r-pill for the few
-     capsules. It had drifted to five hardcoded values — 2/3/4/5/999 — which
-     reads as sloppy where a badge sits inside a panel inside a menu. The
-     larger steps stay defined for other kits in the design system. */
-  --r-0: 0;
-  --r-1: 3px;
-  --r-2: 4px;
-  --r-3: 8px;
-  --r-4: 12px;
-  --r-pill: 999px;
+  /* --r-1 is THE radius. Every cornered surface on the site takes it — panels,
+     cards, badges, menus, buttons, code — which is 23 of the site's 24 uses.
+     It had drifted to five hardcoded values (2/3/4/5/999), which reads as
+     sloppy where a badge sits inside a panel inside a menu; one value is the
+     point, not a step someone forgot to vary.
+
+     --r-3 (8px) and --r-4 (12px) are gone, along with --r-0. Nothing anywhere
+     in the design system referenced them. */
+  --r-1: 3px;      /* default — assume this unless you have a reason */
+  --r-2: 4px;      /* preview/_card.css chrome only, not the site */
+  --r-pill: 999px; /* the few capsules */
 
   /* ---------- Borders ---------- */
   --bw: 1px;
@@ -301,7 +343,7 @@ summary:focus-visible,
 hr {
   border: 0;
   border-top: 1px solid var(--border-soft);
-  margin: var(--s-6) 0;
+  margin: var(--s-32) 0;
 }
 
 /* Marker — small "prompt" prefix */

@@ -23,34 +23,74 @@ The aesthetic takes cues from **lo-fi cyberpunk illustration**: rain-slick Tokyo
 
 **Voice:** First person. Dry. Competent. A little terse — the way a senior engineer writes their own notes. Never marketing-speak. Never "we're passionate about…"
 
-**Casing:** Sentence case everywhere. Headings, buttons, nav. Never title case. Never ALL CAPS except for tiny mono labels (`→ SELECTED`, `◆ NOTE`), where caps become a visual flag rather than shouting.
+**Two registers, kept separate.** Every rule below depends on this one.
 
-**Punctuation:**
-- Em-dashes over parentheses — they carry more rhythm.
-- Lowercase sentences in mono labels. No terminal period on micro-copy.
-- Ellipsis for in-progress states: `compiling…`, `loading…`
+- **Interface** — nav, headings, buttons, table columns, stat kickers, meta rows. Lowercase, always: `home` · `overview` · `ibkr` · `polymarket` · `thoughts` · `about` · `qty` · `roi` · `profit by source` · `peak-to-trough` · `annualized · twr`. Not sentence case — *lower* case. A capital in the chrome reads as a slip.
+- **Prose** — log entries, post bodies, summaries, the bio. Ordinary sentence case with ordinary punctuation, because it is ordinary writing: "Probably one of my weakest trading weeks of the year. Didn't recognize the oncoming train after FOMC caused a vanna push…"
 
-**Emoji:** None. Use unicode glyphs as typographic ornaments instead: `◆ ◇ ▸ → ∴ §`. An unadorned `—` does more work than any emoji.
+Don't blend them. Lowercase prose reads affected at paragraph length; sentence-case chrome reads like a dashboard someone bought.
 
-**Numbers & dates:** ISO-ish. `2026-04-23` beats "April 23rd." `v0.4.1` beats "version 0.4.1." Counts use a `/` pair: `03 / 12` reads better than "3 of 12."
+**The motto register, and its fence.** A third voice exists on the site and appears exactly twice: `i am suzerain. i'm here to write the future.` in the hero, and `the morning will come when the world is mine` on the about page. Sincere, grandiose, in character — the suzerain conceit speaking in its own voice rather than the author speaking about themselves.
+
+It is allowed in a masthead or an epigraph and nowhere else. The test is whether the page underneath has to answer for the claim: the hero line sits on top of a live P&L, so the charts are the receipt — if you are bad at writing the future, the drawdown says so. A grand line in the chrome, the footer or an error state answers to nothing, which is why it curdles. The old footer prescription (`built with violets and spite`) failed this way: it read as a costume break, the author stepping out of the persona to wink at the reader. Sovereignty doesn't do bits about its own mood.
+
+Put another way — a claim about **purpose** can go in the masthead. A claim about **temperament** goes nowhere. Everything outside those two lines stays flat: `ibkr · polymarket · volatility`, `no such post.`, `couldn't reach polymarket.`
+
+**Headings take a terminal period.** The site's most consistent tic and the one most worth keeping:
+
+`i am suzerain.` · `i'm here to write the future.` · `notes from the desk.` · `no such post.` · `couldn't reach polymarket.` · `couldn't build overview feed.`
+
+The period closes the statement and stops a lowercase heading reading as a fragment. One outlier ships today: `ENDORSEMENTS.` on the politics view, the only ALL-CAPS heading on the site.
+
+**In-progress states drop the period and take a blinking block cursor**, not an ellipsis: `fetching positions▋` · `merging feeds▋` · `loading▋`. That's `<Cursor/>`, which renders `▋`. There is not one `…` in the site's copy.
+
+**Failures say what failed and stop.** No apology, no exclamation, no error code in the reader's face: `couldn't reach polymarket.` — not "Error: unable to connect", not "Oops!". There are **zero** exclamation marks on the site. Keep it that way.
+
+**Proper nouns go lowercase too.** `ibkr`, `polymarket`, `spx`, `btc`, `discord`, `reddit`. Type them the way the site types them, not the way they brand themselves.
+
+**Punctuation:** Em-dashes over parentheses — they carry more rhythm. Parentheses survive for a real gloss (`(vol, drawdown, beta)`). Watch for ` - ` creeping in as a substitute dash; three have already.
+
+**Emoji:** None, and the site holds the line — there isn't one anywhere in the source. Use the glyphs below.
+
+**Glyphs, ranked by the work they actually do:**
+
+| glyph | uses | job |
+|---|---|---|
+| `·` | 116 | the separator, between every meta field |
+| `→` | 28 | active nav prefix, direction |
+| `◆` | 19 | annotation marker on a chart |
+| `±` | 8 | tolerance |
+| `↗` | 7 | external link |
+| `▋` | 2 | in-progress cursor |
+
+`◇ ▸ × ∴ § ↑` appear once or twice each. `∴` and `§` were listed as core ornaments and never earned it — don't reach for them.
+
+**Numbers & dates:** ISO in the interface, always. Dates render through `toLocaleDateString('en-CA')` → `2026-08-18`; axis ticks are ISO fragments (`2026-08`, `08-18`). Prose is exempt and should be — "Tracker live since April 2026" is right in a bio. Versions are bare: `v0.5`.
+
+There is no count convention. The nav carries no counts at all. Don't invent one.
 
 ### Examples
 
 | Do | Don't |
 |---|---|
-| `about — a few things I make and think about` | `About Me 🙂` |
-| `writing / 04 posts` | `My Blog Posts (4)` |
-| `↗ mastodon` | `Follow me on Mastodon!` |
-| `built with violets and spite` | `Made with ❤️` |
-| `currently — rewriting the compiler` | `What I'm working on right now 🚀` |
+| `ibkr · polymarket · volatility` | `Made with ❤️` |
+| `couldn't reach polymarket.` | `Error: connection failed!` |
+| `fetching positions▋` | `Loading, please wait…` |
+| `thoughts` | `My Blog Posts (4)` |
+| `↗ reddit` | `Follow me on Reddit!` |
+| `peak-to-trough` | `Peak To Trough` |
 
 ### Sample copy
 
-> _hero:_ **suzerain** — a small sovereign territory on the open web. notes, projects, things unfinished.
+Real lines from the site, not illustrations.
 
-> _project card:_ `ginkgo` — a tiny static site generator in rust. built because hugo's mental model never stuck. v0.3 ships when it ships.
+> _hero:_ **i am suzerain.** · i'm here to write the future. · tracker live since 2026 · footer: `ibkr · polymarket · volatility`
 
-> _404:_ the page you're looking for is in another castle. or maybe never existed. ◆
+> _about:_ heading `the morning will come when the world is mine`, then prose — "Trader since 2017. Tracker live since April 2026. Theta, volatility, prediction markets."
+
+> _log entry:_ EOQ. Despite making 5 figures on geopolitical and election predictions, we ended up with a massive drawdown on Polymarket due to touch options on oil, a tradfi position.
+
+> _states:_ `no such post.` · `couldn't build overview feed.` · `fetching positions▋`
 
 ---
 
@@ -70,7 +110,12 @@ The aesthetic takes cues from **lo-fi cyberpunk illustration**: rain-slick Tokyo
 
 **Foreground** (text)
 - `#f5f0ff` primary · `#c4b5d4` secondary · `#a99bc0` tertiary · `#8b7aa8` quietest · `#3d334f` divider
-- Both caption tiers clear 4.5:1 on glass (7.2:1 / 4.8:1) — they carry 10–11px uppercase labels over the city photo. `#3d334f` is a divider colour and must never be used for text.
+- Both caption tiers clear 4.5:1 on glass (7.2:1 / 4.8:1) — they carry the 9–12px uppercase labels over the city photo. `#3d334f` is a divider colour: never body text, never a label. The one sanctioned exception is `.sz-sep`, the inert `·` between meta fields, where it is punctuation rather than something to read.
+
+**Series** (benchmark overlays — categorical, outside the brand ramp)
+- `spx #5eead4` · `qqq #60a5fa` · `vti #4ade80` · `iwm #a3e635` · `vt #22d3ee` · `aor #facc15` · `bnd #94a3b8` · `tlt #cbd5e1` · `gld #fbbf24` · `btc #f97316`
+- Ten hues, defined once in `SZ_BENCHES` (`ui_kits/personal_site/Chrome.jsx`) and grouped equity / bonds & blends / alternatives. They sit deliberately outside violet and magenta: a benchmark is the thing the book is measured *against*, so it must not wear the book's colours — a teal line is never yours.
+- This is the one place the site leaves the ink/violet/magenta world, and it is a closed list. Adding an eleventh benchmark means adding a hue here, not picking one at the call site.
 
 _Warm white fg over cool violet ink — prevents the page feeling clinical or Matrix-green._
 
@@ -80,16 +125,35 @@ _Warm white fg over cool violet ink — prevents the page feeling clinical or Ma
 - **Body:** `Inter Tight` — 300/400/500. Used for long-form reading.
 - **Principle:** mono for anything the eye _scans_, sans for anything the eye _reads_.
 
-**Scale:** 11 / 13 / 15 / 17 / 20 / 24 / 32 / 44 / 60 / 84 px. Body is 15. Display caps at 84 (used once per page, for the name).
+**Scale.** Three tiers doing three different jobs — the site is not one ramp, and reading it as one is how the middle of it went unused.
 
-**Letter-spacing:**
-- Display: `-0.02em` (tight, grotesk-feeling)
-- Mono caps labels: `0.14em` (wide, flagged)
-- Everything else: `0`
+- **Mono micro-labels — 9 / 10 / 11 / 12 px.** Uppercase, tracked `0.08–0.16em`, in `--fg-3` or `--fg-4`. The largest tier by volume: 67 of the site's 99 fixed size declarations, and 10px alone is 28 of them. Anything the eye *scans* lives here — axis ticks, stat kickers, legend keys, table headers, meta rows. 8px exists once, on the range-picker caret, where it is an ornament rather than a word; treat 9px as the floor for anything with letters in it.
+- **Reading — 13 / 15 / 16 / 17 px.** Body is 15. 13px is the hinge: mono where it labels, Inter Tight where it reads.
+- **Display — 18 / 22 / 26 / 30 / 44 px, plus two fluid heads.** `.sz-h2` is the fixed 44px section head. The hero name is `clamp(48px, 11vw, 120px)` and its tagline `clamp(22px, 5vw, 32px)` — the only fluid type on the site, and the only thing that goes above 44.
+
+**The heading tier is for authored markdown, not for the interface.** No hand-written component on the site sets 20, 24, 32 or 60px — every `<h1>`/`<h2>` in the JSX carries a class that overrides them. But `.sz-post-body` styles post headings for colour and margin *without* setting a size, so a `##` in a blog post falls through to the bare `h2` rule and renders at `--fs-2xl` (32px). That path is live today. `###` (24px) and `#` (60px) are unused so far but one post away from rendering.
+
+One thing to fix before it bites: `h1` is 60px while `.sz-h2` — the post's own title — is 44px. A `#` in a post body would outrank the title above it.
+
+84px is gone. It was the top of the old ramp and rendered nowhere in any form.
+
+The `--fs-*` tokens are referenced only by the semantic element rules inside `colors_and_type.css`; `index.html` writes px directly. The tokens are the vocabulary, not yet the mechanism.
+
+**Letter-spacing.** Three bands, one of which is honest drift.
+
+- **Display:** `-0.01` to `-0.04em`, `-0.02` the common case (tight, grotesk-feeling). 10 uses.
+- **Reading:** `0` to `0.02em`. Effectively neutral; 15px body sits at `0.01em`.
+- **Mono caps labels:** a band from `0.04` to `0.18em`, 56 uses — and no rule decides which. 11px alone ships at `0.04`, `0.06`, `0.1`, `0.12` and `0.16em` in different components. `0.1em` is the plurality (13 uses); `--tracking-mono` (`0.14em`) is the documented value and only the fifth most common (7).
+
+The band is not a scale, and it does not track size — it is what eleven components each picking a number looks like. **New work: use `0.1em`.** `--tracking-mono` stays at `0.14em` because two shipped rules reference it and moving it would shift them; if that ever gets reconciled, `0.1em` is the target.
 
 ### Spacing
 
-4-px base grid: `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 128`. Generous whitespace is the main luxury of this design. Never cram.
+**2-px grid, 4-px preferred:** `2 · 4 · 6 · 8 · 10 · 12 · 14 · 16 · 18 · 20 · 24 · 32 · 36 · 40`. The four that carry the site are `8` and `16` (22 uses each) and `14` and `10` (19 each) — dense-data spacing, not the airy 4–8–16–24 ramp the token block describes. Odd values are a hairline nudge, not a step: 20 of 238 spacing declarations use 1/3/5/7px, and each one is nudging a border or a glyph into place.
+
+Whitespace is still the luxury, but at *page* level — 32/40px between sections, `max-width: 760px` on reading measure, and the hero left to breathe. Inside a data panel, tight is correct: a table that cannot show you twelve rows at once has failed at the only thing it does. Never cram the page; do crowd the grid.
+
+The spacing tokens are now **named by value** — `--s-8` is 8px, `--s-14` is 14px. They used to be named by step index, so `--s-2` meant 8px and the ramp implied the in-between values didn't exist. `--s-10` (128px) is gone; nothing on the site is that far apart.
 
 ### Backgrounds
 
@@ -104,9 +168,13 @@ Supporting layers, lightest first:
 
 ### Cards & borders
 
-Cards are `var(--ink-3)` fills with `1px solid var(--ink-4)` borders and `2–4px` radius — just enough to not be brutalist, nowhere near "friendly." Shadows are almost never used on cards; elevation comes from the `inner-glow` (a 1px inset violet line at 15% alpha).
+Cards are `var(--ink-3)` fills with `1px solid var(--ink-4)` borders and a `3px` radius — just enough to not be brutalist, nowhere near "friendly." Shadows are almost never used on cards; elevation comes from the `inner-glow` (a 1px inset violet line at 15% alpha).
 
-**Radii:** `0 / 2 / 4 / 8 / 12 / pill`. Default is `4px`. Use `0` for terminal-style panels. Use `pill` only for tags/badges.
+**Radii:** two, and only two. `--r-1` (**3px**) on every cornered surface — panels, cards, badges, menus, buttons, code — and `--r-pill` on the few capsules. That is 23 uses against 1.
+
+`--r-0`, `--r-3` (8px) and `--r-4` (12px) have been removed — nothing in the design system referenced them. `--r-2` (4px) survives because `preview/_card.css` frames the preview cards with it; it is chrome, not a site value.
+
+Note there is no 2px radius: `--r-1` is **3**, and a badge sitting inside a panel inside a menu is why all three share one value rather than stepping.
 
 ### Hover, press, focus
 
@@ -140,7 +208,7 @@ If photography is used, it should be **cool, slightly desaturated, violet-shifte
 - **Max content width:** 720px for reading, 1080px for project grids, 1200px absolute max.
 - **Side margins:** 48px desktop, 20px mobile. Generous.
 - **Nav:** single row, left-aligned, mono-cased lowercase. No logo in the nav (the page _is_ the logo). Active state = `→` prefix.
-- **Footer:** a single mono line. `© 2026 · suzerain · built with violets and spite`
+- **Footer:** a single mono line of plain nouns — `ibkr · polymarket · volatility`. No copyright line, no build boast, no "made with". The footer names what the site is about and stops.
 - **Single column.** Sidebars are allowed once per page max, and must be ≤ 240px.
 
 ---
@@ -150,6 +218,8 @@ If photography is used, it should be **cool, slightly desaturated, violet-shifte
 **Primary system:** [Lucide](https://lucide.dev) — thin-stroke line icons (1.5px stroke, 24×24 default). Loaded from CDN via `<script src="https://unpkg.com/lucide@latest">` or imported as individual SVGs into `assets/icons/`.
 
 **Size scale:** 14 (inline-with-text), 16 (button), 20 (nav), 24 (default), 32 (feature). Never smaller than 14.
+
+> The personal site ships **no icons at all** — no Lucide, no `assets/icons/`. Every mark on it is a unicode glyph from the list below, set in JetBrains Mono. This section is the rule for kits that need icons; it is not a description of the site.
 
 **Color:** `currentColor`. Icons inherit text color. Violet/magenta hover comes from the parent link rule, not the icon.
 
