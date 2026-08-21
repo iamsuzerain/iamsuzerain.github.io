@@ -1,0 +1,65 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "personal_site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "Suzerain Design System/ui_kits/personal_site"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "personal_site_8766",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "Suzerain Design System/ui_kits/personal_site"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "personal_site_8767",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8767",
+        "--directory",
+        "Suzerain Design System/ui_kits/personal_site"
+      ],
+      "port": 8767
+    },
+    {
+      "name": "personal_site_8768",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8768",
+        "--directory",
+        "Suzerain Design System/ui_kits/personal_site"
+      ],
+      "port": 8768
+    },
+    {
+      "name": "personal_site_dist",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8769",
+        "--directory",
+        "Suzerain Design System/ui_kits/personal_site/dist"
+      ],
+      "port": 8769
+    }
+  ]
+}
