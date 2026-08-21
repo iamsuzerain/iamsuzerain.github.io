@@ -65,6 +65,16 @@ jobs:
           grep -q "app.min.js?v=${GITHUB_SHA:0:8}" index.html
           rm -f *.jsx
 
+      # Mirrors the "minify the stylesheet" step in build.sh — keep the two in
+      # step. The source file's comments are ~60% of its bytes and exist for the
+      # next person editing the tokens, not for anyone loading the page.
+      - name: minify css
+        working-directory: Suzerain Design System/ui_kits/personal_site
+        run: |
+          npx -y esbuild@0.25.0 colors_and_type.css --minify > colors_and_type.min.css
+          grep -q -- '--r-1: *3px' colors_and_type.min.css   # fail loudly on an empty emit
+          mv colors_and_type.min.css colors_and_type.css
+
       - name: generate rss feed
         working-directory: Suzerain Design System/ui_kits/personal_site
         run: |
