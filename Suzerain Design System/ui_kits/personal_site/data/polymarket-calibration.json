@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T07:09:26Z",
+  "generatedAt": "2026-08-21T07:10:30Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -32,26 +32,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 614,
-      "wins": 567,
+      "n": 615,
+      "wins": 568,
       "pushes": 0,
-      "hitRate": 0.9235,
-      "volume": 3421443.22,
-      "realizedPnl": 18311.41,
+      "hitRate": 0.9236,
+      "volume": 3421933.51,
+      "realizedPnl": 18311.88,
       "roi": 0.0054,
       "brier": 0.0414,
-      "avgImplied": 0.9002,
+      "avgImplied": 0.9004,
       "edge": 0.0232,
-      "calibrationError": 0.0328
+      "calibrationError": 0.0327
     },
     "exit": {
       "n": 251,
       "wins": 168,
       "pushes": 7,
       "hitRate": 0.6885,
-      "volume": 962335.94,
-      "realizedPnl": -18899.55,
-      "roi": -0.0196
+      "volume": 963359.52,
+      "realizedPnl": -19636.52,
+      "roi": -0.0204
     }
   },
   "buckets": {
@@ -224,16 +224,16 @@
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 165,
-        "wins": 164,
+        "n": 166,
+        "wins": 165,
         "pushes": 0,
-        "winRate": 0.9939,
+        "winRate": 0.994,
         "avgImplied": 0.9948,
-        "volume": 1071749.54,
-        "realizedPnl": 5188.64,
-        "grossPnl": 5471.22,
+        "volume": 1072239.83,
+        "realizedPnl": 5189.11,
+        "grossPnl": 5471.69,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.9665,
+        "wilsonLo": 0.9667,
         "wilsonHi": 0.9989
       }
     ],
@@ -336,10 +336,10 @@
         "pushes": 0,
         "winRate": 0.5833,
         "avgImplied": 0.6536,
-        "volume": 48946.73,
-        "realizedPnl": -1776.54,
-        "grossPnl": 5429.4,
-        "winRateByVolume": 0.7719,
+        "volume": 49970.31,
+        "realizedPnl": -2513.51,
+        "grossPnl": 6166.37,
+        "winRateByVolume": 0.7561,
         "wilsonLo": 0.3195,
         "wilsonHi": 0.8067
       },
@@ -615,23 +615,23 @@
     },
     "politics": {
       "combined": {
-        "n": 175,
-        "volume": 886902.3,
-        "realizedPnl": 18046.09,
+        "n": 176,
+        "volume": 887392.59,
+        "realizedPnl": 18046.56,
         "roi": 0.0203,
-        "hitRate": 0.8314,
-        "avgImplied": 0.8441,
-        "edge": -0.0127,
+        "hitRate": 0.8324,
+        "avgImplied": 0.845,
+        "edge": -0.0126,
         "top1Share": 0.1285
       },
       "settlement": {
-        "n": 125,
-        "volume": 750238.88,
-        "realizedPnl": 24043.69,
+        "n": 126,
+        "volume": 750729.17,
+        "realizedPnl": 24044.16,
         "roi": 0.032,
-        "hitRate": 0.904,
-        "avgImplied": 0.896,
-        "edge": 0.008,
+        "hitRate": 0.9048,
+        "avgImplied": 0.8968,
+        "edge": 0.0079,
         "top1Share": 0.1659
       },
       "exit": {
@@ -648,13 +648,13 @@
     "sports": {
       "combined": {
         "n": 280,
-        "volume": 726433.42,
-        "realizedPnl": -14088.89,
-        "roi": -0.0194,
+        "volume": 727457.0,
+        "realizedPnl": -14825.86,
+        "roi": -0.0204,
         "hitRate": 0.8065,
         "avgImplied": 0.8207,
         "edge": -0.0142,
-        "top1Share": 0.1532
+        "top1Share": 0.1511
       },
       "settlement": {
         "n": 229,
@@ -668,13 +668,13 @@
       },
       "exit": {
         "n": 51,
-        "volume": 162430.18,
-        "realizedPnl": -22314.23,
-        "roi": -0.1374,
+        "volume": 163453.76,
+        "realizedPnl": -23051.2,
+        "roi": -0.141,
         "hitRate": 0.48,
         "avgImplied": 0.6895,
         "edge": -0.2095,
-        "top1Share": 0.2742
+        "top1Share": 0.2677
       }
     },
     "tech": {
@@ -711,10 +711,10 @@
     }
   },
   "openBook": {
-    "n": 52,
-    "cost": 131587.22,
-    "mark": 110563.97,
-    "unrealized": -21023.26
+    "n": 56,
+    "cost": 179768.45,
+    "mark": 158069.69,
+    "unrealized": -21698.76
   },
   "excluded": {
     "hedged": {
