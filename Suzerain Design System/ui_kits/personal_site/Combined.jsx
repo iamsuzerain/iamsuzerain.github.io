@@ -307,9 +307,8 @@ function cmbGetJson(url) {
 // use lifetime totals (correct as long as no rewards/fees pre-date the window).
 // betmoar breakdown is primary; CLOB rewards json is the fallback.
 //
-// Takes the already-fetched breakdown + history payloads: the loader fetches
-// both in its parallel fan-out, and the breakdown is shared with the capital
-// -deployment bar rather than requested twice.
+// Takes the already-fetched breakdown + history payloads rather than fetching
+// its own: the loader has both in its parallel fan-out by the time this runs.
 async function cmbBdExtra(bd, hist) {
   const current = (bd && bd.totals) ? bd.totals : null;
   if (!current) {
@@ -508,6 +507,32 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   };
   const baseAt = (day) => ibkrLevelAt(day) + pmLevelAt(day);
   const notional = baseAt(start);
+
+  // The capital-deployment bar's two ends, read off the same level curve the
+  // chart's nav key prints, on the same day. It used to compute its own split
+  // from portfolio.account.nav and breakdown.balances.nav — the last *measured*
+  // pair — while the chart ran on to `today`, which the live user-pnl feed
+  // pushes a day past the last betmoar scrape. The two agreed to the cent on
+  // every measured day and then disagreed by whatever the polymarket book had
+  // done since that scrape: −$127 on a quiet morning, four figures on the days
+  // this window actually had. Two numbers on one page naming the same quantity,
+  // reconstructed twice from different corners of the feed — the thing every
+  // other convention in this file is written once to avoid.
+  //
+  // So there is one construction now, and `asOf` is the day it belongs to
+  // rather than the older of two file dates. Past its last measured day each
+  // half is carried by its own P&L (see the note above baseAt), so on a day the
+  // IBKR close has not landed yet its end of the bar is the previous close held
+  // flat — the same figure that end has always shown, now dated by the curve it
+  // came from instead of by the file it was read out of.
+  //
+  // Carried unrounded, and the bar adds the two ends itself: rounding each half
+  // to cents first and summing those can land a whole dollar off the chart's
+  // reading, which rounds the sum. Both ends print in $k anyway.
+  const deployable = navDays.length > 0 && pmFloor != null && today >= pmFloor;
+  const deploy = deployable
+    ? { ibkr: ibkrLevelAt(today), poly: pmLevelAt(today), asOf: cmbFromEpochDay(today) }
+    : null;
   const bench = [];
   if (benchmarks && notional) {
     for (const [key, b] of Object.entries(benchmarks)) {
@@ -558,6 +583,7 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     bench: bench.map(b => ({ key: b.key, label: b.label })),
     benchNotional: notional,
     vsSpx,
+    deploy,
     // Deliberately not range-windowed: the overlap is only ~144 sessions to
     // begin with (Polymarket NAV history is the binding constraint), and slicing
     // that to 1M would leave a correlation estimate that is pure noise.
@@ -1517,43 +1543,13 @@ function Combined({ setView }) {
       const breakdown = await breakdownP;
       const bd = await cmbBdExtra(breakdown, await bdHistP);  // { total, rows } — lifetime net + dated history
 
-      // Current NAV split for the capital-deployment bar. IBKR NAV is on the
-      // daily flex cron; Polymarket NAV (open positions + idle USDC) rides the
-      // betmoar breakdown snapshot. Bar renders only when both are present.
-      //
-      // Each side's "as of" comes from the day its number describes, not from the
-      // day its file was written — those differ by one, and the label used to read
-      // the later of the two. generatedAt says when the cron ran; the NAV it
-      // carries is a close from the day before. Same close-of-day convention as
-      // every other figure on the page.
-      let polyNav = null, polyDate = null;
-      if (breakdown) {
-        polyNav = breakdown.balances ? breakdown.balances.nav : null;
-        // betmoar's NAV is the live ~08:45 scrape, so it lands on the same
-        // completed day as the rest of that scrape's fields (szPmSnapshotDay).
-        const gen = (breakdown.generatedAt || '').slice(0, 10);
-        polyDate = gen ? window.szFromEpochDay(window.szPmSnapshotDay(gen)) : null;
-      }
-      const ibkrNav = (portfolio.account && portfolio.account.nav != null) ? portfolio.account.nav : null;
-      // account.nav is the last EquitySummary total — i.e. navSeries' final point,
-      // whose date is the close it represents. Verified equal, so read the date off
-      // the series rather than trusting the file's write time.
-      const navS = portfolio.navSeries || [];
-      const ibkrDate = navS.length ? navS[navS.length - 1].d
-        : ((portfolio.generatedAt || '').slice(0, 10) || null);
-
+      // The capital-deployment bar's split comes back from cmbBuild with the
+      // rest of the levels (`built.deploy`) — it is the nav curve's last point,
+      // read apart into its two halves rather than rebuilt here out of
+      // account.nav and breakdown.balances.nav.
       const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
-      if (ibkrNav != null && polyNav != null) {
-        // Two feeds with different latencies. Show the *older* of the two so the
-        // "as of" never overstates how fresh the bar is.
-        const dates = [ibkrDate, polyDate].filter(Boolean);
-        const asOf = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
-        built.deploy = { ibkr: ibkrNav, poly: polyNav, asOf };
-      } else {
-        built.deploy = null;
-      }
       return built;
     }
     load()
