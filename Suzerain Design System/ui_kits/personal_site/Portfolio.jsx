@@ -1191,8 +1191,10 @@ function Portfolio() {
   const [range, setRange] = usePortState('1Y');
   // Percent by default: this page's headline metric is TWR (the "1y" tile says
   // so), and the benchmark overlays are exact in percent where the dollar
-  // versions have to assume a notional. $ is one click away.
-  const [unit, setUnit] = usePortState('pct');
+  // versions have to assume a notional. $ is one click away — and once clicked
+  // it is remembered, here and on the overview tab, which share the key.
+  const [unit, setUnit] = window.useKeptState(
+    window.SZ_UNIT_PREF, 'pct', window.SZ_UNIT_VALUES);
   // What the book is drawn against. SPX alone by default — it's the comparison
   // the tiles and strips below are worded for, and a chart that opens with one
   // benchmark on it says which one matters rather than making you read a key.

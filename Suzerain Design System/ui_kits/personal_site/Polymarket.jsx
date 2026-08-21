@@ -599,6 +599,33 @@ const PM_PCT_START = '2026-06-01';
 const PM_PCT_START_SHORT = 'jun 1 26';     // range button — sized like "all-time"
 const PM_PCT_START_LONG = 'jun 1, 2026';   // panel title, on that range only
 
+// Which timeframes percent can honestly cover, given the last day of history.
+// Module-level because two callers need them: the panel below, and the effect
+// that reconciles a remembered percent against the range it opens on — which
+// has to run before that panel's code exists.
+//
+// A range qualifies once its own start clears PM_PCT_START. MAX always does,
+// because it gets trimmed to exactly that date. This list grows on its own as
+// history accumulates — 3mo qualifies from 2026-09-01, 6mo from 2026-12-01.
+function pmPctRangeOk(r, lastD) {
+  if (r === 'MAX') return true;
+  if (!lastD) return false;
+  const c = pmRangeCutoff(r, lastD);
+  return c != null && c >= PM_PCT_START;
+}
+
+// Landing spot when the selected range has no percent. Prefer the longest real
+// timeframe that does — earliest cutoff wins — and fall back to the trimmed
+// window only if nothing else qualifies. Dropping straight to "jun 1 26" would
+// swap a named timeframe for a substitute one when a genuine shorter timeframe
+// was available: today 12mo steps down to qtd, not to the start date.
+function pmPctFallback(lastD) {
+  const real = PM_RANGES.filter(r => r !== 'MAX' && pmPctRangeOk(r, lastD));
+  if (!real.length) return 'MAX';
+  return real.reduce((best, r) =>
+    pmRangeCutoff(r, lastD) < pmRangeCutoff(best, lastD) ? r : best);
+}
+
 // Last recorded NAV on or before a date, forward-filled. Rows arrive already
 // restated to close-of-day by szPmDateSnapshotRows at the fetch site.
 function pmNavLookup(rows) {
@@ -1289,7 +1316,11 @@ function Polymarket() {
   // than the page's. The tiles above are lifetime figures whose window reaches
   // back past PM_PCT_START by definition, so they have no honest percent and
   // stay in dollars under both settings.
-  const [unit, setUnit] = usePmState('usd');
+  // Remembered under its own key rather than the page-wide one the other two
+  // views share: a reader who set the overview to percent has said nothing
+  // about this panel, whose percent covers a shorter history than its dollars.
+  const [unit, setUnit] = window.useKeptState(
+    'unit.pm', 'usd', window.SZ_UNIT_VALUES);
   // The timeframe percent stepped down from, so switching back restores it
   // rather than stranding the reader on the shorter window.
   const [usdRange, setUsdRange] = usePmState(null);
@@ -1341,6 +1372,19 @@ function Polymarket() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  // A remembered percent arrives without passing through onUnit, so the
+  // step-down that lives there runs here instead — once the feed that decides
+  // which timeframes percent can cover has landed. Above the early returns
+  // below because it is a hook; the panel that would be the natural home for it
+  // is drawn only after those.
+  usePmEffect(() => {
+    const rows = data && data.pnlSeries;
+    const lastD = (rows && rows.length) ? rows[rows.length - 1].d : null;
+    if (unit !== 'pct' || !lastD || pmPctRangeOk(range, lastD)) return;
+    setUsdRange(range);
+    setRange(pmPctFallback(lastD));
+  }, [data, unit, range]);
 
   if (err) return (
     <section className="sz-prose">
@@ -1410,15 +1454,7 @@ function Polymarket() {
   // jun 1" rather than a lifetime TWR whose early denominators are guesses.
   const navAt = pmNavLookup(navRows);
   const lastD = (pnlSeries && pnlSeries.length) ? pnlSeries[pnlSeries.length - 1].d : null;
-  // A range qualifies once its own start clears PM_PCT_START. MAX always does,
-  // because it gets trimmed to exactly that date. This list grows on its own as
-  // history accumulates — 3mo qualifies from 2026-09-01, 6mo from 2026-12-01.
-  const pctRangeOk = (r) => {
-    if (r === 'MAX') return true;
-    if (!lastD) return false;
-    const c = pmRangeCutoff(r, lastD);
-    return c != null && c >= PM_PCT_START;
-  };
+  const pctRangeOk = (r) => pmPctRangeOk(r, lastD);
   const pctSlice = (winSeries || []).filter(p => p.d >= PM_PCT_START);
   const twrSeries = navAt ? pmTwrSeries(pctSlice, navAt) : null;
   // Percent is only offered when there is a denominator for every day of it.
@@ -1428,18 +1464,7 @@ function Polymarket() {
   const shownRanges = pct ? PM_RANGES.filter(pctRangeOk) : PM_RANGES;
   // MAX stops meaning all-time once the window is trimmed, so it says so.
   const labelFor = (r) => (pct && r === 'MAX') ? PM_PCT_START_SHORT : pmRangeLabel(r);
-  // Landing spot when the selected range has no percent. Prefer the longest
-  // real timeframe that does — earliest cutoff wins — and fall back to the
-  // trimmed window only if nothing else qualifies. Dropping straight to "jun 1
-  // 26" would swap a named timeframe for a substitute one when a genuine
-  // shorter timeframe was available: today 12mo steps down to qtd, not to the
-  // start date.
-  const pctFallback = () => {
-    const real = PM_RANGES.filter(r => r !== 'MAX' && pctRangeOk(r));
-    if (!real.length) return 'MAX';
-    return real.reduce((best, r) =>
-      pmRangeCutoff(r, lastD) < pmRangeCutoff(best, lastD) ? r : best);
-  };
+  const pctFallback = () => pmPctFallback(lastD);
   const onUnit = (u) => {
     setUnit(u);
     // Leaving the reader on a range percent cannot express would silently show

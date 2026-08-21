@@ -1461,8 +1461,10 @@ function Combined({ setView }) {
   // '$' or '%' for every P&L figure on the page. Percent by default, matching
   // the ibkr view: a return on a stated capital base is the comparable figure,
   // and it is the one that reads against the benchmark lines drawn beside it.
-  // Dollars are one click away.
-  const [unit, setUnit] = useCmbState('pct');
+  // Dollars are one click away, and stay chosen — the same stored preference
+  // the ibkr tab reads, since it is the same switch in the same nav.
+  const [unit, setUnit] = window.useKeptState(
+    window.SZ_UNIT_PREF, 'pct', window.SZ_UNIT_VALUES);
   // What the book is drawn against — same control and same default as the ibkr
   // tab, kept per-view rather than shared so the two pages can be read side by
   // side against different benchmarks.

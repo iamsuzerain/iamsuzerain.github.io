@@ -447,6 +447,50 @@ function szFmtPct(v, base, digits = 1) {
   return (p >= 0 ? '+' : '') + p.toFixed(digits) + '%';
 }
 
+// ---------- kept preferences ----------
+// A reader who flips to dollars has told the site how they read; asking again
+// on the next tab, or on the next visit, is the site forgetting it. So the
+// unit switches remember, and nothing else does — a range or a benchmark is a
+// question about one chart, but $ vs % is a habit.
+//
+// localStorage rather than a cookie: this is a static site, so the server has
+// no use for the value and no reason to carry it up on every request. Reads
+// and writes are wrapped because both throw outright when storage is blocked
+// (private windows, third-party frames), and a reader with cookies off should
+// still get a working switch — just one that forgets.
+const SZ_PREF_NS = 'sz.pref.';
+function szPrefRead(key, fallback, allowed) {
+  try {
+    const v = window.localStorage.getItem(SZ_PREF_NS + key);
+    // An unknown value is treated as absent: the allowed set is the one place
+    // that says what a preference may be, so a stale key from an older build
+    // can't put a view into a state it has no branch for.
+    if (v != null && (!allowed || allowed.indexOf(v) !== -1)) return v;
+  } catch (e) {}
+  return fallback;
+}
+function szPrefWrite(key, val) {
+  try { window.localStorage.setItem(SZ_PREF_NS + key, val); } catch (e) {}
+}
+
+// useState with the initial value read from storage and every set written back.
+// String values only — that keeps the stored form legible and the validation
+// above a plain membership test. Setters take a value, not an updater; the
+// callers here set a unit outright, and an updater would have to write to
+// storage from inside the reducer.
+function useKeptState(key, fallback, allowed) {
+  const [value, setValue] = useState(() => szPrefRead(key, fallback, allowed));
+  const set = (next) => { setValue(next); szPrefWrite(key, next); };
+  return [value, set];
+}
+
+// The two page-wide switches — overview and ibkr — share one key. They are the
+// same control in the same place (the nav), so a reader who set one and moved
+// tabs would rightly read the other reverting as a bug. Polymarket's switch
+// governs a single panel and defaults the other way, so it keeps its own.
+const SZ_UNIT_PREF = 'unit';
+const SZ_UNIT_VALUES = ['usd', 'pct'];
+
 // Two buttons wearing the range selector's chrome, because they sit beside it
 // (or above it) and do the same kind of job: change how the same series reads.
 // Drawn in a panel head where the switch governs that panel, and in the nav
@@ -687,6 +731,9 @@ window.szBenchSort = szBenchSort;
 window.szBenchPrimary = szBenchPrimary;
 window.szBenchColor = szBenchColor;
 window.szBenchLabel = szBenchLabel;
+window.useKeptState = useKeptState;
+window.SZ_UNIT_PREF = SZ_UNIT_PREF;
+window.SZ_UNIT_VALUES = SZ_UNIT_VALUES;
 window.UnitToggle = UnitToggle;
 window.UnitBar = UnitBar;
 window.useUnitSlot = useUnitSlot;
