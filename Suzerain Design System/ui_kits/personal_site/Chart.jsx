@@ -6,7 +6,7 @@
 // that box, a pointer handler that turns a clientX into a series index, a
 // vertical crosshair, and a tooltip positioned as a percentage of the box.
 // Those parts had been written out once per chart — eleven copies across three
-// ~1700-line files — so a fix to the hover maths, the axis padding or the
+// ~1700-line files — so a fix to the hover math, the axis padding or the
 // gradient stops was a three-file change, and in practice usually a two-file
 // change that quietly left the third behind. The drift was the real cost: the
 // baseline rule already reads at three different alphas depending on which file
@@ -250,8 +250,8 @@ function SzCrosshair({ frame, x, cy, fill, ring = '#0a0612', r = 4, dots }) {
 // get real text rendering and don't inherit preserveAspectRatio="none"'s
 // horizontal stretch. Positions convert from viewBox units to percentages.
 
-// The tooltip is centred on its column, and at the first and last column that
-// centre is 8px from the edge of the box — so half the tooltip hung outside it.
+// The tooltip is centered on its column, and at the first and last column that
+// center is 8px from the edge of the box — so half the tooltip hung outside it.
 // On a desktop column the spill landed in the card's padding and only looked
 // careless; on a phone, where the tooltip can be half the screen wide, it ran
 // off the viewport, which meant the newest point — the one most worth reading —
@@ -272,13 +272,13 @@ function useSzTooltipClamp(leftFrac) {
     const wrap = el && el.offsetParent;   // .pm-chart-wrap, the left% basis
     if (!wrap) return;
     const w = el.offsetWidth, box = wrap.clientWidth;
-    const centre = leftFrac * box;
+    const center = leftFrac * box;
     // A tooltip wider than the wrap has nothing to be clamped to; centring it
     // at least splits the overhang evenly rather than piling it on one side.
     const want = w >= box
       ? box / 2
-      : Math.min(Math.max(centre, w / 2), box - w / 2);
-    el.style.setProperty('--tt-shift', `${(want - centre).toFixed(1)}px`);
+      : Math.min(Math.max(center, w / 2), box - w / 2);
+    el.style.setProperty('--tt-shift', `${(want - center).toFixed(1)}px`);
   });
   return ref;
 }
@@ -330,7 +330,7 @@ function SzAxisZero({ frame, y, children }) {
 //
 // Idle it shows the latest point, so the key still reads as the book's current
 // level when the cursor is elsewhere. `live` (the cursor is on the chart) only
-// lifts the colour: the crosshair and tooltip already say which day it is, so
+// lifts the color: the crosshair and tooltip already say which day it is, so
 // the readout doesn't repeat the date and doesn't change width as you move.
 // `note` is a qualifier the value can't carry on its own — "at open" on a
 // benchmark's notional, which is a level from one particular column rather than
@@ -359,7 +359,7 @@ function SzStripHead({ label, meta, children }) {
 // ---------- toggles ----------
 // Every segmented control on the site — timeframe, $/%, rolling metric, sort
 // key — is this button with this active class. Options are either bare keys
-// (labelled by `label`, lowercased by default) or [key, text] pairs.
+// (labeled by `label`, lowercased by default) or [key, text] pairs.
 //
 // type="button" is not decoration: a bare <button> inside a form defaults to
 // submit, and one of the six hand-written copies had dropped it.

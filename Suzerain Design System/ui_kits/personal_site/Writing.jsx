@@ -54,12 +54,12 @@ function Writing({ slug }) {
   useWrEffect(() => {
     setBody(null);
     if (!post) return;
-    let cancelled = false;
+    let canceled = false;
     fetch(`data/posts/${post.slug}.md`, { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error('post ' + r.status); return r.text(); })
-      .then(t => { if (!cancelled) setBody(t); })
-      .catch(() => { if (!cancelled) setErr('post not found'); });
-    return () => { cancelled = true; };
+      .then(t => { if (!canceled) setBody(t); })
+      .catch(() => { if (!canceled) setErr('post not found'); });
+    return () => { canceled = true; };
   }, [post && post.slug]);
 
   const fail = err || (window.POSTS_ERR ? 'posts unavailable' : null);

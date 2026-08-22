@@ -9,7 +9,7 @@
      only asks a crawler not to fetch — a crawler that fetches anyway (and every
      one that ignores robots.txt does) needs to be told not to index, and that is
      this tag. The pair is belt and braces, not redundancy. Note the interaction:
-     a crawler that honours the Disallow never fetches the page and so never reads
+     a crawler that honors the Disallow never fetches the page and so never reads
      this line, which is why the URL can still surface bare if linked externally.
      Link previews are unaffected — unfurlers read the og: tags below regardless. -->
 <meta name="robots" content="noindex, nofollow">
@@ -305,7 +305,7 @@
   }
 
   /* Data views knock the photo back on purpose (.sz-dim .sz-skyline-photo), but
-     the surfaces above sample that backdrop and put the colour straight back:
+     the surfaces above sample that backdrop and put the color straight back:
      0.92 x 1.2 = 1.10, more saturated inside a pane than one pixel outside it.
      At 0.45 alpha that reads through. The skyline in window-view.jpg is lit
      windows and signage — long thin horizontal bands of red — so what surfaced
@@ -484,7 +484,7 @@
   .sz-log-entry:first-child { padding-top: 0; }
   .sz-log-entry:last-child { padding-bottom: 0; border-bottom: none; }
   /* Rows that carry a post are the whole row a link, so the title and the body
-     under it are one target. The body keeps its own colour — only the title
+     under it are one target. The body keeps its own color — only the title
      moves on hover, which is what says "this one continues". */
   a.sz-log-entry { text-decoration: none; color: inherit; }
   .sz-log-title {
@@ -696,7 +696,7 @@
   .pf-bench-menu { min-width: 208px; }
   /* One head per group, so every head after the first needs air above it */
   .pf-bench-menu .pf-range-menu-head:not(:first-child) { margin-top: 7px; }
-  /* The tick IS the swatch: it carries the line's colour when on and an empty
+  /* The tick IS the swatch: it carries the line's color when on and an empty
      rule when off, so the menu reads as the chart's legend before you commit */
   .pf-bench-tick { display: inline-flex; align-items: center; gap: 8px; }
   /* combined-view risk panel: flat divided columns, not nested stat cards */
@@ -750,7 +750,7 @@
   /* Rows are flush, not spaced: the bars stack edge to edge so the panel reads
      as one diverging chart instead of a list of marks floating on their own
      lines. No gap on the column, and a track that stretches to the full row box
-     rather than sitting centred inside it.
+     rather than sitting centered inside it.
      The row pitch MUST stay an even, 4-divisible number of CSS pixels. Adjacent
      borders are collapsed by over-extending the bar (see .pf-contrib-bar), not
      by a negative row margin — a -1px margin made the pitch 19px, which is
@@ -1343,7 +1343,7 @@
        moment the map is rendered narrow. */
     stroke-width: 1.1;
     stroke-linejoin: round;
-    /* Fill and stroke colour only — transitioning stroke-width makes the
+    /* Fill and stroke color only — transitioning stroke-width makes the
        borders shimmer as the browser re-rasterises them. */
     transition: fill 160ms var(--ease-out), stroke 160ms var(--ease-out);
   }
@@ -1351,12 +1351,12 @@
      Stepped down in OKLCH from there: ΔL 0.135 a step, 38° of hue. Validated
      against this surface — monotone lightness, worst adjacent pair ΔE 16.0
      normal / 10.1 protan. The lightness march is what carries it for a
-     colourblind reader; the hue arc alone would not.
+     colorblind reader; the hue arc alone would not.
 
      Do not raise the warm end to brighten the ramp: sRGB can't hold magenta's
      chroma above L~0.75, so it desaturates into pink. Do not compress the ramp
      to lift the cool end either — that was tried, and it drops the top pair to
-     ΔE 13.9, which full-colour readers can't separate.
+     ΔE 13.9, which full-color readers can't separate.
 
      tactical sits at 2.42:1 against the surface, under the 3:1 guideline. That
      is allowed only because the level is printed as text everywhere it is
@@ -1367,7 +1367,7 @@
      marked shape.
 
      Two ordered warm steps plus a neutral: `tactical` is a vote against rather
-     than a colder shade of support, so it reads as colourless instead of as a
+     than a colder shade of support, so it reads as colorless instead of as a
      third rung. Checked all-pairs against this surface — normal-vision ΔE 17.8,
      contrast passes on all three. Magenta↔violet sits at ΔE 7.5 under
      protanopia, which is a floor that holds only because the level is printed
@@ -1377,7 +1377,7 @@
   .pol-shape.pol-lv-tactical     { stroke: #f5f0ff; fill: rgba(245,240,255,0.09); }
 
   /* Interaction is fill-only, the mirror of before: the border is the data
-     channel now, so hover must not recolour it. A neutral wash inside the
+     channel now, so hover must not recolor it. A neutral wash inside the
      outline reads as "you are touching this" without claiming a step. */
   .pol-shape[role="button"] { cursor: pointer; }
   .pol-shape[role="button"]:hover { fill: rgba(245,240,255,0.20); }
@@ -1440,7 +1440,7 @@
   }
   .pol-race.is-primary .pol-race-office { color: var(--fg-1); }
   /* The level reads as text in an ink token with the swatch carrying the hue —
-     a label tinted with its own series colour is the thing that stops being
+     a label tinted with its own series color is the thing that stops being
      legible first. */
   .pol-race-level {
     flex: none; font-family: var(--font-mono); font-size: 9px;

@@ -235,7 +235,7 @@ function szQuarters(firstDate, lastDate) {
 // polymarket view ramped from the first row that actually moved (182 days
 // later), and the overview cut its trailing window from Date.now() while the
 // polymarket view cut from the last real data point. The two errors partly
-// cancelled, which is why the same 12mo P&L read as two numbers ~$57 apart
+// canceled, which is why the same 12mo P&L read as two numbers ~$57 apart
 // instead of something obviously broken.
 const SZ_DAY_MS = 86400000;
 const SZ_DAY_S = 86400;
@@ -254,7 +254,7 @@ function szFromEpochDay(day) {
 //
 // The reference is IBKR: build_nav_series reads EquitySummaryByReportDateInBase
 // keyed by reportDate, whose `total` is that day's end-of-day NAV. Dated D =
-// close of D. Everything else is normalised to match.
+// close of D. Everything else is normalized to match.
 
 // A polymarket user-pnl row's trading day. The feed's daily points are stamped at
 // exactly 00:00:00 UTC, so a point stamped D holds cumulative P&L through the
@@ -605,7 +605,7 @@ function HistoryPicker({ quarters, value, onPick }) {
 // menu by adding a row here — and a key the file doesn't carry is skipped
 // rather than drawn empty.
 //
-// Colours avoid the violet→pink range: that gradient is the portfolio's own
+// Colors avoid the violet→pink range: that gradient is the portfolio's own
 // line on both charts, and a benchmark wearing it would read as part of the
 // book rather than the thing the book is measured against.
 const SZ_BENCHES = [
@@ -623,14 +623,14 @@ const SZ_BENCHES = [
 const SZ_BENCH_DEFAULT = ['spx'];
 const SZ_BENCH_BY_KEY = Object.fromEntries(SZ_BENCHES.map(b => [b.key, b]));
 
-// Registry order, not click order, so the chart's line colours and the legend's
+// Registry order, not click order, so the chart's line colors and the legend's
 // reading order don't depend on which one you happened to tick first — and so
 // `primary` (the key every "vs" statistic anchors on) is stable.
 function szBenchSort(keys) {
   const want = new Set(keys || []);
   return SZ_BENCHES.filter(b => want.has(b.key)).map(b => b.key);
 }
-// The benchmark the labelled statistics follow: beta, the alpha strip, capture,
+// The benchmark the labeled statistics follow: beta, the alpha strip, capture,
 // the monthly bars. First selected, and spx when the selection is empty — those
 // panels always have something to name, and deselecting everything is a request
 // for a clean chart, not for the analytics to disappear.
@@ -673,7 +673,7 @@ function BenchPicker({ value, onChange, available }) {
     onChange(szBenchSort(next));
   };
   // The button keeps its name whatever is ticked — the legend under the chart
-  // already spells out which lines are drawn, in the colours they're drawn in,
+  // already spells out which lines are drawn, in the colors they're drawn in,
   // so repeating them here would be the same list twice. It only counts.
   const count = items.filter(b => sel.has(b.key)).length;
   // Lit only once the reader has moved off the default. Lighting it whenever a

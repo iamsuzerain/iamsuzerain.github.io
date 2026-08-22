@@ -110,11 +110,11 @@ Real lines from the site, not illustrations.
 
 **Foreground** (text)
 - `#f5f0ff` primary · `#c4b5d4` secondary · `#a99bc0` tertiary · `#8b7aa8` quietest · `#3d334f` divider
-- Both caption tiers clear 4.5:1 on glass (7.2:1 / 4.8:1) — they carry the 9–12px uppercase labels over the city photo. `#3d334f` is a divider colour: never body text, never a label. The one sanctioned exception is `.sz-sep`, the inert `·` between meta fields, where it is punctuation rather than something to read.
+- Both caption tiers clear 4.5:1 on glass (7.2:1 / 4.8:1) — they carry the 9–12px uppercase labels over the city photo. `#3d334f` is a divider color: never body text, never a label. The one sanctioned exception is `.sz-sep`, the inert `·` between meta fields, where it is punctuation rather than something to read.
 
 **Series** (benchmark overlays — categorical, outside the brand ramp)
 - `spx #5eead4` · `qqq #60a5fa` · `vti #4ade80` · `iwm #a3e635` · `vt #22d3ee` · `aor #facc15` · `bnd #94a3b8` · `tlt #cbd5e1` · `gld #fbbf24` · `btc #f97316`
-- Ten hues, defined once in `SZ_BENCHES` (`ui_kits/personal_site/Chrome.jsx`) and grouped equity / bonds & blends / alternatives. They sit deliberately outside violet and magenta: a benchmark is the thing the book is measured *against*, so it must not wear the book's colours — a teal line is never yours.
+- Ten hues, defined once in `SZ_BENCHES` (`ui_kits/personal_site/Chrome.jsx`) and grouped equity / bonds & blends / alternatives. They sit deliberately outside violet and magenta: a benchmark is the thing the book is measured *against*, so it must not wear the book's colors — a teal line is never yours.
 - This is the one place the site leaves the ink/violet/magenta world, and it is a closed list. Adding an eleventh benchmark means adding a hue here, not picking one at the call site.
 
 _Warm white fg over cool violet ink — prevents the page feeling clinical or Matrix-green._
@@ -131,7 +131,7 @@ _Warm white fg over cool violet ink — prevents the page feeling clinical or Ma
 - **Reading — 13 / 15 / 16 / 17 px.** Body is 15. 13px is the hinge: mono where it labels, Inter Tight where it reads.
 - **Display — 18 / 22 / 26 / 30 / 44 px, plus two fluid heads.** `.sz-h2` is the fixed 44px section head. The hero name is `clamp(48px, 11vw, 120px)` and its tagline `clamp(22px, 5vw, 32px)` — the only fluid type on the site, and the only thing that goes above 44.
 
-**The heading tier is for authored markdown, not for the interface.** No hand-written component on the site sets 20, 24, 32 or 60px — every `<h1>`/`<h2>` in the JSX carries a class that overrides them. But `.sz-post-body` styles post headings for colour and margin *without* setting a size, so a `##` in a blog post falls through to the bare `h2` rule and renders at `--fs-2xl` (32px). That path is live today. `###` (24px) and `#` (60px) are unused so far but one post away from rendering.
+**The heading tier is for authored markdown, not for the interface.** No hand-written component on the site sets 20, 24, 32 or 60px — every `<h1>`/`<h2>` in the JSX carries a class that overrides them. But `.sz-post-body` styles post headings for color and margin *without* setting a size, so a `##` in a blog post falls through to the bare `h2` rule and renders at `--fs-2xl` (32px). That path is live today. `###` (24px) and `#` (60px) are unused so far but one post away from rendering.
 
 One thing to fix before it bites: `h1` is 60px while `.sz-h2` — the post's own title — is 44px. A `#` in a post body would outrank the title above it.
 

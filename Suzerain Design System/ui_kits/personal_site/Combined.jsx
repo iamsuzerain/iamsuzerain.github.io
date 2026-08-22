@@ -8,7 +8,7 @@ const {
 } = React;
 
 // Chart machinery (Chart.jsx, loaded ahead of this file) — the same box,
-// scales, hover maths and gradient stops the ibkr and polymarket charts use.
+// scales, hover math and gradient stops the ibkr and polymarket charts use.
 // The spline in particular is shared rather than re-derived, so both books'
 // curves round the same way.
 const {
@@ -51,7 +51,7 @@ const CMB_DAY_MS = 86400000;
 const CMB_C_TOTAL = '#8b5cf6';  // saturated violet (violet-500) — the aggregate line
 const CMB_C_IBKR  = '#a78bfa';  // brand purple — brokerage
 const CMB_C_PM    = '#ff4fd8';  // brand pink — prediction markets
-// Benchmark colours/labels/order come from the shared registry (SZ_BENCHES in
+// Benchmark colors/labels/order come from the shared registry (SZ_BENCHES in
 // Chrome.jsx), the same one the ibkr tab and the picker read.
 const cmbBenchColor = (key) => (window.szBenchColor ? window.szBenchColor(key) : '#5eead4');
 const cmbBenchLabel = (key) => (window.szBenchLabel ? window.szBenchLabel(key) : key);
@@ -605,7 +605,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
   const benches = bench || [];
   const base = ddNotional != null ? ddNotional : benchNotional;
   const pct = unit === 'pct' && !!pctSeries;
-  // Percent redraws the curve rather than relabelling it: chaining against a
+  // Percent redraws the curve rather than relabeling it: chaining against a
   // moving capital base is a different shape, not a rescale. `series` stays the
   // dollar copy because the drawdown strip rebuilds an equity curve from it.
   const plot = pct ? pctSeries : series;
@@ -1337,7 +1337,7 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
   const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = F;
 
   // Fit the range to what's actually drawn rather than pinning zero to the
-  // vertical centre with a symmetric ±maxAbs. The books are lopsided (a
+  // vertical center with a symmetric ±maxAbs. The books are lopsided (a
   // trailing year runs roughly -43k..+79k), so forced symmetry left a third of
   // the plot permanently empty and shortened every column to pay for it.
   const vals = months.flatMap(m => bars.map(b => m[b.key]).filter(v => v != null));
@@ -1471,7 +1471,7 @@ function Combined({ setView }) {
   const [benchKeys, setBenchKeys] = useCmbState(window.SZ_BENCH_DEFAULT || ['spx']);
 
   useCmbEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     async function load() {
       // Every feed below is independent, so they all go out on the same tick.
       // This used to be a sequential await-chain: ten round trips end to end,
@@ -1555,9 +1555,9 @@ function Combined({ setView }) {
       return built;
     }
     load()
-      .then(d => { if (!cancelled) setData(d); })
-      .catch(e => { if (!cancelled) setErr(String(e.message || e)); });
-    return () => { cancelled = true; };
+      .then(d => { if (!canceled) setData(d); })
+      .catch(e => { if (!canceled) setErr(String(e.message || e)); });
+    return () => { canceled = true; };
   }, []);
 
   if (err) return (
@@ -1626,7 +1626,7 @@ function Combined({ setView }) {
   // compounding-weighted contribution, which can end the window on the far side
   // of zero from its dollars — a leg down early on a large base and up later on
   // a small one nets negative in cash while contributing a positive return.
-  // Colouring off the dollars there painted a +0.05% tile red.
+  // Coloring off the dollars there painted a +0.05% tile red.
   const tone = (v) => (v == null ? undefined : v >= 0 ? 'pos' : 'neg');
   const vIbkr = pct ? sLast.ibkr : wIbkr;
   const vPm = pct ? sLast.pm : wPm;

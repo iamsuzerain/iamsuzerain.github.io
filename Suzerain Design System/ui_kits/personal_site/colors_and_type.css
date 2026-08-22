@@ -72,7 +72,7 @@
   --fg-hero: #ece6f5;  /* warm white for text sitting directly on the city photo */
 
   /* ---------- Marks (drawn P&L: bars, fills, chart strokes) ---------- */
-  /* Deliberately NOT --pos/--neg. Those colour the numbers; these colour the
+  /* Deliberately NOT --pos/--neg. Those color the numbers; these color the
      shapes, and the site has always drawn gains pink and losses violet. Pink
      lives here and nowhere else — interaction is violet (see --link-hover), so
      a pink pixel on the page always means "this is data".
@@ -83,7 +83,7 @@
   --mark-neg-soft: rgba(167,139,250,0.55);
   /* Outlined-bar wash. Every magnitude bar on the site — monthly-pnl columns,
      return histogram, attribution rows, the deployment rope — is a 1px stroke
-     in the mark colour over this fill. The fill is what carries visual weight,
+     in the mark color over this fill. The fill is what carries visual weight,
      so keeping it that low is what lets several bars share a row without the
      page reading as a wall of solid slabs. Tuned here, once.
      SVG charts hard-code the same 0.13 as fill-opacity; keep them in step. */
@@ -111,7 +111,7 @@
 
      HEADING TIER — consumed by the bare h1/h2/h3 rules further down, which are
      what style *authored markdown*. A post's `##` gets --fs-2xl today, because
-     .sz-post-body sets colour and margin on headings but not size. These are
+     .sz-post-body sets color and margin on headings but not size. These are
      live, not decoration — do not prune them for looking unreferenced.
 
      Between them sits the reading tier. Body is --fs-base.
