@@ -1,6 +1,12 @@
 {
   "posts": [
     {
+      "slug": "promises-made-promises-kept",
+      "title": "Promises made, promises kept",
+      "date": "2026-08-21",
+      "summary": "Hit the goal set when I launched the site: 1m net liquidity."
+    },
+    {
       "slug": "the-charts-now-remember",
       "title": "the charts now remember",
       "date": "2026-07-24",
