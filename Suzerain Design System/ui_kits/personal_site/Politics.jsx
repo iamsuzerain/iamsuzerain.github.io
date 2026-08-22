@@ -8,7 +8,7 @@
 // Logged places carry one ordered reading — how warm the endorsement is,
 // enthusiastic through tactical. It's an ordinal ramp, so the steps run
 // light→dark as well as magenta→violet; lightness is what keeps them apart for
-// a colourblind reader, and the label is always printed beside the colour.
+// a colorblind reader, and the label is always printed beside the color.
 
 const { useState: usePolState, useEffect: usePolEffect, useMemo: usePolMemo } = React;
 
@@ -17,7 +17,7 @@ const POL_SCOPES = [
   { id: 'us',    label: 'united states', file: 'data/geo-us.json' },
 ];
 
-// How warm the endorsement is — an ordered ramp, warmest first. The colours
+// How warm the endorsement is — an ordered ramp, warmest first. The colors
 // live in index.html; the order here is what the legend and the map read from.
 // Every place that paints a step also prints its label: the two cool steps sit
 // ~13 ΔE apart under protanopia, which is fine as a secondary cue and useless
@@ -57,7 +57,7 @@ function polTier(race) {
   for (let i = 0; i < POL_TIERS.length; i++) {
     if (POL_TIERS[i].test.test(office)) return i;
   }
-  // Unrecognised offices sort after everything known rather than jumping the
+  // Unrecognized offices sort after everything known rather than jumping the
   // queue — better to be listed last than to mis-rank a presidential race.
   return POL_TIERS.length;
 }
@@ -88,7 +88,7 @@ function polRank(race, scope, place) {
   return tier * 10 + (tier === 1 ? polChamber(race, scope, place) : 5);
 }
 
-// Places may still be written with a single race inline; normalise either way.
+// Places may still be written with a single race inline; normalize either way.
 function polRaces(entry) {
   if (!entry) return [];
   if (Array.isArray(entry.races)) return entry.races;
@@ -222,7 +222,7 @@ function PolOverlay({ name, entry, scope, onClose }) {
   }, [onClose]);
 
   // Every contest for this place, soonest first, rank settling a shared date.
-  // The map can only paint one colour, so the overlay is where a full ballot
+  // The map can only paint one color, so the overlay is where a full ballot
   // becomes legible.
   const races = polRaces(entry).slice().sort(polCmp(scope, name));
   return (
@@ -264,7 +264,7 @@ function PolOverlay({ name, entry, scope, onClose }) {
 // Ceiling on a marked state's outline, in viewBox units.
 //
 // A marked shape is clipped to itself, so it paints its band inward; two marked
-// neighbours each paint their own and the seam carries both. That was rare when
+// neighbors each paint their own and the seam carries both. That was rare when
 // six states were logged and they barely touched. With the senate slate it is
 // most of the map, and build-geo.py clamps w at 4.0 with 46 of the 51 US shapes
 // at the cap — so nearly every interior seam was 8 units wide on a 980-unit
@@ -280,8 +280,8 @@ const POL_US_STROKE_MAX = 4;
 
 function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
   // Logged places paint last. SVG has no z-index — a 4.5px border is drawn
-  // centred on the path, so half of it sits outside the shape and any
-  // neighbour drawn afterwards would paint over that half. Alphabetical order
+  // centered on the path, so half of it sits outside the shape and any
+  // neighbor drawn afterwards would paint over that half. Alphabetical order
   // would clip Canada's border wherever Greenland happens to follow it.
   const ordered = usePolMemo(() => {
     const unlogged = [], logged = [];
@@ -299,10 +299,10 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
         role="img"
         aria-label="map — click a place to read its entry"
       >
-        {/* A stroke is centred on its path, so half of every border is drawn
+        {/* A stroke is centered on its path, so half of every border is drawn
             outside its own country. Where two marked countries touch — the US
             and Canada — those outer halves land on top of each other and the
-            one painted second wins, so the shared edge shows a single colour
+            one painted second wins, so the shared edge shows a single color
             and the seam reads as lost. Clipping each shape to itself keeps the
             inner half only, so both sides of the border survive. Widths are
             doubled because half of each is now thrown away. */}
@@ -371,7 +371,7 @@ function Politics({ scope: routeScope }) {
   // most visits never open.
   usePolEffect(() => {
     const src = POL_SCOPES.find(s => s.id === scope);
-    let cancelled = false;
+    let canceled = false;
     Promise.all([
       POL_CACHE.log
         ? Promise.resolve(POL_CACHE.log)
@@ -383,12 +383,12 @@ function Politics({ scope: routeScope }) {
       .then(([logData, geoData]) => {
         POL_CACHE.log = logData;
         POL_CACHE[scope] = geoData;
-        if (cancelled) return;
+        if (canceled) return;
         setLog(logData);
         setGeo(geoData);
       })
-      .catch(() => { if (!cancelled) setErr('map data unavailable'); });
-    return () => { cancelled = true; };
+      .catch(() => { if (!canceled) setErr('map data unavailable'); });
+    return () => { canceled = true; };
   }, [scope]);
 
   // Entries are keyed by whatever's readable when hand-editing the JSON — the

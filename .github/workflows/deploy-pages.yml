@@ -24,9 +24,9 @@ permissions:
   id-token: write
 
 # Four refresh crons can land within seconds of each other, and two deployments
-# racing is how 2026-08-06 ended up with one build cancelled and its neighbour
+# racing is how 2026-08-06 ended up with one build canceled and its neighbor
 # timing out. Newest wins; an in-flight deploy is allowed to finish rather than
-# being cancelled halfway.
+# being canceled halfway.
 concurrency:
   group: pages
   cancel-in-progress: false

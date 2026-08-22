@@ -13,7 +13,7 @@
     "note": "one line, why — optional",
     "past": "[{ date, office, pick, enthusiasm, note }] — earlier reads, authored oldest first; the panel renders them newest first. A held race lands in the history on its own; entries here are for saying something the standing entry did not",
     "logged": "ISO date the endorsement was made — stamped by scripts/politics/stamp-logged.py when the pick changes, not hand-written. Changing enthusiasm on the same pick leaves it alone",
-    "_priority": "Soonest race leads — it colours the map and heads the overlay. Rank only settles a shared date: executive (president/PM/chancellor) > legislature > governor. Within the legislature, the US ranks senate above house; parliamentary systems rank the lower house (commons/bundestag/lok sabha) above the upper."
+    "_priority": "Soonest race leads — it colors the map and heads the overlay. Rank only settles a shared date: executive (president/PM/chancellor) > legislature > governor. Within the legislature, the US ranks senate above house; parliamentary systems rank the lower house (commons/bundestag/lok sabha) above the upper."
   },
   "world": {
     "Brazil": {

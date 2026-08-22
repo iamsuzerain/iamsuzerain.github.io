@@ -9,7 +9,7 @@ const {
 } = React;
 
 // Chart machinery (Chart.jsx, loaded ahead of this file) — the same box,
-// scales, hover maths and gradient stops the ibkr and overview charts use.
+// scales, hover math and gradient stops the ibkr and overview charts use.
 const {
   szLinePath, szFrame, szScales, szDomain, szAreaPath, szTicks,
   useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzCrosshairLine,
@@ -309,7 +309,7 @@ function pmFetchStreams() {
 
 // `onPartial` gets the view as soon as positions and the snapshot land — which
 // is one same-origin round trip, not the live series' cold path. The three P&L
-// figures that need a series draw the snapshot's, labelled as such; only when
+// figures that need a series draw the snapshot's, labeled as such; only when
 // there is no snapshot at all do they hold on `pnlPending`. What they must never
 // do is print the open-position fallback (realized-on-open + unrealized, off by
 // thousands) as though it were the lifetime figure.
@@ -422,7 +422,7 @@ function pmBuild(perWallet, pnl, breakdown) {
   const sampled = pmDownsample(trimmed, PM_CHART_MAX_POINTS);
   // szPmPointDay, not the raw stamp's own date: the feed's daily points sit on
   // 00:00 UTC boundaries, so stamp D is the close of D-1. Taking the stamp at face
-  // value labelled every point a day late and, because the live intraday tail is
+  // value labeled every point a day late and, because the live intraday tail is
   // *not* a boundary, put the last two points on the same date.
   // Deduped last: polymarket skips hourly tail updates often enough that two
   // points can resolve to one day (see szDedupeByDate).
@@ -1189,7 +1189,7 @@ function PmCalibration({ cal }) {
 // tracked day (see below), so every group starts at 0 and shows what it has
 // earned since tracking began. Total carries the brand pink and the gradient
 // stroke; lp takes the neutral near-white total used to hold. The headline line
-// should be the one wearing the house colour — the groups are components of it,
+// should be the one wearing the house color — the groups are components of it,
 // not peers.
 const PM_REWARD_PARTS = [
   // Sponsored rewards are liquidity rewards a market's sponsor funds rather than
@@ -1226,7 +1226,7 @@ function PmRewardsChart({ rows }) {
       })),
     })),
     // `stroke` overrides `color` for the line only — dots, legend swatch and
-    // tooltip text still need a flat colour a gradient url cannot provide.
+    // tooltip text still need a flat color a gradient url cannot provide.
     { key: 'total', label: 'total', color: '#ff4fd8', stroke: 'url(#pm-rewards-stroke)',
       fill: 'url(#pm-rewards-fill)', width: 1.9,
       series: rows.map(r => ({ d: r.d, v: pmRewardsTotal(r) - pmRewardsTotal(first) })) },
@@ -1326,19 +1326,19 @@ function Polymarket() {
   const [usdRange, setUsdRange] = usePmState(null);
 
   usePmEffect(() => {
-    let cancelled = false;
-    pmFetchAll(d => { if (!cancelled) setData(d); })
-      .then(d => { if (!cancelled) setData(d); })
+    let canceled = false;
+    pmFetchAll(d => { if (!canceled) setData(d); })
+      .then(d => { if (!canceled) setData(d); })
       .catch(e => {
-        if (cancelled) return;
+        if (canceled) return;
         // Live fetch failed — fall back to expired cache rather than a blank
         // error. The breakdown is still refetched, so the daily figures are
         // current even when the live wallet calls are down.
         const stale = pmReadCache({ ignoreAge: true });
         if (stale) {
           pmViewFromCache(stale)
-            .then(d => { if (!cancelled) setData(d); })
-            .catch(() => { if (!cancelled) setErr(String(e.message || e)); });
+            .then(d => { if (!canceled) setData(d); })
+            .catch(() => { if (!canceled) setErr(String(e.message || e)); });
           return;
         }
         setErr(String(e.message || e));
@@ -1347,7 +1347,7 @@ function Polymarket() {
     // independent of the live fetch — the panel renders only when present.
     fetch('data/polymarket-calibration.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
-      .then(j => { if (!cancelled && j) setCal(j); })
+      .then(j => { if (!canceled && j) setCal(j); })
       .catch(() => {});
     // Rewards-accrual history (betmoar breakdown daily cron). Best-effort; the
     // panel renders only when the history file is present. Row dates are restated
@@ -1356,7 +1356,7 @@ function Polymarket() {
     fetch('data/polymarket-breakdown-history.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(j => {
-        if (cancelled || !j) return;
+        if (canceled || !j) return;
         setHist({ ...j, rows: window.szPmDateSnapshotRows(j.rows) });
       })
       .catch(() => {});
@@ -1366,11 +1366,11 @@ function Polymarket() {
     fetch('data/polymarket-nav-history.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(j => {
-        if (cancelled || !j || !Array.isArray(j.rows)) return;
+        if (canceled || !j || !Array.isArray(j.rows)) return;
         setNavRows(window.szPmDateSnapshotRows(j.rows));
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => { canceled = true; };
   }, []);
 
   // A remembered percent arrives without passing through onUnit, so the

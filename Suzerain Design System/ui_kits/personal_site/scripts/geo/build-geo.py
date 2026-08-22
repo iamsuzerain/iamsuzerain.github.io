@@ -413,7 +413,7 @@ def stroke_width(d):
 
     2·area/perimeter is an inradius-like measure of how *fat* a shape is. Big
     landmasses score 15–50; Japan scores 3.5 and the UK 3.9, because an
-    archipelago is nearly all edge. A stroke centred on a path spills half its
+    archipelago is nearly all edge. A stroke centered on a path spills half its
     width to each side, so a fixed heavy border swallows the small ones whole
     while looking right on Texas. Scaling the width to this keeps the weight
     proportional to the thing it outlines.
@@ -449,7 +449,7 @@ def emit(features, width, height, tol):
                 "d": d,
                 # Outline weight this shape can carry — see stroke_width().
                 "w": stroke_width(d),
-                # Bounding-box centre — good enough to anchor a marker or label.
+                # Bounding-box center — good enough to anchor a marker or label.
                 "c": [round((x0 + x1) / 2, 1), round((y0 + y1) / 2, 1)],
             }
         )

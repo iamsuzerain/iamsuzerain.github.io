@@ -3,7 +3,7 @@
 emit data/benchmarks.json for the chart overlays.
 
 The site draws SPX by default and lets the reader switch the comparison to any
-of the others (see SZ_BENCHES in Chrome.jsx, which owns the labels and colours;
+of the others (see SZ_BENCHES in Chrome.jsx, which owns the labels and colors;
 this file owns only the closes). Keys here and there must match.
 
 Accumulates: each run unions the fresh fetch into the closes already stored on

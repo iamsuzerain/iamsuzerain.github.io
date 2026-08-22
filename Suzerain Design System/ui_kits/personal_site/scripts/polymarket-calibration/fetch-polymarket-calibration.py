@@ -726,7 +726,7 @@ def category_stats(rows):
     The panel reads the picking-vs-sizing story off two edges in the units the
     calibration headline already uses, rather than a Brier score (which isn't
     comparable across categories — it falls automatically as odds shorten, so a
-    book of favourites scores well with no skill):
+    book of favorites scores well with no skill):
 
       edge  — won − priced, one vote per bet (probability points). Directional
               picking skill: did the side win more often than its entry price

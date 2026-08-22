@@ -5,7 +5,7 @@ const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo }
 
 // Chart machinery (Chart.jsx, loaded ahead of this file). The panels below own
 // their own bodies — overlays, warm-up rules, distribution bins — but the box,
-// the scales, the hover maths and the gradient stops are shared with the
+// the scales, the hover math and the gradient stops are shared with the
 // polymarket and overview views.
 const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
@@ -362,7 +362,7 @@ function pfRolling(perf, benchSeries, metric, periods = 252) {
 
   // One slot per perf date, null until the lookback window has filled. The strip
   // must share the chart's date axis: a rolling series is shorter than the window
-  // it summarises, and stretching those fewer points across the same pixel width
+  // it summarizes, and stretching those fewer points across the same pixel width
   // silently slides every date sideways, so a vertical read against the chart and
   // the strips above it lands on the wrong day. Leading nulls keep x = date.
   const series = perf.map(p => ({ d: p.d, v: null }));
@@ -488,7 +488,7 @@ function rebaseBenchmark(benchSeries, perfDates) {
   return out.map(v => v / base - 1);
 }
 
-// Colours, labels and ordering all come from the shared registry (SZ_BENCHES in
+// Colors, labels and ordering all come from the shared registry (SZ_BENCHES in
 // Chrome.jsx), so this chart, the overview's, and the picker's swatches cannot
 // drift apart as tickers are added.
 const benchColor = (key) => (window.szBenchColor ? window.szBenchColor(key) : '#5eead4');
@@ -658,7 +658,7 @@ function AllocDonut({ data }) {
         <circle cx={cx} cy={cy} r={ring} fill="none" stroke="rgba(167,139,250,0.08)" strokeWidth={thick}/>
         {data.map((seg, i) => {
           // Clamp defensively: a malformed feed must never draw an arc longer
-          // than the circumference (that wraps and paints over its neighbours).
+          // than the circumference (that wraps and paints over its neighbors).
           const len = Math.max(0, Math.min(seg.pct || 0, 1)) * C;
           const offset = -acc;
           acc += len;
@@ -667,7 +667,7 @@ function AllocDonut({ data }) {
           return (
             <React.Fragment key={i}>
               {/* Long slices are solid. Net-short slices read hollow — the band
-                  drops to a ghost and a thin rail runs down its centre — so
+                  drops to a ghost and a thin rail runs down its center — so
                   direction is legible without leaning on the legend alone. */}
               <circle
                 cx={cx} cy={cy} r={ring}
@@ -721,10 +721,10 @@ function AllocDonut({ data }) {
 }
 
 // ---------- Stat tile ----------
-// `change` always carries the sign — it drives the arrow and the colour — while
+// `change` always carries the sign — it drives the arrow and the color — while
 // `changeText` optionally overrides what gets printed. That split is what lets
 // the P&L tiles keep one shape under both units: the big number is whichever
-// unit is selected, and the small coloured line underneath is the other one.
+// unit is selected, and the small colored line underneath is the other one.
 function StatTile({ label, value, change, changeText, kicker }) {
   const pos = change != null && change >= 0;
   return (
@@ -742,7 +742,7 @@ function StatTile({ label, value, change, changeText, kicker }) {
 }
 
 // ---------- Underwater (drawdown) strip ----------
-// The underwater strip hangs off a hard ceiling at 0 rather than being centred,
+// The underwater strip hangs off a hard ceiling at 0 rather than being centered,
 // so it gets 2px less headroom than the strips that straddle their reference.
 const PF_DD_FRAME = szFrame(60, 6, 12);
 const PF_STRIP_FRAME = szFrame(60, 8, 12);
@@ -889,7 +889,7 @@ function ReturnDistribution({ perfSeries }) {
               ink — the weight comes back down via opacity instead. */}
           <path d={normPath} fill="none" stroke="rgba(94,234,212,0.55)"
             strokeWidth="1.25"/>
-          {/* No rule at zero. The bins already change colour there — violet to
+          {/* No rule at zero. The bins already change color there — violet to
               the left, pink to the right — so the split is drawn by the data
               itself, and the 0% tick sits under the axis. A dashed line on top
               of that was a third marker for the same fact, and it cut through
@@ -1317,7 +1317,7 @@ function Portfolio() {
 
       {/* These four are fixed calendar periods, not the range picker's window,
           so the toggle only swaps which of the two figures each tile already
-          carried is the big one — the other takes the small coloured line
+          carried is the big one — the other takes the small colored line
           underneath. Same shape under both units; only the pair swaps. */}
       <div className="pf-stats">
         {[['mtd', 'mtd', 'month to date'],
