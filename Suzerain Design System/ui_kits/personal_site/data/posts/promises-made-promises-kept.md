@@ -1,4 +1,4 @@
-It's relieving, but this isn't an all time high; it's a recovery from 2024-25. I said as much in the first entry I ever logged here, which is the same entry where I set the goal. What I never did was show the damage.
+Hit the goal set when I launched the site: 1m net liquidity. It's relieving, but this isn't an all time high; it's a recovery from 2024-25. I said as much in the first entry I ever logged here, which is the same entry where I set the goal. What I never did was show the damage.
 
 It isn't visible on the main charts on this site either. I launched in 2026, and IB's Flex Queries only hand back a trailing year, so the site's own history doesn't start until April 2025.
 
@@ -71,7 +71,7 @@ However, we can reconstruct most of the data from old statements. We had a reall
     <text x="334.6" y="348.4" font-size="11" fill="var(--fg-2,#c4b5d4)">27 sep 2022 &#183; the deepest drawdown of the two years, 11.5%</text>
     <text x="334.6" y="362.4" font-size="10" fill="var(--fg-4,#8b7aa8)">the book was +9.8% here. the index was &#8722;23.0%.</text>
     <text x="50" y="412" font-size="10.5" letter-spacing="0.14em" fill="var(--fg-3,#a99bc0)">RISK WAS THE SAME ON THE WAY DOWN AS ON THE WAY BACK UP</text>
-    <text x="50" y="428" font-size="10.5" fill="var(--fg-4,#8b7aa8)">21-session realised vol &#183; the book&#8217;s own daily moves. backward-looking, so its spikes sit just after the losses.</text>
+    <text x="50" y="428" font-size="10.5" fill="var(--fg-4,#8b7aa8)">21-session realized vol &#183; the book&#8217;s own daily moves. backward-looking, so its spikes sit just after the losses.</text>
     <line x1="50" y1="522.0" x2="804" y2="522.0" stroke="rgba(255,255,255,0.20)"/>
     <text x="40" y="525.5" text-anchor="end" font-size="10" fill="var(--fg-4,#8b7aa8)">0%</text>
     <line x1="50" y1="495.3" x2="804" y2="495.3" stroke="rgba(255,255,255,0.055)"/>
@@ -209,7 +209,7 @@ That all fell apart in a series of cascading failures in 2024-2025, after I had 
     <text x="535.7" y="317.4" font-size="10" fill="var(--fg-4,#8b7aa8)">the index bottomed the next day. the book</text>
     <text x="535.7" y="331.4" font-size="10" fill="var(--fg-4,#8b7aa8)">bled nine more: &#8722;8.9% to the index&#8217;s +1.9%.</text>
     <text x="50" y="412" font-size="10.5" letter-spacing="0.14em" fill="var(--fg-3,#a99bc0)">RISK WAS 4x HIGHER ON THE WAY DOWN THAN ON THE WAY BACK UP</text>
-    <text x="50" y="428" font-size="10.5" fill="var(--fg-4,#8b7aa8)">21-session realised vol &#183; the book&#8217;s own daily moves. backward-looking, so its spikes sit just after the losses.</text>
+    <text x="50" y="428" font-size="10.5" fill="var(--fg-4,#8b7aa8)">21-session realized vol &#183; the book&#8217;s own daily moves. backward-looking, so its spikes sit just after the losses.</text>
     <line x1="50" y1="522.0" x2="804" y2="522.0" stroke="rgba(255,255,255,0.20)"/>
     <text x="40" y="525.5" text-anchor="end" font-size="10" fill="var(--fg-4,#8b7aa8)">0%</text>
     <line x1="50" y1="495.3" x2="804" y2="495.3" stroke="rgba(255,255,255,0.055)"/>
