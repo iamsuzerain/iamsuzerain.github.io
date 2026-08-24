@@ -9,3 +9,7 @@
 # backstop for a local run that points IBKR_FLEX_RAW_DIR inside the checkout.
 *.xml.gz
 warehouse/
+
+# Local scratch. Not ignored until a `git add -A` in this session swept 479
+# extracted PDF pages into a public repo; the rule is cheaper than remembering.
+tmp/

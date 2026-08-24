@@ -134,158 +134,37 @@ expects — see `../data/portfolio.json` for the contract.
 
 ---
 
-## 7 — Raw statement archive (required for anything cross-statement)
+## 7 — Raw statement archive (lives in the private warehouse repo)
 
-`portfolio.json` is a **lossy projection** of the Flex statement. It keeps 17
-summarized positions and a per-underlying contribution roll-up; it discards every
-trade row, and every option leg's strike, expiry, right, and multiplier. IBKR's
-Flex window is a rolling ~365 days, so a statement not captured on the day it is
-served is gone for good.
-
+`portfolio.json` is a **lossy projection** of the Flex statement: 17 summarized
+positions and a per-underlying roll-up, discarding every trade row and every
+option leg's strike, expiry, right, and multiplier. IBKR's Flex window is a
+rolling ~365 days, so a statement not captured on the day it is served is gone.
 That is why `merge-nav-history.py` exists — it stitches the one series that would
-otherwise age out. The archive generalizes that: bank the untransformed XML
-daily, and questions needing trade- or leg-level history (DTE drift,
-delta-reduction cost per unit of exposure, vega by underlying over months) become
-answerable later instead of never.
+otherwise age out.
 
-### Where it lives, and why not here
+**The archive is not in this repo, and nothing here touches it.** It runs in the
+private [`iamsuzerain/warehouse`](https://github.com/iamsuzerain/warehouse)
+repo, which has its own daily workflow, its own narrow Flex query, and its own
+setup instructions. See that repo's README.
 
-The archive goes to the **private** repo `iamsuzerain/warehouse`, not this one.
+### Why it is not here
 
-This repo is public and `deploy-pages` uploads the whole `personal_site`
-directory. Raw Flex XML carries the unmasked account id, every position, and
-every cash transaction — exactly what `mask_account()` strips before anything
-reaches the site. Encryption alone would not have been enough:
+Not because this repo is public in itself — the site publishes NAV and holdings
+at `/data/portfolio.json` deliberately, so repo visibility was never the
+boundary. What the raw statement adds over that is the part worth protecting:
+the **unmasked account id**, every cash transaction, the full trade history, and
+every position rather than the top 20.
 
-- **Public commits are permanent and mirrored.** A key leak or crypto break
-  later would expose every historical statement retroactively, and there is no
-  un-publishing a forked or archived repo.
-- **Metadata leaks through the encryption.** Filenames publish which trading days
-  exist; blob sizes proxy position count and activity.
-- **Ciphertext does not delta-compress.** Each day is a fresh full blob in a repo
-  every Pages deploy checks out — hundreds of MB a year of data the site never
-  reads.
+The deciding factor was that a public repo has **public Actions logs**. While the
+archive job ran here, every line it printed was a publishing decision, and a byte
+count echoed to the log leaked a proxy for position count and activity before
+anyone noticed. Censoring log lines treats the symptom. Moving the job to a
+private repo fixes the cause, and removes the cross-repo access token as a bonus.
 
-GitHub Actions artifacts are not an alternative either: on a public repo, anyone
-can download a run's artifacts.
+### What stays here
 
-It is still encrypted inside the private repo — AES-256, PBKDF2, 600k iterations.
-That is defence in depth: an accidental visibility flip or a leaked read-only
-token stops being a disclosure on its own.
-
-### Two queries, on purpose
-
-| Query | Period | Feeds | Secret |
-|---|---|---|---|
-| site | ~365 days | `portfolio.json`, NAV series | `IBKR_FLEX_QUERY_ID` |
-| archive | **Last Business Day** | the warehouse | `IBKR_FLEX_ARCHIVE_QUERY_ID` |
-
-Archiving the wide query daily would re-store a year of already-archived history
-on every run, in blobs git cannot delta. The narrow query accumulates the same
-information over time at a fraction of the bytes.
-
-Build the archive query with **Period: Last Business Day**. Section names below
-match the Flex query builder verbatim.
-
-The governing principle: **the archive cannot be backfilled**, so enable
-generously. A section not ticked today is a permanent hole, and the
-last-business-day period keeps each statement small even with everything on.
-Bytes are the cheap side of this trade.
-
-Essential — these are what the whole exercise is for:
-
-| Section | Why |
-|---|---|
-| `Trades` | the trade ledger; nothing else records fills |
-| `Open Positions` | daily position snapshot |
-| `Financial Instrument Information` | contract dimension: conid → underlying, strike, expiry, right, multiplier. Emitted once per instrument instead of repeated on every row |
-| `Option Exercises, Assignments and Expirations` | assignments and expiries are **not trades**. Without this, legs vanish between snapshots with no event explaining it, and DTE/lifecycle analysis breaks silently. For an options-heavy book this is as load-bearing as `Trades` |
-| `Corporate Actions` | splits and mergers break position continuity; a warehouse ignoring them produces wrong quantity series across the split date |
-| `Cash Report`, `Cash Transactions` | cash side, and continuity with the site query |
-| `Change in NAV`, `Net Asset Value (NAV) in Base` | day-boundary reconciliation |
-
-Worth adding while you are in there:
-
-`Statement of Funds` (fuller cash ledger than Cash Transactions alone) ·
-`Commission Details` (cost-per-unit-of-exposure questions are cost questions;
-trade rows carry `ibCommission` but this is the breakdown) ·
-`Realized and Unrealized Performance Summary in Base` ·
-`Prior Period Positions` (day-boundary continuity check) ·
-`Transfers`, `Incoming/Outgoing Trade Transfers` (position changes that are not
-trades) · `Interest Accruals`, `Change in Dividend Accruals` (carry) ·
-`Change in Position Value Summary` · `Net Stock Position Summary`
-
-Skip for this account: the HK IPO sections, `CFD Charges`, `Debit Card
-Activity`, `FDIC-Insured Deposits by Bank`, `Grant Activity`, `IBG Notes`,
-`Sales Tax Details`, `Mutual Fund Dividend Details`. The securities
-borrowed/lent and `Borrow Fees Details` sections only matter if you short
-*stock* — short options do not involve a borrow.
-
-On fields: within each section the builder also offers a column picker. Take the
-contract identifiers (`conid`, `underlyingSymbol`, `strike`, `expiry`,
-`putCall`, `multiplier`) wherever offered — same reasoning, they cannot be
-added retroactively.
-
-### Setup
-
-1. Create the archive Flex Query (above). Note its id.
-2. Generate a passphrase and **store it in a password manager**. If it is lost
-   the archive is unreadable; there is no recovery path.
-   ```
-   openssl rand -base64 32
-   ```
-3. Create a **fine-grained personal access token** scoped to
-   `iamsuzerain/warehouse` only, with `Contents: read and write`.
-4. Add three repo secrets to *this* repo
-   (**Settings → Secrets and variables → Actions**):
-
-   | Secret | Value |
-   |---|---|
-   | `IBKR_FLEX_ARCHIVE_QUERY_ID` | id from step 1 |
-   | `IBKR_FLEX_ARCHIVE_KEY` | passphrase from step 2 |
-   | `WAREHOUSE_TOKEN` | token from step 3 |
-
-Until all three exist the workflow still refreshes the site but archives nothing
-and emits a red `::error::` annotation on every run. Deliberately not a hard
-failure — breaking the daily refresh over missing archive plumbing would trade a
-visible problem for a worse one.
-
-The token expires (a year at most for fine-grained PATs). When it does, the
-archive stops silently apart from that annotation — worth a calendar reminder.
-
-### Reading the archive back
-
-```
-git clone git@github.com:iamsuzerain/warehouse.git
-export IBKR_FLEX_ARCHIVE_KEY='...'
-export WAREHOUSE_DIR="$PWD/warehouse/flex-raw"
-./decrypt-raw.sh /tmp/flex                    # whole archive
-./decrypt-raw.sh /tmp/flex path/to/one.enc    # one statement
-zcat /tmp/flex/flex-<qid>-<date>.xml.gz
-```
-
-Decrypt to a path **outside both repos**. `decrypt-raw.sh` verifies gzip
-integrity after decrypting, so a wrong key fails loudly rather than emitting
-garbage.
-
-### Local runs
-
-`fetch-ibkr.py` archives only when `IBKR_FLEX_RAW_DIR` is set, and writes
-plaintext. On a private machine that is fine:
-
-```
-IBKR_FLEX_RAW_DIR=~/flex-archive python3 fetch-ibkr.py --archive-only
-```
-
-`--archive-only` skips the transform, which the narrow archive statement would
-fail anyway — it has no NAV series and no `ChangeInNAV`.
-
-### Behavior worth knowing
-
-- **First capture of a day wins.** `openssl` salts every invocation, so the same
-  statement encrypted twice is two different blobs. The workflow skips a date
-  already present rather than banking a duplicate.
-- **Named by the statement's `toDate`**, not the wall clock, so a late or
-  hand-dispatched run lands on the trading day it describes.
-- **Push retries by re-cloning** up to 3 times. Two runs can overlap; re-cloning
-  picks up whatever landed and dedupes against it.
+This script and its wide Flex query, feeding `portfolio.json` and the NAV series
+— all of it published on purpose. The archive query is a **separate** Flex query
+scoped to `Last Business Day`; the two do not share an id, and only the site one
+belongs in this repo's secrets.

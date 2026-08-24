@@ -5,21 +5,12 @@ Fetch latest IBKR Flex Query, transform to portfolio.json.
 Env:
   IBKR_FLEX_TOKEN     — long-lived token from Client Portal → FlexWeb Service
   IBKR_FLEX_QUERY_ID  — numeric query id from your saved Flex Query
-  IBKR_FLEX_RAW_DIR   — optional. If set, the raw statement XML is written
-                        there gzipped, before any transform. See archive_raw().
-
-Flags:
-  --archive-only      Fetch and archive the statement, then stop without
-                      transforming or emitting JSON. For the narrow
-                      last-business-day query that feeds the archive: it has no
-                      NAV series and no ChangeInNAV, so transform() would fail on
-                      it, and its output is not what the site renders anyway.
 
 Writes JSON to stdout. Pipe it into ui_kits/personal_site/data/portfolio.json.
 Stdlib only.
 """
 from __future__ import annotations
-import gzip, json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+import json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService"
@@ -55,15 +46,7 @@ ALLOC_ORDER = ["us equities", "intl equities", "bonds", "crypto", "options",
                "futures", "futures options", "cash", "other"]
 
 
-def fetch(url: str) -> tuple[ET.Element, bytes]:
-    """Returns the parsed tree *and* the bytes it was parsed from.
-
-    The raw bytes are the point: ET.Element is lossy relative to the wire format
-    (attribute order, unread sections, whitespace), and the archive is meant to
-    outlive every assumption this script currently makes about which fields
-    matter. Re-deriving a statement from the parsed tree is not the same thing
-    as having kept it.
-    """
+def fetch(url: str) -> ET.Element:
     req = urllib.request.Request(url, headers={"User-Agent": "suzerain-site/1.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
         body = r.read()
@@ -73,13 +56,13 @@ def fetch(url: str) -> tuple[ET.Element, bytes]:
         err_code = root.findtext("ErrorCode") or "?"
         err_msg = root.findtext("ErrorMessage") or "unknown"
         raise SystemExit(f"IBKR Flex error {err_code}: {err_msg}")
-    return root, body
+    return root
 
 
-def run_flex(token: str, query_id: str) -> tuple[ET.Element, bytes]:
+def run_flex(token: str, query_id: str) -> ET.Element:
     # Step 1: SendRequest -> ReferenceCode
     params = urllib.parse.urlencode({"t": token, "q": query_id, "v": VERSION})
-    root, _ = fetch(f"{SEND}?{params}")
+    root = fetch(f"{SEND}?{params}")
     ref = root.findtext("ReferenceCode")
     if not ref:
         raise SystemExit("no ReferenceCode in SendRequest response")
@@ -91,10 +74,10 @@ def run_flex(token: str, query_id: str) -> tuple[ET.Element, bytes]:
     for attempt in range(8):
         time.sleep(5 + attempt * 4)  # 5, 9, 13, ... ~backoff
         try:
-            root, body = fetch(url)
+            root = fetch(url)
             # A successful statement has FlexStatements as the root tag, not Status
             if root.tag == "FlexQueryResponse":
-                return root, body
+                return root
         except SystemExit as e:
             last_err = e
             # code 1019 = "Statement generation in progress". Retry.
@@ -102,44 +85,6 @@ def run_flex(token: str, query_id: str) -> tuple[ET.Element, bytes]:
                 continue
             raise
     raise last_err or SystemExit("Flex statement never ready after 8 polls")
-
-
-def archive_raw(body: bytes, root: ET.Element, query_id: str) -> str | None:
-    """Write the untransformed statement to IBKR_FLEX_RAW_DIR, gzipped.
-
-    Written before any transform runs, and a failure here is fatal rather than
-    best-effort: the whole reason this exists is that a statement not captured
-    on the day it was served is gone. IBKR's Flex window is a rolling ~365 days,
-    so a silently skipped write is a permanent hole in the archive that nothing
-    downstream can notice or repair.
-
-    Named by the statement's own toDate, not the wall clock — a run that fires
-    late, gets retried, or is dispatched by hand still lands on the trading day
-    the data actually describes, and re-running overwrites in place instead of
-    minting a second file for the same day.
-    """
-    out_dir = os.environ.get("IBKR_FLEX_RAW_DIR")
-    if not out_dir:
-        return None
-
-    stmt = root.find(".//FlexStatement")
-    to_date = _norm_date((stmt.get("toDate") if stmt is not None else "") or "")
-    if not to_date:
-        to_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, f"flex-{query_id}-{to_date}.xml.gz")
-    # mtime=0 so an unchanged statement re-fetched later is byte-identical, and
-    # a same-day rerun does not register as a change to whatever stores this.
-    with open(path, "wb") as fh:
-        with gzip.GzipFile(fileobj=fh, mode="wb", mtime=0) as gz:
-            gz.write(body)
-    # Size is deliberately not logged. On a public repo Actions logs are world
-    # readable, and a daily series of raw statement sizes is a usable proxy for
-    # position count and activity - the same metadata the archive was moved to a
-    # private repo to stop publishing.
-    print(f"archived raw statement -> {path}", file=sys.stderr)
-    return path
 
 
 # ---------- transforms ----------
@@ -733,23 +678,13 @@ def transform(root: ET.Element) -> dict:
 
 
 def main() -> int:
-    archive_only = "--archive-only" in sys.argv[1:]
     token = os.environ.get("IBKR_FLEX_TOKEN")
     qid = os.environ.get("IBKR_FLEX_QUERY_ID")
     if not token or not qid:
         print("missing IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID", file=sys.stderr)
         return 2
     try:
-        root, body = run_flex(token, qid)
-        # Archive first. If the transform below breaks on some field IBKR changed,
-        # the statement is already banked and the parse can be fixed after the fact.
-        path = archive_raw(body, root, qid)
-        if archive_only:
-            if not path:
-                print("--archive-only with no IBKR_FLEX_RAW_DIR set: nothing written",
-                      file=sys.stderr)
-                return 2
-            return 0
+        root = run_flex(token, qid)
         data = transform(root)
     except SystemExit as e:
         print(str(e), file=sys.stderr)
