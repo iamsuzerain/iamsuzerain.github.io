@@ -56,18 +56,45 @@ jobs:
           hist_path.write_text(json.dumps(hist, indent=2) + "\n")
           PY
 
+      # nav-history's `recorded` rows are balances.nav copied straight out of the
+      # history appended above, so rebuilding it here — in the same job, off the
+      # scrape that just landed — is what keeps the file in step with its own
+      # source. polymarket-pnl-refresh also rebuilds it, ten nominal minutes
+      # later; that stays as it is, and re-derives the same rows.
+      #
+      # It used to be the only rebuild, which made a fresh scrape and a fresh
+      # nav-history two different workflows apart. On the cron path that gap is
+      # ~12 minutes and invisible. A manual dispatch fell outside it entirely and
+      # left the file on the previous day's scrape until the next scheduled run —
+      # up to a day for an afternoon dispatch. Both crons also drift 43-72min
+      # past their nominal times under queue pressure, so neither the stagger nor
+      # the clock is something to date data by.
+      #
+      # Reads polymarket-pnl.json from disk without refreshing it: that feed only
+      # supplies the walk-back for days before betmoar began reporting balances
+      # (pre-2026-07-15), which a day-old copy covers identically. The recorded
+      # rows come from the file written one step above.
+      - name: rebuild polymarket nav history
+        run: |
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-pnl/build-pm-nav-history.py" \
+            > /tmp/pm-nav-history.json
+          mv /tmp/pm-nav-history.json \
+            "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
+
       - name: commit + push if changed
         run: |
           git config user.name  "betmoar-bot"
           git config user.email "betmoar-bot@users.noreply.github.com"
           if git diff --quiet \
               "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
-              "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json"; then
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json" \
+              "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"; then
             echo "no changes"
             exit 0
           fi
           git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
-                  "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json"
+                  "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
           git commit -m "polymarket: refresh betmoar breakdown $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
           # Rebase onto it, keeping our freshly generated data on conflict, then retry push.
