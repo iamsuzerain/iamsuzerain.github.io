@@ -108,7 +108,9 @@ jobs:
                 continue
               fi
               openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$f" -out "$out" -pass env:ARCHIVE_KEY
-              echo "encrypted $(basename "$out") ($(wc -c < "$out") bytes)"
+              # No byte count: these logs are public, and a daily size series
+            # proxies position count and activity.
+            echo "encrypted $(basename "$out")"
             done
 
             git -C "$wh" add flex-raw

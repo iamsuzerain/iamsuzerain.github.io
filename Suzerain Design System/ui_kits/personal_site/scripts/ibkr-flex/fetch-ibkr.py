@@ -134,7 +134,11 @@ def archive_raw(body: bytes, root: ET.Element, query_id: str) -> str | None:
     with open(path, "wb") as fh:
         with gzip.GzipFile(fileobj=fh, mode="wb", mtime=0) as gz:
             gz.write(body)
-    print(f"archived raw statement -> {path} ({len(body)} bytes raw)", file=sys.stderr)
+    # Size is deliberately not logged. On a public repo Actions logs are world
+    # readable, and a daily series of raw statement sizes is a usable proxy for
+    # position count and activity - the same metadata the archive was moved to a
+    # private repo to stop publishing.
+    print(f"archived raw statement -> {path}", file=sys.stderr)
     return path
 
 
