@@ -28,12 +28,6 @@ jobs:
         env:
           IBKR_FLEX_TOKEN: ${{ secrets.IBKR_FLEX_TOKEN }}
           IBKR_FLEX_QUERY_ID: ${{ secrets.IBKR_FLEX_QUERY_ID }}
-          # Raw statement lands on the runner's scratch disk, never in the work
-          # tree. This repo is public and Pages serves the whole personal_site
-          # directory, so plaintext XML inside the checkout is one stray `git add`
-          # away from publishing the unmasked account. The next step encrypts it;
-          # only ciphertext is ever written under the repo.
-          IBKR_FLEX_RAW_DIR: ${{ runner.temp }}/flex-raw
         run: |
           mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
           python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/fetch-ibkr.py" \
@@ -41,45 +35,102 @@ jobs:
           echo "first 400 bytes of result:"
           head -c 400 "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
 
-      - name: encrypt + stage raw statement
+      - name: archive raw statement to private warehouse
         # Why this exists: IBKR's Flex window is a rolling ~365 days, so a
         # statement not captured on the day it is served is unrecoverable. The
         # derived portfolio.json is a lossy projection of it - no trade rows, no
         # option strike/expiry/right - and cannot be back-fitted into the answers
-        # those fields support. Banking the XML now is what makes a warehouse
-        # possible later; every day without it is a permanent hole.
+        # those fields support.
+        #
+        # Why a second query: the site query spans ~365 days, so archiving it
+        # daily would re-store a year of already-archived history every run, in
+        # blobs git cannot delta because ciphertext is incompressible. The
+        # archive query is scoped to the last business day - same information
+        # accumulated over time, a fraction of the bytes.
+        #
+        # Why a separate private repo: this repo is public. Encryption protects
+        # the contents today, but public commits are permanent and mirrored, so a
+        # key leak later would expose every historical statement retroactively,
+        # and filenames plus blob sizes leak the trading calendar and activity
+        # level through the encryption regardless.
         env:
+          IBKR_FLEX_TOKEN: ${{ secrets.IBKR_FLEX_TOKEN }}
+          IBKR_FLEX_QUERY_ID: ${{ secrets.IBKR_FLEX_ARCHIVE_QUERY_ID }}
+          IBKR_FLEX_RAW_DIR: ${{ runner.temp }}/flex-raw
           ARCHIVE_KEY: ${{ secrets.IBKR_FLEX_ARCHIVE_KEY }}
-          RAW_DIR: ${{ runner.temp }}/flex-raw
+          WAREHOUSE_TOKEN: ${{ secrets.WAREHOUSE_TOKEN }}
+          WAREHOUSE_REPO: iamsuzerain/warehouse
         run: |
           set -euo pipefail
-          if [ -z "$(ls -A "$RAW_DIR" 2>/dev/null || true)" ]; then
-            echo "::error::no raw statement was written - the archive gained nothing today"
+
+          # Deliberately soft failures. Breaking the daily site refresh over
+          # missing archive plumbing would trade a visible problem for a worse
+          # one; an error annotation is loud in the Actions UI while the
+          # portfolio still updates underneath it.
+          missing=""
+          [ -n "${IBKR_FLEX_QUERY_ID:-}" ] || missing="$missing IBKR_FLEX_ARCHIVE_QUERY_ID"
+          [ -n "${ARCHIVE_KEY:-}" ]        || missing="$missing IBKR_FLEX_ARCHIVE_KEY"
+          [ -n "${WAREHOUSE_TOKEN:-}" ]    || missing="$missing WAREHOUSE_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "::error::not archiving - missing secret(s):$missing. Today's statement is lost once it ages out of the Flex window. See scripts/ibkr-flex/README.md section 7."
             exit 0
           fi
-          if [ -z "${ARCHIVE_KEY:-}" ]; then
-            # Deliberately not a hard failure: breaking the daily site refresh
-            # over a missing archive key trades a visible problem for a worse one.
-            # An error annotation is loud in the Actions UI; the portfolio still
-            # updates underneath it.
-            echo "::error::IBKR_FLEX_ARCHIVE_KEY is not set - today's statement was NOT archived and is lost once it ages out of the Flex window. See scripts/ibkr-flex/README.md section 7."
+
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/fetch-ibkr.py" --archive-only
+
+          if [ -z "$(ls -A "$IBKR_FLEX_RAW_DIR" 2>/dev/null || true)" ]; then
+            echo "::error::archive query returned no statement - nothing banked today"
             exit 0
           fi
-          mkdir -p warehouse/flex-raw
-          for f in "$RAW_DIR"/*.xml.gz; do
-            out="warehouse/flex-raw/$(basename "$f").enc"
-            # First capture of a day wins. openssl salts every invocation, so
-            # re-encrypting identical input yields different bytes and would
-            # churn a fresh commit on every manual re-run.
-            if [ -e "$out" ]; then
-              echo "already archived: $out"
-              continue
+
+          # Re-clone on every attempt rather than rebasing. Two runs can overlap
+          # (cron plus a manual dispatch), and the site repo's own commit step
+          # already carries a retry loop for exactly that reason. Re-cloning is
+          # the simpler fix here: whatever landed meanwhile is present, the
+          # skip-if-exists check below dedupes against it, and if nothing new is
+          # left the loop exits clean. That also makes "first capture of a day
+          # wins" fall out for free, which matters because openssl salts every
+          # invocation - the same statement encrypted twice is two different
+          # blobs, and without dedup a rerun would bank a duplicate.
+          wh="${{ runner.temp }}/warehouse"
+          pushed=""
+          for attempt in 1 2 3; do
+            rm -rf "$wh"
+            git clone -q --depth 1 "https://x-access-token:${WAREHOUSE_TOKEN}@github.com/${WAREHOUSE_REPO}.git" "$wh"
+            mkdir -p "$wh/flex-raw"
+
+            for f in "$IBKR_FLEX_RAW_DIR"/*.xml.gz; do
+              out="$wh/flex-raw/$(basename "$f").enc"
+              # `if`, not `&&`: this runs under `bash -e`, where a bare
+              # `[ -e ... ] && continue` that tests false exits 1 and aborts.
+              if [ -e "$out" ]; then
+                echo "already archived: $(basename "$out")"
+                continue
+              fi
+              openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$f" -out "$out" -pass env:ARCHIVE_KEY
+              echo "encrypted $(basename "$out") ($(wc -c < "$out") bytes)"
+            done
+
+            git -C "$wh" add flex-raw
+            if git -C "$wh" diff --cached --quiet; then
+              echo "nothing new to archive"
+              pushed="yes"
+              break
             fi
-            openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$f" -out "$out" -pass env:ARCHIVE_KEY
-            echo "archived $(basename "$out") ($(wc -c < "$out") bytes)"
+            git -C "$wh" -c user.name="portfolio-bot"                          -c user.email="portfolio-bot@users.noreply.github.com"                          commit -q -m "flex: archive $(date -u +%F)"
+            if git -C "$wh" push -q; then
+              echo "pushed to $WAREHOUSE_REPO"
+              pushed="yes"
+              break
+            fi
+            echo "push rejected (attempt $attempt) - refetching"
           done
-          # Belt and braces: never let plaintext survive into a later step.
-          rm -rf "$RAW_DIR"
+          if [ -z "$pushed" ]; then
+            echo "::error::could not push to $WAREHOUSE_REPO after 3 attempts - today's statement was NOT archived"
+          fi
+
+          # Never let plaintext, or a checkout holding a token, survive the step.
+          rm -rf "$IBKR_FLEX_RAW_DIR" "$wh"
 
       - name: merge NAV history
         # Stitch today's trailing-year pnlSeries into the growing multi-year
@@ -102,14 +153,9 @@ jobs:
           git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/nav-history.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json"
-          # `if`, not `&&`: Actions runs this under `bash -e`, and a bare
-          # `[ -d ... ] && ...` that tests false exits 1 and would abort the
-          # step on the first run, before any archive directory exists.
-          if [ -d warehouse/flex-raw ]; then git add warehouse/flex-raw; fi
-          # Stage first, then test the index. The previous guard ran `git diff`
-          # over data/ only, which is blind to untracked files - a day where the
-          # marks happened not to move but a new statement was archived would
-          # have hit `exit 0` and dropped the archive on the floor.
+          # Stage first, then test the index rather than running `git diff` over
+          # data/, which is blind to untracked files - benchmarks.json is created
+          # fresh on a run where it did not previously exist.
           if git diff --cached --quiet; then
             echo "no changes"
             exit 0

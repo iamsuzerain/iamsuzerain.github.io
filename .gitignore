@@ -1,12 +1,11 @@
-# Decrypted / in-flight Flex statements. The repo is public and Pages serves the
-# whole personal_site directory, so raw IBKR XML must never be committable: it
-# carries the unmasked account id, every position, and every cash transaction --
-# precisely what mask_account() in scripts/ibkr-flex/fetch-ibkr.py exists to keep
-# off the site. CI stages plaintext on the runner's temp disk and only ever
-# writes ciphertext here; this is the second line of defence for local runs that
-# point IBKR_FLEX_RAW_DIR somewhere inside the checkout.
+# Decrypted or in-flight IBKR Flex statements must never be committable here.
+# This repo is public and Pages serves the whole personal_site directory; raw
+# Flex XML carries the unmasked account id, every position, and every cash
+# transaction -- precisely what mask_account() in
+# scripts/ibkr-flex/fetch-ibkr.py exists to keep off the site.
+#
+# The archive itself lives in the private iamsuzerain/warehouse repo, encrypted.
+# Nothing statement-shaped should ever appear in this tree; these rules are the
+# backstop for a local run that points IBKR_FLEX_RAW_DIR inside the checkout.
 *.xml.gz
-warehouse/flex-raw/plain/
-
-# ...but the encrypted archive itself is the point, so keep it.
-!warehouse/flex-raw/*.xml.gz.enc
+warehouse/
