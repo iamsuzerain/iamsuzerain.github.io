@@ -460,6 +460,34 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   for (const r of ((pmNavHistory && pmNavHistory.rows) || [])) {
     if (r && r.d && r.nav != null) pmNavByDay.set(cmbEpochDay(r.d), r.nav);
   }
+  // The breakdown history carries the same `nav`, and it is where nav-history's
+  // `recorded` rows come from: build-pm-nav-history.py copies balances.nav
+  // straight across and only *derives* the days before the scrape started
+  // carrying balances. So this overlay is the same number from the nearer of two
+  // copies — identical on every day both hold — except at the tail, where it is
+  // the only one that exists.
+  //
+  // The two files are written by different workflows: betmoar-refresh appends
+  // the scrape to the breakdown history, and polymarket-pnl-refresh rebuilds
+  // nav-history off it ten minutes later. On the cron path they stay in step. A
+  // manual betmoar-refresh dispatch does not: it moves the breakdown that the
+  // polymarket view reads its headline off, and leaves nav-history — and so this
+  // page's polymarket level — on the previous day's scrape until the next 06:10
+  // UTC run. That is a full scrape of drift between two numbers naming one
+  // quantity, +$1,386 (0.55%) at the dispatch that turned it up. Reading the
+  // scrape directly puts the level on the same footing the polymarket view has,
+  // and takes the rebuild off this page's critical path.
+  //
+  // `nav` and `trading` are both read live off the profile, so the row also
+  // pins the P&L the book had *at the moment its nav was measured* — kept here
+  // for the carry-forward below, where the labeled day is the wrong baseline.
+  const pmScrapeEarned = new Map();
+  for (const r of ((bd && bd.rows) || [])) {
+    if (!r || !r.d || r.nav == null) continue;
+    const day = cmbEpochDay(r.d);
+    pmNavByDay.set(day, r.nav);
+    if (r.trading != null) pmScrapeEarned.set(day, r.trading + cmbBdNet(r));
+  }
   const pmNavDays = [...pmNavByDay.keys()].sort((a, b) => a - b);
   const pmFloor = pmNavDays.length ? pmNavDays[0] : null;
   const pmCapitalAt = (day) => {
@@ -503,7 +531,20 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   const pmLevelAt = (day) => {
     const level = pmCapitalAt(day);
     if (!extendable(lastPmNavDay) || day <= lastPmNavDay) return level;
-    return level + (pmEarnedAt(day) - pmEarnedAt(lastPmNavDay));
+    // Baseline is the P&L the scrape itself saw, not the close of the day it is
+    // filed under. Those are different readings: the row dated D-1 was taken
+    // partway into D, so `nav` already contains everything the book earned
+    // between D-1's close and the scrape. Measuring the carry-forward from
+    // D-1's close therefore counts that stretch twice — +$380 on a 5h-old
+    // scrape, and a four-figure overstatement on a day the book actually moved.
+    // The dating is right for the rewards the row also carries (they batch at
+    // 00:00 for the previous day, which is what szPmSnapshotDay is about); it is
+    // the live-marked fields that need reading at their own timestamp, and the
+    // row carries those too.
+    const anchor = pmScrapeEarned.has(lastPmNavDay)
+      ? pmScrapeEarned.get(lastPmNavDay)
+      : pmEarnedAt(lastPmNavDay);
+    return level + (pmEarnedAt(day) - anchor);
   };
   const baseAt = (day) => ibkrLevelAt(day) + pmLevelAt(day);
   const notional = baseAt(start);

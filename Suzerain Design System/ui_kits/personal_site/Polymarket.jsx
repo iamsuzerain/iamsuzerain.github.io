@@ -403,11 +403,39 @@ function pmBuild(perWallet, pnl, breakdown) {
   }));
 
   // Portfolio value = full Polymarket NAV (positions + idle USDC) from the
-  // betmoar daily snapshot, so it matches the overview's capital-deployment
-  // bar exactly. Falls back to live open-position value if the snapshot NAV
-  // is unavailable.
+  // betmoar snapshot, carried forward by the P&L earned since that snapshot was
+  // taken. Falls back to the snapshot alone, and then to live open-position
+  // value, as each input goes missing.
+  //
+  // It used to be the bare snapshot, "so it matches the overview's
+  // capital-deployment bar exactly". That reason now argues the other way: the
+  // overview carries its own polymarket level forward off the same live feed
+  // (cmbBuild's pmLevelAt), so holding this one at the scrape is what pulls the
+  // two apart — by a four-figure gap on a day the book moves.
+  //
+  // The two halves of the carry:
+  //   - trading, which the live user-pnl feed reports continuously, so it moves
+  //     between scrapes and is the whole of the delta below;
+  //   - rewards, which only betmoar reports, so the scrape *is* the newest
+  //     reading and its contribution to the delta is exactly zero.
+  // Which is why this nets to one term rather than a difference of two totals:
+  // the income halves are the same number and cancel. Written out, it is
+  // (lifetime now) − (lifetime at the scrape), the same quantity the overview
+  // extends by.
+  //
+  // Absent a deposit or withdrawal this is definitional, not an estimate — a
+  // book's value moves by what it earns. A flow between the scrape and now is
+  // missed and corrects itself on the next scrape, the same caveat the overview
+  // carries. Live-only: a snapshot P&L series can predate the scrape, and
+  // extending backwards would subtract P&L the nav already holds.
   const positionsValue = +positions.reduce((a, p) => a + p.value, 0).toFixed(2);
-  const totalValue = (breakdown && breakdown.nav != null) ? breakdown.nav : positionsValue;
+  const snapNav = (breakdown && breakdown.nav != null) ? breakdown.nav : null;
+  const liveLifetime = (pnl && pnl.source === 'live' && summedPnl.length)
+    ? summedPnl[summedPnl.length - 1].p : null;
+  const totalValue = snapNav == null ? positionsValue
+    : (liveLifetime != null && breakdown.trading != null)
+      ? +(snapNav + (liveLifetime - breakdown.trading)).toFixed(2)
+      : snapNav;
   const unrealized = +positions.reduce((a, p) => a + p.unrealized, 0).toFixed(2);
   const realized = +positions.reduce((a, p) => a + p.realized, 0).toFixed(2);
 
