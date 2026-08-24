@@ -24,12 +24,23 @@ Secrets; only the Action can read it.
 2. Head-left menu → **Performance & Reports** → **Flex Queries**.
 3. Click **Create Activity Flex Query**.
 4. Give it a name: `site-portfolio-daily`.
-5. Under **Sections**, enable at minimum:
-   - `Open Positions` (symbol, qty, markPrice, positionValue, costBasis, fifoPnlUnrealized)
-   - `Net Asset Value in Base` (total, cash, stock, etc.)
-   - `Equity Summary in Base` (for buying power + cash balances)
-   - `MTM Performance Summary in Base` (for day/MTD/YTD PnL)
-   - `Change in NAV` (for the NAV time-series)
+5. Under **Sections**, enable exactly these — the names below match the Flex
+   query builder verbatim, and each one maps to an element `fetch-ibkr.py`
+   actually parses. Omit one and the corresponding block of `portfolio.json`
+   silently degrades to zeros rather than erroring:
+
+   | Section | Element parsed | Feeds |
+   |---|---|---|
+   | `Open Positions` | `OpenPosition` | positions, allocation |
+   | `Net Asset Value (NAV) in Base` | `EquitySummaryByReportDateInBase` | NAV, cash, NAV series |
+   | `Mark-to-Market Performance Summary in Base` | `MTMPerformanceSummaryUnderlying` | contribution, byAssetClass |
+   | `Change in NAV` | `ChangeInNAV` | 1-year P&L and TWR |
+   | `Cash Transactions` | `CashTransaction` | deposit/withdrawal adjustment |
+   | `Cash Report` | `CashReportCurrency` | MTD/YTD net deposits |
+
+   There is no section called "Equity Summary in Base" — an earlier version of
+   this document said there was. The `EquitySummary*` elements come from
+   **Net Asset Value (NAV) in Base**.
 6. **Delivery Configuration** — Format: `XML`. Period: `Last Business Day`
    (or `Month to Date` if you want a longer NAV series per call).
 7. Save. Note the **Query ID** — a number like `123456`.
@@ -173,10 +184,47 @@ Archiving the wide query daily would re-store a year of already-archived history
 on every run, in blobs git cannot delta. The narrow query accumulates the same
 information over time at a fraction of the bytes.
 
-Build the archive query exactly like section 1, but set **Period: Last Business
-Day**, and enable `Trades` and `Open Positions` with the full contract fields
-(`underlyingSymbol`, `strike`, `expiry`, `putCall`, `multiplier`) — those are the
-fields the whole exercise is for.
+Build the archive query with **Period: Last Business Day**. Section names below
+match the Flex query builder verbatim.
+
+The governing principle: **the archive cannot be backfilled**, so enable
+generously. A section not ticked today is a permanent hole, and the
+last-business-day period keeps each statement small even with everything on.
+Bytes are the cheap side of this trade.
+
+Essential — these are what the whole exercise is for:
+
+| Section | Why |
+|---|---|
+| `Trades` | the trade ledger; nothing else records fills |
+| `Open Positions` | daily position snapshot |
+| `Financial Instrument Information` | contract dimension: conid → underlying, strike, expiry, right, multiplier. Emitted once per instrument instead of repeated on every row |
+| `Option Exercises, Assignments and Expirations` | assignments and expiries are **not trades**. Without this, legs vanish between snapshots with no event explaining it, and DTE/lifecycle analysis breaks silently. For an options-heavy book this is as load-bearing as `Trades` |
+| `Corporate Actions` | splits and mergers break position continuity; a warehouse ignoring them produces wrong quantity series across the split date |
+| `Cash Report`, `Cash Transactions` | cash side, and continuity with the site query |
+| `Change in NAV`, `Net Asset Value (NAV) in Base` | day-boundary reconciliation |
+
+Worth adding while you are in there:
+
+`Statement of Funds` (fuller cash ledger than Cash Transactions alone) ·
+`Commission Details` (cost-per-unit-of-exposure questions are cost questions;
+trade rows carry `ibCommission` but this is the breakdown) ·
+`Realized and Unrealized Performance Summary in Base` ·
+`Prior Period Positions` (day-boundary continuity check) ·
+`Transfers`, `Incoming/Outgoing Trade Transfers` (position changes that are not
+trades) · `Interest Accruals`, `Change in Dividend Accruals` (carry) ·
+`Change in Position Value Summary` · `Net Stock Position Summary`
+
+Skip for this account: the HK IPO sections, `CFD Charges`, `Debit Card
+Activity`, `FDIC-Insured Deposits by Bank`, `Grant Activity`, `IBG Notes`,
+`Sales Tax Details`, `Mutual Fund Dividend Details`. The securities
+borrowed/lent and `Borrow Fees Details` sections only matter if you short
+*stock* — short options do not involve a borrow.
+
+On fields: within each section the builder also offers a column picker. Take the
+contract identifiers (`conid`, `underlyingSymbol`, `strike`, `expiry`,
+`putCall`, `multiplier`) wherever offered — same reasoning, they cannot be
+added retroactively.
 
 ### Setup
 
