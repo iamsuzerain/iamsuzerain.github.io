@@ -50,8 +50,15 @@ Secrets; only the Action can read it.
 1. Same menu — **Settings** → **Account Settings** → scroll to **Reporting** →
    **FlexWeb Service**.
 2. Click **Configure** and enable the service.
-3. Generate a new **token**. It's a long string. **Copy it now** — IBKR shows it
-   exactly once.
+3. Generate a new **token**. It's a long string. Save it to a password manager —
+   GitHub will not show a secret's value back to you once stored, so the copy you
+   keep is the only readable one you control.
+
+   An earlier version of this said IBKR shows the token exactly once. It does
+   not: the Flex Queries page displays the current token, so a value that is
+   only "lost" from your own notes can be read straight off that page. Worth
+   knowing before regenerating, because generating a new token can invalidate
+   the working one and silently break the daily refresh.
 4. Keep it secret. This token allows anyone to download your full portfolio.
 
 ## 3 — Wire up GitHub Actions
