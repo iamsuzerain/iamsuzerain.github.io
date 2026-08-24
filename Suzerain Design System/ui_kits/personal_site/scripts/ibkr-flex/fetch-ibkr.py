@@ -8,6 +8,13 @@ Env:
   IBKR_FLEX_RAW_DIR   — optional. If set, the raw statement XML is written
                         there gzipped, before any transform. See archive_raw().
 
+Flags:
+  --archive-only      Fetch and archive the statement, then stop without
+                      transforming or emitting JSON. For the narrow
+                      last-business-day query that feeds the archive: it has no
+                      NAV series and no ChangeInNAV, so transform() would fail on
+                      it, and its output is not what the site renders anyway.
+
 Writes JSON to stdout. Pipe it into ui_kits/personal_site/data/portfolio.json.
 Stdlib only.
 """
@@ -722,6 +729,7 @@ def transform(root: ET.Element) -> dict:
 
 
 def main() -> int:
+    archive_only = "--archive-only" in sys.argv[1:]
     token = os.environ.get("IBKR_FLEX_TOKEN")
     qid = os.environ.get("IBKR_FLEX_QUERY_ID")
     if not token or not qid:
@@ -731,7 +739,13 @@ def main() -> int:
         root, body = run_flex(token, qid)
         # Archive first. If the transform below breaks on some field IBKR changed,
         # the statement is already banked and the parse can be fixed after the fact.
-        archive_raw(body, root, qid)
+        path = archive_raw(body, root, qid)
+        if archive_only:
+            if not path:
+                print("--archive-only with no IBKR_FLEX_RAW_DIR set: nothing written",
+                      file=sys.stderr)
+                return 2
+            return 0
         data = transform(root)
     except SystemExit as e:
         print(str(e), file=sys.stderr)

@@ -6,11 +6,18 @@
 # ingest, a one-off query, a schema check against an old statement -- comes
 # through here.
 #
-#   IBKR_FLEX_ARCHIVE_KEY='...' ./decrypt-raw.sh OUT_DIR [FILE...]
+#   export IBKR_FLEX_ARCHIVE_KEY='...'
+#   export WAREHOUSE_DIR=/path/to/warehouse/flex-raw
+#   ./decrypt-raw.sh OUT_DIR [FILE...]
 #
-# With no FILE arguments, decrypts the whole archive. OUT_DIR should be outside
-# the repo; the root .gitignore refuses plaintext *.xml.gz inside it, but a
-# directory nobody can accidentally publish is better than a rule that says no.
+# The archive lives in the private iamsuzerain/warehouse repo, not here:
+#
+#   git clone git@github.com:iamsuzerain/warehouse.git
+#
+# With no FILE arguments, decrypts everything under WAREHOUSE_DIR. OUT_DIR
+# should be outside both repos -- the site repo's .gitignore refuses plaintext
+# and so does the warehouse's, but a directory nobody can accidentally publish
+# beats a rule that says no.
 #
 # Read back with: zcat OUT_DIR/flex-<qid>-<date>.xml.gz
 set -euo pipefail
@@ -25,21 +32,24 @@ if [ $# -lt 1 ]; then
 fi
 
 out_dir="$1"; shift
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(git -C "$here" rev-parse --show-toplevel)"
 mkdir -p "$out_dir"
 
 if [ $# -gt 0 ]; then
   files=("$@")
 else
+  if [ -z "${WAREHOUSE_DIR:-}" ]; then
+    echo "set WAREHOUSE_DIR to the warehouse checkout's flex-raw/ directory," >&2
+    echo "or pass specific .enc files as arguments." >&2
+    exit 2
+  fi
   # Nothing matched is not an error worth a shell trace -- report it plainly.
   shopt -s nullglob
-  files=("$repo_root"/warehouse/flex-raw/*.xml.gz.enc)
+  files=("$WAREHOUSE_DIR"/*.xml.gz.enc)
   shopt -u nullglob
 fi
 
 if [ ${#files[@]} -eq 0 ]; then
-  echo "no archived statements found under warehouse/flex-raw/" >&2
+  echo "no archived statements found (looked in ${WAREHOUSE_DIR:-<args>})" >&2
   exit 1
 fi
 
