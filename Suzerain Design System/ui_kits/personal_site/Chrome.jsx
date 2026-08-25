@@ -360,6 +360,37 @@ function szRangeCutoff(range, last) {
   return c.toISOString().slice(0, 10);
 }
 
+// Whether a range names a calendar period rather than a trailing span, which
+// decides what szRangeCutoff's return value *means* and therefore which day a
+// window rebases against.
+//
+// For a trailing range the cutoff IS the base day: "1M" measures from the close
+// one month back to the latest close, so rebasing to the first point at-or-after
+// the cutoff is exactly right.
+//
+// For a calendar range the cutoff is the first day INSIDE the period, and that
+// day's own return belongs to the period. Rebasing to it silently drops a day:
+// q3-to-date rebased on 2026-07-01's close excluded that day's -$1,148, so the
+// chart read +8.095% against a qtd tile of +7.925%. The base has to be the last
+// close *before* the period opens — the same convention build_pnl's start_nav()
+// has always used on the Python side, which is why the tiles were right and the
+// chart was not.
+function szRangeIsCalendar(range) {
+  return range === 'YTD' || range === 'QTD' || !!szQuarterBounds(range);
+}
+
+// The index a window should rebase against: the first point at-or-after the
+// cutoff for a trailing range, one earlier for a calendar one. Returns 0 when
+// the period opens at or before the series start, so a window that predates the
+// data still rebases on the first point it has rather than going negative.
+function szRangeBaseIndex(dates, range, cutoff) {
+  if (cutoff == null) return 0;
+  let i = dates.findIndex(d => d >= cutoff);
+  if (i < 0) return Math.max(0, dates.length - 2);
+  if (szRangeIsCalendar(range) && i > 0) i -= 1;
+  return i;
+}
+
 // Polymarket income beyond trading, net of fees. `uma` belongs in the sum — it
 // is dispute-resolution income like any other — and having it in one copy of
 // this total but not the other was a divergence waiting on the first payout.
@@ -751,6 +782,8 @@ window.szPmDateSnapshotRows = szPmDateSnapshotRows;
 window.szDedupeByDate = szDedupeByDate;
 window.szRangeEnd = szRangeEnd;
 window.szRangeCutoff = szRangeCutoff;
+window.szRangeIsCalendar = szRangeIsCalendar;
+window.szRangeBaseIndex = szRangeBaseIndex;
 window.szPmIncomeNet = szPmIncomeNet;
 window.szPnlFirstMoveIndex = szPnlFirstMoveIndex;
 window.szPnlLifeStartDay = szPnlLifeStartDay;

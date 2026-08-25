@@ -87,6 +87,67 @@ python3 scripts/fetch-ibkr.py > ui_kits/personal_site/data/portfolio.json
 
 The script has no dependencies beyond the Python stdlib.
 
+`--from-file PATH` reads a statement off disk instead of calling the API — point
+it at a decrypted, gunzipped copy out of the archive to re-run a past day without
+burning a Flex request.
+
+### Reconciling the flow sources
+
+Three different deposit/withdrawal figures feed this page, and they do not agree:
+
+| | source | drives |
+|---|---|---|
+| CT | `CashTransaction` rows, deduped | `perfSeries`, `pnlSeries` — the chart |
+| ES | `EquitySummaryByReportDateInBase@depositsWithdrawals` | nothing today; fallback only |
+| CIN | `ChangeInNAV@depositsWithdrawals` | the `1y` stat tile |
+
+CT and CIN currently land **exactly $2,000.00 apart** on every snapshot in the
+repo, back to 2026-07-24. `Portfolio.jsx` hides the endpoint gap with a ratio
+(`pfAnchorDollars`), which spreads a fixed dollar error across all 262 points and
+contaminates every shorter window along the way.
+
+`--reconcile-flows` prints all three totals, the per-day CT-vs-ES comparison that
+localizes the gap to a date, and a pre-dedup breakdown of the CT rows by currency:
+
+```bash
+python3 scripts/ibkr-flex/fetch-ibkr.py --reconcile-flows > /dev/null
+```
+
+Read it as a decision tree:
+
+- **ES == CIN, CT differs** → the bug is ours, in `build_cash_flows`. The dedup key
+  is `date|type|amount`, so the BASE and native copies of a *non-base-currency*
+  movement carry different amounts, neither is suppressed, and the flow is counted
+  twice. A currency other than USD in the breakdown is the tell.
+- **ES == CT, CIN differs** → IBKR books the movement somewhere other than
+  `depositsWithdrawals` (internal transfer, position transfer), and the `1y` tile
+  is the odd one out.
+
+**Do not wire this into the workflow.** It prints per-date cash movements, which is
+exactly the metadata the archive was moved to a private repo to stop publishing —
+and Actions logs on a public repo are world readable. The report goes to stderr and
+stdout stays clean JSON, so the flag is safe to add to an existing pipe locally.
+
+### The canary (always on, including CI)
+
+Every run prints one line to stderr, which the Actions log picks up:
+
+```
+flow-sources: CT!=ES ES==CIN CT!=CIN -> suspect build_cash_flows (currency dedup)
+```
+
+Three equality flags and a verdict — **no amounts, no dates, no transaction
+counts** — which is what makes it safe to publish where the full report is not.
+`CT?CIN` means the statement carried no `ChangeInNAV` to compare against.
+
+Its value is that it watches a constant. The CT/CIN gap has been a flat $2,000.00
+on every snapshot since 2026-07-24, so the event worth catching is the day that
+*changes* — the gap closing, or a second one opening on top of it. Nothing else in
+the pipeline would notice.
+
+No workflow change was needed: `run:` steps already send stderr to the log, and
+stdout is redirected into `portfolio.json`.
+
 ---
 
 ## 5 — What the Flex API actually returns
@@ -121,6 +182,39 @@ IBKR returns XML. A skeleton looks like:
 
 `fetch-ibkr.py` walks that tree and emits the JSON shape the Portfolio view
 expects — see `../data/portfolio.json` for the contract.
+
+---
+
+## 5a — What the stat tiles mean
+
+Each of the four tiles carries a dollar/percent pair, and they are **not two
+views of one number** — `abs / pct` will not reproduce the opening NAV.
+
+| | quantity | built by |
+|---|---|---|
+| `abs` | deposit-adjusted dollar P&L over the period: `(end − start) − net flows` | `adjusted_pnl()` |
+| `pct` | chained daily TWR over the same period | `period_twr()` |
+
+They answer different questions — how much money the period made, and how each
+dollar performed while it was in the account — and on a book whose size moves,
+the answers diverge hard. With $228k withdrawn during 2026 the ytd tile read
+**+37.98%** while the chart drew **+43.45%**; both were correct under their own
+definition, which is exactly the problem.
+
+Before 2026-08, `pct` was `abs / start_nav` — dollar P&L over the NAV the period
+opened on. TWR is what the risk block, the alpha strip and every benchmark
+overlay were already computed on; the tiles were the last thing on the page still
+dividing by a fixed denominator, and the chart never agreed with them. `1y` had a
+third definition on top of that: IBKR's own `ChangeInNAV@twr`, which runs ~40bp
+off our daily chain because IBKR weights flows intraday and we chain on closes.
+All four are now the same chained return the chart draws.
+
+**Periods are named off the statement's last row, never the wall clock**
+(`period_bounds()`). Chrome.jsx's `szRangeCutoff` makes the same demand for the
+same reason: statements lag up to 24h, so on the first day of any month, quarter
+or year the two would otherwise disagree about which period they are describing.
+A run on 1 January against a 31 December statement would compute a ytd that has
+not started yet.
 
 ---
 

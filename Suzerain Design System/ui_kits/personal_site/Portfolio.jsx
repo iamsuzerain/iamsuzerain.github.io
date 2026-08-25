@@ -202,11 +202,19 @@ function pfExtendHistory(navSeries, perfSeries, pnlSeries, hist, oneYearAbs) {
 // Slice navSeries + perfSeries to a trailing range and re-base the cumulative
 // TWR to the window start, so a 3M view reads as the 3M return rather than 3M of
 // the full 12mo curve. Both arrays share dates/length, so one index aligns them.
+//
+// The base index comes from szRangeBaseIndex rather than a bare findIndex,
+// because a calendar range has to rebase on the close BEFORE the period opens —
+// otherwise the first day's return falls out of the window and the chart
+// disagrees with the tile that covers the same period. See that function for the
+// full reasoning; the short version is that qtd was reading +8.095% against a
+// tile of +7.925% purely because 2026-07-01 was being used as the base instead
+// of 2026-06-30.
 function pfWindow(navSeries, perfSeries, pnlSeries, range) {
   if (!perfSeries || perfSeries.length < 2) return { nav: navSeries, perf: perfSeries, pnl: pnlSeries };
-  const cutoff = pfRangeCutoff(range, perfSeries.map(p => p.d));
-  let i = perfSeries.findIndex(p => p.d >= cutoff);
-  if (i < 0) i = 0;
+  const dates = perfSeries.map(p => p.d);
+  const cutoff = pfRangeCutoff(range, dates);
+  let i = window.szRangeBaseIndex(dates, range, cutoff);
   if (i > perfSeries.length - 2) i = perfSeries.length - 2;  // keep >= 2 points
   // A completed quarter also stops early; trailing ranges run to the end.
   const endCut = pfRangeEnd(range);
@@ -1320,9 +1328,13 @@ function Portfolio() {
           carried is the big one — the other takes the small colored line
           underneath. Same shape under both units; only the pair swaps. */}
       <div className="pf-stats">
-        {[['mtd', 'mtd', 'month to date'],
-          ['qtd', 'qtd', 'quarter to date'],
-          ['ytd', 'ytd', 'year to date'],
+        {/* Every kicker carries `· twr` now. It used to sit on 1y alone, which
+            read as a distinction — and was one: the other three divided dollar
+            P&L by the NAV the period opened on. All four are the same chained
+            return the chart draws, so the label says so on all four. */}
+        {[['mtd', 'mtd', 'month to date · twr'],
+          ['qtd', 'qtd', 'quarter to date · twr'],
+          ['ytd', 'ytd', 'year to date · twr'],
           ['1y', '1y', 'trailing 12mo · twr']].map(([key, label, kicker]) => {
           const p = d.pnl[key];
           if (!p) return null;

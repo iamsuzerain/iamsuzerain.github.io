@@ -11,7 +11,7 @@ Stdlib only.
 """
 from __future__ import annotations
 import json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService"
 SEND = f"{BASE}/SendRequest"
@@ -234,6 +234,193 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
         flows[d] = flows.get(d, 0.0) + to_float(tx.get("amount"))
     return flows
 
+
+def _ct_rows(root: ET.Element) -> list[dict]:
+    """Every CashTransaction row that build_cash_flows would consider, before
+    dedup — date, type, amount, currency. Kept separate from build_cash_flows so
+    the reconciliation can see what the dedup key suppressed."""
+    out = []
+    for tx in root.iter("CashTransaction"):
+        tx_type = (tx.get("type") or "").lower()
+        if "deposit" not in tx_type and "withdrawal" not in tx_type:
+            continue
+        raw = (tx.get("reportDate") or tx.get("dateTime") or "").split(";")[0].split(" ")[0]
+        d = _norm_date(raw.replace("-", ""))
+        if not d:
+            continue
+        out.append({"d": d, "type": tx_type, "amount": to_float(tx.get("amount")),
+                    "currency": (tx.get("currency") or "").upper()})
+    return out
+
+
+def flow_totals(root: ET.Element, nav_series: list[dict],
+                cash_flows: dict[str, float]) -> tuple[float, float, float | None]:
+    """Window totals for the three deposit/withdrawal sources: (CT, ES, CIN).
+
+    Day 0 is excluded from CT and ES, matching build_pnl_series — a flow dated on
+    the window's first day is already inside nav_0's close. CIN makes no such
+    exclusion, which is a structural difference rather than a data discrepancy.
+    CIN is None when the statement carries no ChangeInNAV element.
+    """
+    if not nav_series:
+        return 0.0, 0.0, None
+    day0 = nav_series[0]["d"]
+    in_window = {p["d"] for p in nav_series}
+    ct_sum = sum(v for d, v in cash_flows.items() if d in in_window and d > day0)
+    es_sum = sum(p.get("cf", 0.0) for p in nav_series if p["d"] > day0)
+    cin = root.find(".//ChangeInNAV")
+    cin_dw = to_float(cin.get("depositsWithdrawals") or "0") if cin is not None else None
+    return ct_sum, es_sum, cin_dw
+
+
+def flow_agreement(root: ET.Element, nav_series: list[dict],
+                   cash_flows: dict[str, float]) -> str:
+    """One line saying whether the three flow sources agree — and nothing else.
+
+    Safe for a world-readable Actions log by construction: it emits three equality
+    flags and a verdict, with no dollar figures, no dates, and no transaction
+    counts. Compare against reconcile_flows(), which prints all of those and is
+    therefore local-only.
+
+    What it buys: the CT/CIN gap has been a flat $2,000.00 on every snapshot in
+    the repo since 2026-07-24, so the interesting event is the day that *changes*
+    — the gap closing, or a second one opening on top of it. A boolean that has
+    read the same value for months is exactly the thing you want watching a
+    constant, and this one costs nothing to leave on.
+
+    Tolerance is half a cent, since every input is already rounded to cents.
+    """
+    ct, es, cin = flow_totals(root, nav_series, cash_flows)
+    eq = lambda a, b: a is not None and b is not None and abs(a - b) < 0.005
+
+    ct_es, ct_cin, es_cin = eq(ct, es), eq(ct, cin), eq(es, cin)
+    if cin is None:
+        verdict = "no ChangeInNAV in statement" if ct_es else "suspect build_cash_flows"
+    elif ct_es and ct_cin:
+        verdict = "all agree"
+    elif es_cin:
+        verdict = "suspect build_cash_flows (currency dedup)"
+    elif ct_es:
+        verdict = "suspect IBKR categorization of a transfer"
+    else:
+        verdict = "three-way disagreement"
+
+    # A missing CIN is rendered as absent rather than as a failed comparison —
+    # "ES!=CIN" would claim a disagreement that was never tested.
+    def flag(ok, a, b):
+        if b == "CIN" and cin is None:
+            return f"{a}?CIN"
+        return f"{a}{'==' if ok else '!='}{b}"
+
+    return ("flow-sources: "
+            + " ".join([flag(ct_es, "CT", "ES"),
+                        flag(es_cin, "ES", "CIN"),
+                        flag(ct_cin, "CT", "CIN")])
+            + f" -> {verdict}")
+
+
+def reconcile_flows(root: ET.Element, nav_series: list[dict],
+                    cash_flows: dict[str, float]) -> list[str]:
+    """Cross-check the three deposit/withdrawal sources this script mixes.
+
+    The site derives its dollar P&L from two of them and they do not agree: the
+    chart's pnlSeries nets out the CashTransaction sum, the "1y" tile nets out
+    ChangeInNAV's own depositsWithdrawals, and as of 2026-08 the two land exactly
+    $2,000.00 apart on every snapshot in the repo. Portfolio.jsx papers over the
+    endpoint with a ratio (pfAnchorDollars), which spreads a fixed dollar error
+    across all 262 points and quietly contaminates every shorter window.
+
+    Three sources, in increasing order of aggregation:
+
+      CT   CashTransaction rows, deduped   — drives perfSeries + pnlSeries
+      ES   EquitySummaryByReportDateInBase@depositsWithdrawals, per day
+           — IBKR's own daily figure, currently only a fallback in this script
+      CIN  ChangeInNAV@depositsWithdrawals, one window total — drives the 1y tile
+
+    ES is the useful third party. It is IBKR-derived like CIN but per-day like CT,
+    so it both localizes the gap to a date and says which side is wrong:
+
+      ES == CIN, CT differs  -> the bug is ours, in build_cash_flows
+      ES == CT,  CIN differs -> IBKR books the movement somewhere other than
+                                depositsWithdrawals (internal transfer, position
+                                transfer), and the 1y tile is the odd one out
+
+    Day 0 is reported separately rather than folded in. build_pnl_series and
+    build_perf_series both start summing at day 1, on the grounds that day-0 flows
+    are already inside nav_0's close; CIN makes no such exclusion, so a flow dated
+    on the window's first day is a structural difference between the two rather
+    than a discrepancy in the data.
+
+    Returns report lines. The caller decides where they go — see main(): NOT the
+    Actions log.
+    """
+    if not nav_series:
+        return ["reconcile: no nav series"]
+
+    day0 = nav_series[0]["d"]
+    dates = [p["d"] for p in nav_series]
+    in_window = set(dates)
+
+    es = {p["d"]: p.get("cf", 0.0) for p in nav_series}
+    ct = cash_flows
+
+    # Shared with the canary, so the two can never disagree about the totals.
+    ct_sum, es_sum, cin_dw = flow_totals(root, nav_series, cash_flows)
+    ct_day0 = ct.get(day0, 0.0)
+    es_day0 = es.get(day0, 0.0)
+
+    cin = root.find(".//ChangeInNAV")
+    cin_start = to_float(cin.get("startingValue") or "0") if cin is not None else None
+    cin_end = to_float(cin.get("endingValue") or "0") if cin is not None else None
+
+    L = [f"reconcile: window {day0} .. {dates[-1]} ({len(dates)} rows)",
+         f"  CT  (CashTransaction, deduped, d>day0)  {ct_sum:>16,.2f}",
+         f"  ES  (EquitySummary@depositsWithdrawals) {es_sum:>16,.2f}",
+         f"  CIN (ChangeInNAV@depositsWithdrawals)   "
+         + (f"{cin_dw:>16,.2f}" if cin_dw is not None else "        (absent)"),
+         f"  day-0 flows, excluded above: CT {ct_day0:,.2f} / ES {es_day0:,.2f}"]
+
+    if cin_dw is not None:
+        L.append(f"  CT-CIN {ct_sum - cin_dw:>+14,.2f}   ES-CIN {es_sum - cin_dw:>+14,.2f}"
+                 f"   CT-ES {ct_sum - es_sum:>+14,.2f}")
+
+    # Endpoint check: pnlSeries is anchored on nav_series, the 1y tile on CIN's
+    # own endpoints. If those disagree the gap is not about flows at all.
+    if cin_start is not None:
+        L.append(f"  endpoints: nav_0 {nav_series[0]['v']:,.2f} vs CIN start {cin_start:,.2f}"
+                 f"  (delta {nav_series[0]['v'] - cin_start:+,.2f})")
+        L.append(f"             nav_n {nav_series[-1]['v']:,.2f} vs CIN end   {cin_end:,.2f}"
+                 f"  (delta {nav_series[-1]['v'] - cin_end:+,.2f})")
+
+    # Per-day CT vs ES. This is what localizes the gap to a date.
+    diffs = [(d, ct.get(d, 0.0), es.get(d, 0.0)) for d in dates
+             if d > day0 and round(ct.get(d, 0.0) - es.get(d, 0.0), 2) != 0]
+    if diffs:
+        L.append(f"  per-day CT vs ES - {len(diffs)} date(s) disagree:")
+        for d, a, b in diffs:
+            L.append(f"    {d}  CT {a:>14,.2f}   ES {b:>14,.2f}   delta {a - b:>+14,.2f}")
+    else:
+        L.append("  per-day CT vs ES: agree on every date in the window")
+
+    # Dedup diagnostics. The key is date|type|amount, so the BASE and native
+    # copies of a NON-base-currency movement carry different amounts, neither is
+    # suppressed, and the flow is counted twice. Any currency here other than the
+    # base one is a candidate for exactly that.
+    rows = _ct_rows(root)
+    kept = len(cash_flows)
+    by_ccy: dict[str, list[int | float]] = {}
+    for r in rows:
+        c = by_ccy.setdefault(r["currency"] or "?", [0, 0.0])
+        c[0] += 1
+        c[1] += r["amount"]
+    L.append(f"  CT rows matching deposit/withdrawal: {len(rows)} raw -> {kept} dates after dedup")
+    L.append("  raw CT rows by currency (pre-dedup, so a duplicated pair shows twice):")
+    for c, (n, amt) in sorted(by_ccy.items()):
+        L.append(f"    {c:<5} n={n:<4} raw sum {amt:>16,.2f}")
+    if len(by_ccy) > 1:
+        L.append("    NOTE: >1 currency present - the date|type|amount dedup cannot"
+                 " suppress the native copy of a non-base movement.")
+    return L
 
 def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> list[dict]:
     """Daily-chain TWR. v is cumulative return as a ratio (0.15 = +15%).
@@ -478,7 +665,36 @@ def period_flows(cash_flows: dict[str, float], from_date: str, to_date: str) -> 
     return sum(v for d, v in cash_flows.items() if from_date <= d < to_date)
 
 
-def parse_cash_report(root: ET.Element, cash_flows: dict[str, float]) -> dict:
+def period_bounds(as_of: str) -> dict[str, str]:
+    """Calendar period starts, plus an exclusive end bound, measured off `as_of`.
+
+    `as_of` is the last date the statement actually carries — never the wall
+    clock. Chrome.jsx's szRangeCutoff makes the same demand of its caller, in the
+    same words, and for the same reason: the two have to name identical periods or
+    the tiles and the chart drift apart again the moment they disagree about what
+    month it is.
+
+    They disagree for roughly a day on every month, quarter and year boundary.
+    Flex statements lag up to 24h, so a run at 09:55 UTC on 1 January sees a
+    statement whose last row is 31 December: `now` would compute a ytd that has
+    not started yet (start > end, everything zero) while the chart, working off
+    the data, would draw the full previous year. Same trap one day into every
+    quarter, and one day into every month for mtd.
+
+    The end bound is as_of + 1 day, so a flow dated on the final row counts.
+    """
+    y, m = int(as_of[0:4]), int(as_of[5:7])
+    end = (datetime.strptime(as_of, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+           + timedelta(days=1)).date().isoformat()
+    return {
+        "mtd": f"{y:04d}-{m:02d}-01",
+        "qtd": f"{y:04d}-{((m - 1) // 3) * 3 + 1:02d}-01",
+        "ytd": f"{y:04d}-01-01",
+        "end": end,
+    }
+
+
+def parse_cash_report(root: ET.Element, cash_flows: dict[str, float], as_of: str) -> dict:
     """Net deposit/withdrawal flows for MTD, QTD, and YTD.
 
     Prefers per-day CashTransaction data (cash_flows) so QTD is computed
@@ -486,18 +702,13 @@ def parse_cash_report(root: ET.Element, cash_flows: dict[str, float]) -> dict:
     Falls back to CashReportCurrency pre-aggregated totals when no CashTransaction
     records are present (e.g. that section isn't enabled in the Flex Query).
     """
-    now = datetime.now(timezone.utc)
-    cur_year = str(now.year)
-    cur_month = now.strftime("%Y-%m")
-    quarter_start_month = ((now.month - 1) // 3) * 3 + 1
-    cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
-    tomorrow = (now.date().isoformat())[:10]
+    p = period_bounds(as_of)
 
     if cash_flows:
         return {
-            "mtd": period_flows(cash_flows, cur_month + "-01", tomorrow),
-            "qtd": period_flows(cash_flows, cur_quarter, tomorrow),
-            "ytd": period_flows(cash_flows, f"{cur_year}-01-01", tomorrow),
+            "mtd": period_flows(cash_flows, p["mtd"], p["end"]),
+            "qtd": period_flows(cash_flows, p["qtd"], p["end"]),
+            "ytd": period_flows(cash_flows, p["ytd"], p["end"]),
         }
 
     # Fallback: CashReportCurrency pre-aggregated totals (no QTD field in IBKR).
@@ -511,7 +722,7 @@ def parse_cash_report(root: ET.Element, cash_flows: dict[str, float]) -> dict:
     # Best approximation without per-day data: YTD minus prior-quarter portion.
     # We don't have prior-quarter totals, so use MTD as a lower bound (correct
     # only in Q1/Q2/Q3/Q4 first month) — flag as approximate.
-    qtd = mtd if now.month in (1, 4, 7, 10) else ytd
+    qtd = mtd if int(as_of[5:7]) in (1, 4, 7, 10) else ytd
     return {"mtd": mtd, "qtd": qtd, "ytd": ytd}
 
 
@@ -521,18 +732,61 @@ def adjusted_pnl(start_v: float, end_v: float, net_deposits: float) -> tuple[flo
     return abs_chg, (abs_chg / start_v if start_v else 0.0)
 
 
+def period_twr(perf_series: list[dict], from_date: str) -> float:
+    """Chained TWR from the close before `from_date` through the end of the series.
+
+    The percent half of every stat tile. It used to be adjusted_pnl's ratio —
+    dollar P&L over the NAV the period *opened* on — which is a different question
+    from the one the chart answers, and on a book whose size moves it is a wildly
+    different answer: with $228k withdrawn during 2026 the ytd tile read +37.98%
+    against a chart drawing +43.45%, and both were "right" under their own
+    definition.
+
+    TWR is the one that survives the capital moving, which is why the risk block,
+    the alpha strip and every benchmark overlay were already computed on it. The
+    tiles were the last thing on the page still dividing by a fixed denominator.
+
+    The base is the last close strictly before from_date, matching start_nav() —
+    a period owns the return of its own first day. Falls back to the series origin
+    (v = 0 by construction) when the period opens at or before the data starts, so
+    a ytd window on a statement that begins mid-year reads as far back as it can
+    rather than returning nothing.
+    """
+    if not perf_series:
+        return 0.0
+    base = 0.0
+    for p in perf_series:
+        if p["d"] >= from_date:
+            break
+        base = p["v"]
+    return (1.0 + perf_series[-1]["v"]) / (1.0 + base) - 1.0
+
+
 def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: dict[str, float],
               nav_correction: float = 0.0, perf_series: list[dict] | None = None) -> dict:
-    """Deposit-adjusted PnL for MTD, QTD, YTD using CashReportCurrency pre-aggregated flows.
-    1Y uses ChangeInNAV.twr — IBKR's own time-weighted return over the 365-day query period.
-    """
-    now = datetime.now(timezone.utc)
-    cur_year = str(now.year)
-    cur_month = now.strftime("%Y-%m")
-    quarter_start_month = ((now.month - 1) // 3) * 3 + 1
-    cur_quarter = f"{cur_year}-{quarter_start_month:02d}-01"
+    """Per-period P&L for the four stat tiles, as a dollar/percent pair.
 
-    flows = parse_cash_report(root, cash_flows)
+    `abs` is deposit-adjusted dollar P&L: (end - start) - net flows over the
+    period. `pct` is the chained TWR over the same period, from period_twr().
+
+    The two are deliberately NOT two views of one number — abs/pct will not
+    reproduce the opening NAV, and should not be expected to. They answer
+    different questions: how much money the period made, and how each dollar in
+    the account performed while it was there. The chart's units toggle draws
+    exactly this pair, which is the point; the tiles now agree with it under both
+    units instead of only one.
+
+    Without a perf_series to chain, pct degrades to adjusted_pnl's fixed-
+    denominator ratio, which is what the whole page used before 2026-08.
+    """
+    # Periods are named off the statement's last row, not the wall clock — see
+    # period_bounds. Only an empty nav_series falls back to today, and then there
+    # is nothing to measure anyway.
+    as_of = nav_series[-1]["d"] if nav_series else datetime.now(timezone.utc).date().isoformat()
+    bounds = period_bounds(as_of)
+    mtd_start, qtd_start, ytd_start = bounds["mtd"], bounds["qtd"], bounds["ytd"]
+
+    flows = parse_cash_report(root, cash_flows, as_of)
 
     def start_nav(from_date: str) -> float:
         # Use the closing NAV of the last trading day before the period opens.
@@ -541,9 +795,16 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: 
         candidates = [p for p in nav_series if p["d"] < from_date]
         return candidates[-1]["v"] if candidates else 0.0
 
-    mtd_abs, mtd_pct = adjusted_pnl(start_nav(cur_month + "-01"),        nav, flows["mtd"])
-    qtd_abs, qtd_pct = adjusted_pnl(start_nav(cur_quarter),               nav, flows["qtd"])
-    ytd_abs, ytd_pct = adjusted_pnl(start_nav(f"{cur_year}-01-01"),       nav, flows["ytd"])
+    mtd_abs, mtd_fallback = adjusted_pnl(start_nav(mtd_start), nav, flows["mtd"])
+    qtd_abs, qtd_fallback = adjusted_pnl(start_nav(qtd_start), nav, flows["qtd"])
+    ytd_abs, ytd_fallback = adjusted_pnl(start_nav(ytd_start), nav, flows["ytd"])
+
+    if perf_series:
+        mtd_pct = period_twr(perf_series, mtd_start)
+        qtd_pct = period_twr(perf_series, qtd_start)
+        ytd_pct = period_twr(perf_series, ytd_start)
+    else:
+        mtd_pct, qtd_pct, ytd_pct = mtd_fallback, qtd_fallback, ytd_fallback
 
     cin = root.find(".//ChangeInNAV")
     if cin is not None:
@@ -551,17 +812,18 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: 
         cin_end   = to_float(cin.get("endingValue")   or "0") + nav_correction
         cin_dw    = to_float(cin.get("depositsWithdrawals") or "0")
         oney_abs  = (cin_end - cin_start) - cin_dw
-        if nav_correction and perf_series:
-            # The bad day is the statement's ending NAV, so it *does* corrupt the
-            # 1Y figure (an intermediate bad day would cancel in TWR chaining).
-            # IBKR's own TWR still embeds it, so use our corrected daily-chained
-            # return over the (≈1-year) query window instead.
-            oney_pct = perf_series[-1]["v"]
-        else:
-            oney_pct = to_float(cin.get("twr") or "0") / 100.0
+        # Our own daily chain, not IBKR's ChangeInNAV@twr. The two disagree by
+        # ~40bp (59.827% vs 60.224% on 2026-08-21) because IBKR weights flows
+        # intraday and we chain on closes, and only one of them can be the number
+        # the chart draws. Chaining ourselves also removes the special case the
+        # nav_correction branch used to need: a bad vendor mark on the statement's
+        # final day corrupts IBKR's figure and cannot be patched out of it, while
+        # perf_series is built from the corrected nav_series to begin with.
+        oney_pct = perf_series[-1]["v"] if perf_series else to_float(cin.get("twr") or "0") / 100.0
     else:
-        s = start_nav(nav_series[0]["d"] if nav_series else f"{cur_year}-01-01")
-        oney_abs, oney_pct = adjusted_pnl(s, nav, flows["ytd"])
+        s = start_nav(nav_series[0]["d"] if nav_series else ytd_start)
+        oney_abs, oney_fallback = adjusted_pnl(s, nav, flows["ytd"])
+        oney_pct = perf_series[-1]["v"] if perf_series else oney_fallback
 
     return {
         "mtd":  {"abs": mtd_abs,  "pct": mtd_pct},
@@ -677,15 +939,51 @@ def transform(root: ET.Element) -> dict:
     }
 
 
-def main() -> int:
+def _load_root(args: list[str]) -> ET.Element:
+    """Statement source: a local file if --from-file was given, else the API.
+
+    The file path exists so the reconciliation can be run against an already
+    archived statement (gunzipped and decrypted first) without burning a Flex
+    request or waiting out the generate/retrieve handshake.
+    """
+    if "--from-file" in args:
+        return ET.parse(args[args.index("--from-file") + 1]).getroot()
     token = os.environ.get("IBKR_FLEX_TOKEN")
     qid = os.environ.get("IBKR_FLEX_QUERY_ID")
     if not token or not qid:
-        print("missing IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID", file=sys.stderr)
-        return 2
+        raise SystemExit("missing IBKR_FLEX_TOKEN or IBKR_FLEX_QUERY_ID")
+    return run_flex(token, qid)
+
+
+def main() -> int:
+    args = sys.argv[1:]
     try:
-        root = run_flex(token, qid)
+        root = _load_root(args)
         data = transform(root)
+
+        nav_series = build_nav_series(root)
+        apply_mark_overrides([], nav_series,
+                             nav_series[-1]["d"] if nav_series else None)
+        cash_flows = build_cash_flows(root)
+
+        # Always on, including in CI. Three equality flags and a verdict, no
+        # amounts and no dates — see flow_agreement for why that is safe to put
+        # in a world-readable Actions log, and why a boolean watching a constant
+        # is worth having.
+        print(flow_agreement(root, nav_series, cash_flows), file=sys.stderr)
+
+        # The full report is opt-in and deliberately NOT wired into the workflow:
+        # it prints per-date cash movements, precisely the metadata the archive
+        # was moved to a private repo to stop publishing (see archive_raw), and
+        # Actions logs on a public repo are world readable. Run it locally:
+        #
+        #   python fetch-ibkr.py --reconcile-flows > /dev/null
+        #
+        # stdout stays clean JSON either way, so the flag is safe to add to an
+        # existing pipe; the report goes to stderr.
+        if "--reconcile-flows" in args:
+            for line in reconcile_flows(root, nav_series, cash_flows):
+                print(line, file=sys.stderr)
     except SystemExit as e:
         print(str(e), file=sys.stderr)
         return 1
