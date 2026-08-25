@@ -573,8 +573,11 @@ function pmWindow(series, range) {
   if (!series || series.length < 2) return series;
   const last = series[series.length - 1].d;
   const cutoff = pmRangeCutoff(range, last);
-  let i = cutoff ? series.findIndex(p => p.d >= cutoff) : 0;
-  if (i < 0) i = 0;
+  // Calendar ranges rebase on the close BEFORE the period opens; trailing ones
+  // on the cutoff day itself. See szRangeBaseIndex. The D-1 restatement these
+  // rows carry is applied once at fetch (szPmDateSnapshotRows), so `d` is already
+  // the effective close date here and the two shifts do not compound.
+  let i = window.szRangeBaseIndex(series.map(p => p.d), range, cutoff);
   if (i > series.length - 2) i = series.length - 2;   // keep >= 2 points to plot
   const endCut = pmRangeEnd(range);
   let j = series.length - 1;

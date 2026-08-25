@@ -260,9 +260,16 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
     for d, tx_type, lod, tx in rows:
         if keep and lod != keep:
             continue
-        # transactionID is unique per movement and empty on SUMMARY rows; the
-        # composite key is the fallback for both of those cases.
-        tx_id = tx.get("transactionID") or f"{d}|{tx_type}|{tx.get('amount')}"
+        # Key on transactionID only once levelOfDetail has told us which stratum
+        # we are in. With no levelOfDetail at all we cannot know what the copies
+        # are, and the original comment here claimed transactionID *differs*
+        # between them — so trusting it would keep both and double the day. Fall
+        # back to the old composite key in that case: it is wrong in the ways
+        # documented above, but it is the behavior those statements were parsed
+        # under, and this path exists only for statements that have none of the
+        # structure the fix relies on.
+        tx_id = (tx.get("transactionID") if keep else None) \
+            or f"{d}|{tx_type}|{tx.get('amount')}"
         if tx_id in seen:
             continue
         seen.add(tx_id)

@@ -1172,8 +1172,15 @@ function cmbWindow(series, notional, range, benchmarks, benchKeys) {
   if (!series || series.length < 2) return { series, notional };
   const last = series[series.length - 1].d;
   const cutoff = cmbRangeCutoff(range, last);
-  let i = cutoff ? series.findIndex(p => p.d >= cutoff) : 0;
-  if (i < 0) i = 0;
+  // Calendar ranges rebase on the close BEFORE the period opens; trailing ones on
+  // the cutoff day itself. See szRangeBaseIndex. Note this also moves `s0` and so
+  // winNotional below: the window's capital base becomes the capital the period
+  // actually opened with, rather than the capital after its first day. That is
+  // the correct denominator — a deposit landing on day one of a quarter should
+  // not be in the base the quarter's return is measured against — and it is the
+  // same rule start_nav() applies in fetch-ibkr.py. On the current data it moves
+  // qtd by 0.079% and ytd by -0.012%.
+  let i = window.szRangeBaseIndex(series.map(p => p.d), range, cutoff);
   if (i > series.length - 2) i = series.length - 2;
   // Closed windows (a completed quarter) also stop early; trailing ranges run
   // to the last point. Keep at least two points so every downstream chart and
