@@ -101,27 +101,56 @@ Three different deposit/withdrawal figures feed this page, and they do not agree
 | ES | `EquitySummaryByReportDateInBase@depositsWithdrawals` | nothing today; fallback only |
 | CIN | `ChangeInNAV@depositsWithdrawals` | the `1y` stat tile |
 
-CT and CIN currently land **exactly $2,000.00 apart** on every snapshot in the
-repo, back to 2026-07-24. `Portfolio.jsx` hides the endpoint gap with a ratio
-(`pfAnchorDollars`), which spreads a fixed dollar error across all 262 points and
-contaminates every shorter window along the way.
+CT and CIN stood **exactly $2,000.00 apart** on every snapshot from 2026-07-24
+until the DETAIL/SUMMARY fix below. `Portfolio.jsx` papered over the endpoint with
+a ratio (`pfAnchorDollars`); with the parser corrected that ratio is 1.0.
 
-`--reconcile-flows` prints all three totals, the per-day CT-vs-ES comparison that
-localizes the gap to a date, and a pre-dedup breakdown of the CT rows by currency:
+`--reconcile-flows` prints all three totals, a per-date `sum(DETAIL)` vs `SUMMARY`
+vs recorded comparison, and a dump of the rows on any date that fails it:
 
 ```bash
 python3 scripts/ibkr-flex/fetch-ibkr.py --reconcile-flows > /dev/null
 ```
 
-Read it as a decision tree:
+### What the $2,000 turned out to be
 
-- **ES == CIN, CT differs** → the bug is ours, in `build_cash_flows`. The dedup key
-  is `date|type|amount`, so the BASE and native copies of a *non-base-currency*
-  movement carry different amounts, neither is suppressed, and the flow is counted
-  twice. A currency other than USD in the breakdown is the tell.
-- **ES == CT, CIN differs** → IBKR books the movement somewhere other than
-  `depositsWithdrawals` (internal transfer, position transfer), and the `1y` tile
-  is the odd one out.
+**Not** a currency-dedup leak, and **not** an IBKR categorization difference —
+both were plausible and both were wrong. IBKR reports every movement at two
+levels of detail:
+
+- a `DETAIL` row per transaction (real `transactionID`, real `accountId`)
+- one `SUMMARY` row per date aggregating them (`transactionID` empty, `accountId` `-`)
+
+Both carry type `Deposits/Withdrawals`. The old dedup key was `date|type|amount`,
+written on the theory that the duplication was per-currency. It failed in both
+directions:
+
+| date | DETAIL rows | SUMMARY | recorded | error |
+|---|---|---|---|---|
+| 2025-10-21 | −500, −1,000 | −1,500 | −3,000 | −1,500 |
+| 2025-11-24 | +700, −900 | −200 | −400 | −200 |
+| 2026-01-23 | −300, −300 | −600 | −900 | −300 |
+
+On a date with **one** movement the key worked by accident, because DETAIL and
+SUMMARY carry the same amount and collide. On a date with **several** the DETAIL
+amounts differ from the SUMMARY total, nothing collided, and the day was counted
+twice. And where two genuinely distinct movements shared a date, type and amount —
+2026-01-23's two −$300 transfers, one second apart — it collapsed them into one.
+
+Those three dates sum to exactly −$2,000.
+
+The fix keeps one level of detail (`DETAIL` preferred, since it survives two
+movements sharing a date and amount) and deduplicates on `transactionID`, which
+is what IBKR actually guarantees unique.
+
+### ES is not populated on this query
+
+`EquitySummaryByReportDateInBase@depositsWithdrawals` reads 0.00 on every row, so
+ES cannot arbitrate. Worth knowing separately: this makes the ES fallback in
+`build_perf_series` / `build_pnl_series` dead. If `cash_flows` ever came back
+empty, they would silently chain a TWR with **no flow adjustment at all** — a
+six-figure error, reported without complaint. The reconciliation says so rather
+than printing a meaningless per-day comparison against zero.
 
 **Do not wire this into the workflow.** It prints per-date cash movements, which is
 exactly the metadata the archive was moved to a private repo to stop publishing —
@@ -133,17 +162,19 @@ stdout stays clean JSON, so the flag is safe to add to an existing pipe locally.
 Every run prints one line to stderr, which the Actions log picks up:
 
 ```
-flow-sources: CT!=ES ES==CIN CT!=CIN -> suspect build_cash_flows (currency dedup)
+flow-sources: CT?ES ES?CIN CT==CIN -> CT==CIN (ES not populated)
 ```
 
 Three equality flags and a verdict — **no amounts, no dates, no transaction
 counts** — which is what makes it safe to publish where the full report is not.
-`CT?CIN` means the statement carried no `ChangeInNAV` to compare against.
+A `?` means that source is absent rather than disagreeing — no `ChangeInNAV`
+in the statement, or (as here) an ES column the query does not populate. Reading
+a structural zero as a value would fail every comparison against it forever.
 
-Its value is that it watches a constant. The CT/CIN gap has been a flat $2,000.00
-on every snapshot since 2026-07-24, so the event worth catching is the day that
-*changes* — the gap closing, or a second one opening on top of it. Nothing else in
-the pipeline would notice.
+Its value is that it watches a constant. CT and CIN stood a flat $2,000.00 apart
+on every snapshot from 2026-07-24 until the DETAIL/SUMMARY fix closed it, and
+nothing in the pipeline would have noticed either the gap or its closing. The
+event worth catching now is the day it opens again.
 
 No workflow change was needed: `run:` steps already send stderr to the log, and
 stdout is redirected into `portfolio.json`.

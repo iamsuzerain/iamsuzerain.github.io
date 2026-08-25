@@ -213,9 +213,35 @@ def build_nav_series(root: ET.Element) -> list[dict]:
 def build_cash_flows(root: ET.Element) -> dict[str, float]:
     """Per-day net deposits/withdrawals from CashTransaction nodes.
     Requires Cash Transactions section enabled in the Flex Query.
+
+    IBKR emits every movement at two levels of detail: a `DETAIL` row per actual
+    transaction (real transactionID, real accountId) and one `SUMMARY` row per
+    date that aggregates them (transactionID empty, accountId '-'). Both carry
+    type "Deposits/Withdrawals", so a naive sum counts every day twice.
+
+    This used to be deduplicated on a `date|type|amount` composite key, on the
+    stated theory that the duplication was per-currency (BASE plus native). That
+    theory was wrong, and the key it motivated failed in both directions:
+
+      - on a date with ONE movement it worked by accident, because the DETAIL row
+        and the SUMMARY row carry the same amount and collide;
+      - on a date with SEVERAL, the DETAIL amounts differ from the SUMMARY total,
+        nothing collided, and the day was counted twice. 2025-10-21 (-500, -1,000,
+        summary -1,500) was read as -3,000;
+      - and where two genuinely distinct movements shared a date, type and amount
+        it collapsed them into one. 2026-01-23 held two separate -300 transfers a
+        second apart; they became a single -300, and then the -600 summary was
+        added on top of that.
+
+    Across the 2025-08/2026-08 window those three dates over-counted by exactly
+    $2,000, which is the gap that stood against ChangeInNAV for months.
+
+    So: keep one level of detail, and deduplicate on transactionID, which is what
+    IBKR actually guarantees unique. DETAIL is preferred over SUMMARY because it
+    survives two movements that happen to share a date and amount. Statements
+    that carry no levelOfDetail at all fall back to the old composite key.
     """
-    seen: set[str] = set()
-    flows: dict[str, float] = {}
+    rows = []
     for tx in root.iter("CashTransaction"):
         tx_type = (tx.get("type") or "").lower()
         if "deposit" not in tx_type and "withdrawal" not in tx_type:
@@ -224,15 +250,33 @@ def build_cash_flows(root: ET.Element) -> dict[str, float]:
         d = _norm_date(raw.replace("-", ""))
         if not d:
             continue
-        # Deduplicate: IBKR Flex returns each CashTransaction twice (once per
-        # currency section — BASE and native currency). transactionID differs
-        # between the two copies, so we use only the composite key.
-        tx_id = f"{d}|{tx_type}|{tx.get('amount')}"
+        rows.append((d, tx_type, (tx.get("levelOfDetail") or "").upper(), tx))
+
+    levels = {lod for _, _, lod, _ in rows if lod}
+    keep = "DETAIL" if "DETAIL" in levels else ("SUMMARY" if "SUMMARY" in levels else None)
+
+    seen: set[str] = set()
+    flows: dict[str, float] = {}
+    for d, tx_type, lod, tx in rows:
+        if keep and lod != keep:
+            continue
+        # transactionID is unique per movement and empty on SUMMARY rows; the
+        # composite key is the fallback for both of those cases.
+        tx_id = tx.get("transactionID") or f"{d}|{tx_type}|{tx.get('amount')}"
         if tx_id in seen:
             continue
         seen.add(tx_id)
         flows[d] = flows.get(d, 0.0) + to_float(tx.get("amount"))
     return flows
+
+
+# The CashTransaction attributes the reconciliation prints. IBKR sends 46 of
+# them; the rest are empty or irrelevant here, and two are actively worth NOT
+# echoing — `description` carries the name of the person who initiated the
+# transfer, and `accountId` is the unmasked account number. Neither helps
+# diagnose a dedup bug, and this report is read and pasted around.
+_CT_REPORT_ATTRS = {"levelOfDetail", "transactionID", "currency", "fxRateToBase",
+                    "dateTime", "settleDate", "code", "type"}
 
 
 def _ct_rows(root: ET.Element) -> list[dict]:
@@ -249,8 +293,72 @@ def _ct_rows(root: ET.Element) -> list[dict]:
         if not d:
             continue
         out.append({"d": d, "type": tx_type, "amount": to_float(tx.get("amount")),
-                    "currency": (tx.get("currency") or "").upper()})
+                    "currency": (tx.get("currency") or "").upper(),
+                    "lod": (tx.get("levelOfDetail") or "").upper(),
+                    # The dedup key exactly as build_cash_flows forms it, so the
+                    # report can show which rows collide and which do not.
+                    "key": tx.get("transactionID") or f"{d}|{tx_type}|{tx.get('amount')}",
+                    "attrs": {k: v for k, v in tx.attrib.items()
+                              if k in _CT_REPORT_ATTRS and v not in ("", "0.0")}})
     return out
+
+
+def _pairing_report(rows: list[dict], cash_flows: dict[str, float]) -> list[str]:
+    """Per-date check of the DETAIL/SUMMARY invariant build_cash_flows relies on.
+
+    IBKR reports each date twice: one `DETAIL` row per movement, and one
+    `SUMMARY` row aggregating them. So for every date, sum(DETAIL) must equal
+    SUMMARY, and the flow this script records must equal both. A date where they
+    diverge means either the statement is internally inconsistent or the dedup is
+    dropping/duplicating a row, and its rows get dumped.
+
+    (This check was originally written against a `raw sum / 2` rule, on the theory
+    that the duplication was per-currency. It isn't, and raw/2 only happened to
+    work on dates carrying a single movement — which is exactly the blind spot
+    that hid the bug. Comparing the two levels directly has no such gap.)
+    """
+    by_date: dict[str, list[dict]] = {}
+    for r in rows:
+        by_date.setdefault(r["d"], []).append(r)
+
+    L = ["  DETAIL vs SUMMARY, per date:",
+         f"    {'date':11} {'nD':>3} {'sum(DETAIL)':>13} {'SUMMARY':>13} {'recorded':>13}  status"]
+    bad: list[str] = []
+    for d in sorted(by_date):
+        rs = by_date[d]
+        det = [r for r in rs if r["lod"] == "DETAIL"]
+        summ = [r for r in rs if r["lod"] == "SUMMARY"]
+        det_sum = sum(r["amount"] for r in det)
+        summ_sum = sum(r["amount"] for r in summ)
+        ded = cash_flows.get(d, 0.0)
+        # Only compare against SUMMARY where one exists; some statements carry
+        # only one level, and that is not an error.
+        parts = [det_sum] if det else []
+        if summ:
+            parts.append(summ_sum)
+        mismatch = any(abs(p - ded) >= 0.005 for p in parts)
+        levels_disagree = bool(det and summ) and abs(det_sum - summ_sum) >= 0.005
+        status = "ok"
+        if levels_disagree: status = "DETAIL != SUMMARY"
+        elif mismatch:      status = "RECORDED != STATEMENT"
+        if status != "ok":
+            bad.append(d)
+        L.append(f"    {d:11} {len(det):>3} {det_sum:>13,.2f} "
+                 f"{(summ_sum if summ else float('nan')):>13,.2f} {ded:>13,.2f}  {status}")
+
+    if bad:
+        L.append(f"  rows on the {len(bad)} suspect date(s):")
+        for d in bad:
+            for r in sorted(by_date[d], key=lambda r: (r["lod"], r["amount"])):
+                extra = " ".join(f"{k}={v}" for k, v in sorted(r["attrs"].items()))
+                L.append(f"    {d}  {r['lod']:<8} amount={r['amount']:>12,.2f}  key={r['key']}")
+                L.append(f"      {extra}")
+    else:
+        L.append("  every date reconciles across both levels of detail")
+
+    seen_levels = sorted({r["lod"] for r in rows if r["lod"]}) or ["(none)"]
+    L.append(f"  levels of detail present: {', '.join(seen_levels)}")
+    return L
 
 
 def flow_totals(root: ET.Element, nav_series: list[dict],
@@ -282,34 +390,49 @@ def flow_agreement(root: ET.Element, nav_series: list[dict],
     counts. Compare against reconcile_flows(), which prints all of those and is
     therefore local-only.
 
-    What it buys: the CT/CIN gap has been a flat $2,000.00 on every snapshot in
-    the repo since 2026-07-24, so the interesting event is the day that *changes*
-    — the gap closing, or a second one opening on top of it. A boolean that has
-    read the same value for months is exactly the thing you want watching a
-    constant, and this one costs nothing to leave on.
+    What it buys: CT and CIN stood a flat $2,000.00 apart on every snapshot from
+    2026-07-24 until the DETAIL/SUMMARY fix in build_cash_flows closed it. The
+    interesting event is the day that changes again, and a boolean watching a
+    constant is exactly the right instrument for that.
+
+    ES is treated as *absent* rather than as zero when the statement reports no
+    depositsWithdrawals on any EquitySummary row, which is the case on the site's
+    own Flex query. Reading a structural zero as a value would fail every
+    comparison against it forever, and a canary that always cries is worse than
+    none — it would have gone on printing "three-way disagreement" long after the
+    only real disagreement was fixed.
 
     Tolerance is half a cent, since every input is already rounded to cents.
     """
     ct, es, cin = flow_totals(root, nav_series, cash_flows)
+    es_present = any(abs(p.get("cf", 0.0)) >= 0.005 for p in nav_series)
+    if not es_present:
+        es = None
     eq = lambda a, b: a is not None and b is not None and abs(a - b) < 0.005
 
     ct_es, ct_cin, es_cin = eq(ct, es), eq(ct, cin), eq(es, cin)
     if cin is None:
-        verdict = "no ChangeInNAV in statement" if ct_es else "suspect build_cash_flows"
-    elif ct_es and ct_cin:
-        verdict = "all agree"
+        verdict = "no ChangeInNAV to check against"
+    elif ct_cin and (es is None or ct_es):
+        verdict = "all agree" if es is not None else "CT==CIN (ES not populated)"
+    elif ct_cin:
+        verdict = "CT==CIN, ES is the outlier"
+    elif es is None:
+        verdict = "CT!=CIN - suspect build_cash_flows"
     elif es_cin:
-        verdict = "suspect build_cash_flows (currency dedup)"
+        verdict = "suspect build_cash_flows"
     elif ct_es:
         verdict = "suspect IBKR categorization of a transfer"
     else:
         verdict = "three-way disagreement"
 
-    # A missing CIN is rendered as absent rather than as a failed comparison —
+    # An absent source is rendered as such rather than as a failed comparison —
     # "ES!=CIN" would claim a disagreement that was never tested.
+    absent = {"CIN": cin is None, "ES": es is None, "CT": False}
+
     def flag(ok, a, b):
-        if b == "CIN" and cin is None:
-            return f"{a}?CIN"
+        if absent[a] or absent[b]:
+            return f"{a}?{b}"
         return f"{a}{'==' if ok else '!='}{b}"
 
     return ("flow-sources: "
@@ -392,15 +515,27 @@ def reconcile_flows(root: ET.Element, nav_series: list[dict],
         L.append(f"             nav_n {nav_series[-1]['v']:,.2f} vs CIN end   {cin_end:,.2f}"
                  f"  (delta {nav_series[-1]['v'] - cin_end:+,.2f})")
 
-    # Per-day CT vs ES. This is what localizes the gap to a date.
-    diffs = [(d, ct.get(d, 0.0), es.get(d, 0.0)) for d in dates
-             if d > day0 and round(ct.get(d, 0.0) - es.get(d, 0.0), 2) != 0]
-    if diffs:
-        L.append(f"  per-day CT vs ES - {len(diffs)} date(s) disagree:")
-        for d, a, b in diffs:
-            L.append(f"    {d}  CT {a:>14,.2f}   ES {b:>14,.2f}   delta {a - b:>+14,.2f}")
+    # Per-day CT vs ES. Only meaningful when ES carries anything at all — on the
+    # site's own Flex query every EquitySummary row reports depositsWithdrawals=0,
+    # so the comparison degenerates to "CT vs nothing" and is worse than useless:
+    # it prints a disagreement on every date a flow occurred and buries the one
+    # that matters. Say so once instead.
+    es_present = any(abs(v) >= 0.005 for v in es.values())
+    if not es_present:
+        L.append("  per-day CT vs ES: SKIPPED - ES is zero on every row, so this")
+        L.append("    Flex query does not populate EquitySummary@depositsWithdrawals.")
+        L.append("    Note this also makes the ES fallback in build_perf_series /")
+        L.append("    build_pnl_series dead: if cash_flows were ever empty, they would")
+        L.append("    silently chain a TWR with no flow adjustment at all.")
     else:
-        L.append("  per-day CT vs ES: agree on every date in the window")
+        diffs = [(d, ct.get(d, 0.0), es.get(d, 0.0)) for d in dates
+                 if d > day0 and round(ct.get(d, 0.0) - es.get(d, 0.0), 2) != 0]
+        if diffs:
+            L.append(f"  per-day CT vs ES - {len(diffs)} date(s) disagree:")
+            for d, a, b in diffs:
+                L.append(f"    {d}  CT {a:>14,.2f}   ES {b:>14,.2f}   delta {a - b:>+14,.2f}")
+        else:
+            L.append("  per-day CT vs ES: agree on every date in the window")
 
     # Dedup diagnostics. The key is date|type|amount, so the BASE and native
     # copies of a NON-base-currency movement carry different amounts, neither is
@@ -420,7 +555,15 @@ def reconcile_flows(root: ET.Element, nav_series: list[dict],
     if len(by_ccy) > 1:
         L.append("    NOTE: >1 currency present - the date|type|amount dedup cannot"
                  " suppress the native copy of a non-base movement.")
+    raw_total = sum(r["amount"] for r in rows)
+    L.append(f"  raw total {raw_total:>16,.2f}   raw/2 {raw_total / 2.0:>16,.2f}"
+             + (f"   CIN {cin_dw:>16,.2f}" if cin_dw is not None else ""))
+    if cin_dw is not None and abs(raw_total / 2.0 - cin_dw) < 0.005:
+        L.append("    raw/2 == CIN exactly: every row is duplicated and IBKR's total"
+                 " is the truth, so the deduped figure is the one that is wrong.")
+    L.extend(_pairing_report(rows, cash_flows))
     return L
+
 
 def build_perf_series(nav_series: list[dict], cash_flows: dict[str, float]) -> list[dict]:
     """Daily-chain TWR. v is cumulative return as a ratio (0.15 = +15%).
