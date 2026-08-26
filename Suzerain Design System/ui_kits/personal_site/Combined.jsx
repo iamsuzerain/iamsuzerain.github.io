@@ -1338,6 +1338,15 @@ function cmbMonthly(series, benchKey = 'spx') {
   const end = new Map();                    // 'YYYY-MM' -> {ibkr, pm, bench}
   for (const p of series) end.set(p.d.slice(0, 7), { ibkr: p.ibkr || 0, pm: p.pm || 0, bench: p[benchKey] });
   const keys = [...end.keys()].sort();
+  // The window's first point is its *base* — the day every stream is rebased
+  // against — so its own bucket is zero by construction. When the next point is
+  // already in a new month, that bucket holds nothing but the base and drew a
+  // full-width empty column. Calendar windows always land here: they rebase on
+  // the close BEFORE the period opens (see szRangeBaseIndex), so ytd led with an
+  // empty "dec" and a picked quarter with the month before it. Drop it — `prev`
+  // below still starts from that base, so the first real month is unchanged.
+  const baseYm = series[0].d.slice(0, 7);
+  if (keys[0] === baseYm && series[1].d.slice(0, 7) !== baseYm) keys.shift();
   const out = [];
   let prev = { ibkr: series[0].ibkr || 0, pm: series[0].pm || 0, bench: series[0][benchKey] };
   for (const k of keys) {
