@@ -166,7 +166,17 @@ def main() -> int:
         log("no transfers ledger — nothing to floor against")
         return 1
     start = date.fromisoformat(max(first_transfer, min(pnl)))
-    end = date.fromisoformat(max(max(pnl), max(recorded)))
+    # Stop at the newest *measured* nav rather than running on to wherever the
+    # pnl series reaches. Past that day the walk has nothing but user-pnl to go
+    # on, and user-pnl is precisely what cannot be trusted after a neg-risk
+    # conversion: it stays corrupted until the market closes, so a day derived
+    # from it lands thousands out — in a file both views read as the capital base
+    # and as the percent-mode denominator. Normally the two agree, because
+    # betmoar-refresh writes today's nav at 06:00 and this runs after it; the cap
+    # only bites on a day that scrape failed, which is the day it matters. A
+    # short series is already handled by the consumers, which clamp; an invented
+    # one is not.
+    end = date.fromisoformat(max(recorded))
     log(f"flooring at first transfer {first_transfer}")
     rows, n_rec, n_der = [], 0, 0
     d = start

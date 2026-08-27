@@ -647,7 +647,7 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     // Deliberately not range-windowed: the overlap is only ~144 sessions to
     // begin with (Polymarket NAV history is the binding constraint), and slicing
     // that to 1M would leave a correlation estimate that is pure noise.
-    corr: cmbCorrelation(pnlHistory, pmRows, pmNavHistory),
+    corr: cmbCorrelation(pnlHistory, pmPts, pmNavHistory),
   };
 }
 
@@ -930,7 +930,7 @@ function cmbCorrPearson(a, b) {
   return (va > 0 && vb > 0) ? cov / Math.sqrt(va * vb) : null;
 }
 
-function cmbCorrelation(pnlHistory, pmRows, pmNavHistory) {
+function cmbCorrelation(pnlHistory, pmPts, pmNavHistory) {
   const hist = ((pnlHistory && pnlHistory.rows) || []).filter(r => r && r.d && r.t != null);
   const navRows = ((pmNavHistory && pmNavHistory.rows) || []).filter(r => r && r.d && r.nav != null);
   if (hist.length < 30 || navRows.length < 30) return null;
@@ -945,12 +945,16 @@ function cmbCorrelation(pnlHistory, pmRows, pmNavHistory) {
   }
   ibDays.sort();
 
-  // Polymarket cumulative user-pnl, on the same close-of-day convention the rest
-  // of the view uses (szPmPointDay — the raw stamps are day boundaries).
+  // Polymarket's cumulative curve exactly as the rest of the view has it: already
+  // on the close-of-day convention, and already walked off book value past the
+  // seam (cmbPmPoints). This used to take the raw feed rows and redo the date
+  // shift itself, which left the risk block on the one series the seam exists to
+  // stop trusting — a mis-marked conversion enters here as a single +8% session
+  // and then sits in the 60-day window for two months.
   const pmCum = new Map();
-  for (const r of (pmRows || [])) {
-    if (!r || r.t == null || r.p == null) continue;
-    pmCum.set(cmbFromEpochDay(window.szPmPointDay(r.t)), r.p);   // last wins within a day
+  for (const r of (pmPts || [])) {
+    if (!r || r.day == null || r.v == null) continue;
+    pmCum.set(cmbFromEpochDay(r.day), r.v);   // last wins within a day
   }
   const pmDays = [...pmCum.keys()].sort();
   if (pmDays.length < 30) return null;
