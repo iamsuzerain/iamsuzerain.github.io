@@ -289,8 +289,19 @@ function cmbIbkrPoints(portfolio, pnlHistory) {
 // on IBKR's "dated D = close of D" convention (szPmPointDay). The raw stamps are
 // day *boundaries*, so taking them at face value put the polymarket leg a day
 // ahead of the IBKR leg it gets summed with below.
-function cmbPmPoints(rows) {
-  return (rows || []).map(r => ({ day: window.szPmPointDay(r.t), v: r.p }));
+function cmbPmPoints(rows, bdRows, transfers) {
+  const dated = window.szDedupeByDate((rows || []).map(r => ({
+    d: window.szFromEpochDay(window.szPmPointDay(r.t)), v: r.p,
+  })));
+  // Past the seam the feed's own figure is unusable — a neg-risk conversion
+  // corrupts it until the market closes — so the curve is walked off book value
+  // from there (szPmBookExtend, same call the polymarket view makes). Doing it
+  // here, on the shared rows, is what keeps the chart, the capital base and the
+  // deployment bar on one reading: the bar used to extend past the last scrape
+  // by this feed's delta, which on 2026-08-27 put $20,046 of phantom capital on
+  // the polymarket end of it while the panel it links to said the same.
+  return window.szPmBookExtend(dated, bdRows, transfers)
+    .map(x => ({ day: window.szEpochDay(x.d), v: x.v }));
 }
 
 // Best-effort JSON GET: resolves to null on any failure so a missing optional
@@ -354,7 +365,7 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   const nowDay = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
-  const pmPts = cmbPmPoints(pmRows);
+  const pmPts = cmbPmPoints(pmRows, (bd && bd.rows) || [], pmTransfers);
 
   // End the series on the last day either feed actually reports, not the wall
   // clock. Padding forward to `now` used to push the trailing-range cutoff a day
@@ -486,7 +497,15 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     if (!r || !r.d || r.nav == null) continue;
     const day = cmbEpochDay(r.d);
     pmNavByDay.set(day, r.nav);
-    if (r.trading != null) pmScrapeEarned.set(day, r.trading + cmbBdNet(r));
+    // Before the book-value seam only. Past it the series is already walked off
+    // these same scrape rows (cmbPmPoints -> szPmBookExtend), so pmEarnedAt is
+    // scrape-consistent by construction and this override has nothing left to
+    // correct — while `trading` is itself the corrupted field the seam exists to
+    // stop reading. Left in place it would net a book-derived level against a
+    // feed-derived anchor, which is the glitch back again with its sign flipped.
+    if (r.trading != null && r.d <= window.SZ_PM_BOOK_SEAM) {
+      pmScrapeEarned.set(day, r.trading + cmbBdNet(r));
+    }
   }
   const pmNavDays = [...pmNavByDay.keys()].sort((a, b) => a - b);
   const pmFloor = pmNavDays.length ? pmNavDays[0] : null;

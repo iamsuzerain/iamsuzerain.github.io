@@ -71,6 +71,10 @@ function pmTrimFlat(series) {
 // every-other-day partway through 2027.
 const PM_CHART_MAX_POINTS = 2000;
 
+// Gap between the feed's curve and the book-value walk that is worth saying out
+// loud. See the effect that reads it for why this number.
+const PM_BOOK_GAP_WARN = 3000;
+
 function pmDownsample(arr, target = PM_CHART_MAX_POINTS) {
   const step = Math.max(1, Math.floor(arr.length / target));
   const out = [];
@@ -402,40 +406,25 @@ function pmBuild(perWallet, pnl, breakdown) {
     realized: +(p.realizedPnl || 0).toFixed(2),
   }));
 
-  // Portfolio value = full Polymarket NAV (positions + idle USDC) from the
-  // betmoar snapshot, carried forward by the P&L earned since that snapshot was
-  // taken. Falls back to the snapshot alone, and then to live open-position
-  // value, as each input goes missing.
+  // Portfolio value = full Polymarket NAV (positions + idle USDC) as the betmoar
+  // scrape read it, and nothing else. Falls back to live open-position value when
+  // the scrape is missing.
   //
-  // It used to be the bare snapshot, "so it matches the overview's
-  // capital-deployment bar exactly". That reason now argues the other way: the
-  // overview carries its own polymarket level forward off the same live feed
-  // (cmbBuild's pmLevelAt), so holding this one at the scrape is what pulls the
-  // two apart — by a four-figure gap on a day the book moves.
+  // This used to carry the scrape forward by (lifetime now - lifetime at the
+  // scrape), so the panel moved intraday rather than sitting at the morning's
+  // reading, and so it tracked the overview's capital-deployment bar, which
+  // extends by the same quantity. Both halves of that argument assumed the live
+  // user-pnl figure was true intraday, and it is not: a neg-risk conversion
+  // corrupts it until the market closes (see szPmBookExtend). On 2026-08-27 that
+  // carry put $20,046 of value on this tile that the book did not have, and the
+  // same $20,046 on the overview's bar.
   //
-  // The two halves of the carry:
-  //   - trading, which the live user-pnl feed reports continuously, so it moves
-  //     between scrapes and is the whole of the delta below;
-  //   - rewards, which only betmoar reports, so the scrape *is* the newest
-  //     reading and its contribution to the delta is exactly zero.
-  // Which is why this nets to one term rather than a difference of two totals:
-  // the income halves are the same number and cancel. Written out, it is
-  // (lifetime now) − (lifetime at the scrape), the same quantity the overview
-  // extends by.
-  //
-  // Absent a deposit or withdrawal this is definitional, not an estimate — a
-  // book's value moves by what it earns. A flow between the scrape and now is
-  // missed and corrects itself on the next scrape, the same caveat the overview
-  // carries. Live-only: a snapshot P&L series can predate the scrape, and
-  // extending backwards would subtract P&L the nav already holds.
+  // A stale but measured NAV beats a live but wrong one, and the two views agree
+  // trivially once both read the scrape instead of each rebuilding a carry. The
+  // cost is a figure up to a day old, which the timestamp already says.
   const positionsValue = +positions.reduce((a, p) => a + p.value, 0).toFixed(2);
   const snapNav = (breakdown && breakdown.nav != null) ? breakdown.nav : null;
-  const liveLifetime = (pnl && pnl.source === 'live' && summedPnl.length)
-    ? summedPnl[summedPnl.length - 1].p : null;
-  const totalValue = snapNav == null ? positionsValue
-    : (liveLifetime != null && breakdown.trading != null)
-      ? +(snapNav + (liveLifetime - breakdown.trading)).toFixed(2)
-      : snapNav;
+  const totalValue = snapNav == null ? positionsValue : snapNav;
   const unrealized = +positions.reduce((a, p) => a + p.unrealized, 0).toFixed(2);
   const realized = +positions.reduce((a, p) => a + p.realized, 0).toFixed(2);
 
@@ -1339,6 +1328,10 @@ function Polymarket() {
   const [hist, setHist] = usePmState(null);
   // Daily Polymarket NAV — read only as the denominator for percent mode.
   const [navRows, setNavRows] = usePmState(null);
+  // The manual IBKR->Polymarket transfer ledger. Read only past the book-value
+  // seam, where money moved in would otherwise walk into the curve as money
+  // earned. Inert before it, and inert on any day with no transfer.
+  const [pmTransfers, setPmTransfers] = usePmState(null);
   // Defaults to the trailing year like the ibkr and overview charts — the
   // lifetime curve is still one click away under MAX.
   const [range, setRange] = usePmState('1Y');
@@ -1401,6 +1394,15 @@ function Polymarket() {
         setNavRows(window.szPmDateSnapshotRows(j.rows));
       })
       .catch(() => {});
+    // Same ledger the overview reads for its benchmark notional; here it is the
+    // flow term in the book-value walk.
+    fetch('data/content.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (canceled || !j) return;
+        setPmTransfers(j.pmTransfers || []);
+      })
+      .catch(() => {});
     return () => { canceled = true; };
   }, []);
 
@@ -1417,6 +1419,26 @@ function Polymarket() {
     setRange(pmPctFallback(lastD));
   }, [data, unit, range]);
 
+  // The feed stops being the source at the seam and becomes the check. Past it
+  // the two are measuring the same book by different routes, so a large gap is
+  // information: either polymarket is mis-marking a conversion again, or capital
+  // moved into the account without reaching the transfer ledger. The second is
+  // the standing cost of pricing P&L off book value — money that arrives reads as
+  // money earned — and it is silent in every other reading on the page.
+  //
+  // Threshold is ~4x the day-to-day residual between the two routes ($757 sd over
+  // the 41 days both were recorded), so ordinary mark disagreement stays quiet.
+  usePmEffect(() => {
+    if (!data || !hist) return;
+    const d = window.szPmBookDivergence(data.pnlSeries, hist.rows, pmTransfers);
+    if (d && Math.abs(d.gap) > PM_BOOK_GAP_WARN) {
+      console.warn(
+        `[polymarket] user-pnl and book value disagree by $${d.gap.toLocaleString()} ` +
+        `at ${d.d} (feed ${d.feed}, book ${d.book}). Either a mis-marked ` +
+        `conversion, or a transfer missing from content.json pmTransfers.`);
+    }
+  }, [data, hist, pmTransfers]);
+
   if (err) return (
     <section className="sz-prose">
       <div className="sz-kicker">◆ polymarket</div>
@@ -1432,7 +1454,15 @@ function Polymarket() {
     </section>
   );
 
-  const { profile, summary, pnlSeries, positions, activity, breakdown } = data;
+  const { profile, summary, positions, activity, breakdown } = data;
+  // Past the seam the feed's own tail is unusable — a neg-risk conversion
+  // corrupts it until the market closes — so the curve is walked off book value
+  // from there (szPmBookExtend). Everything downstream reads this one series:
+  // the three P&L figures, the income curve, the chart and its windows. Applying
+  // it here rather than in each consumer is what stops one of them being left on
+  // the raw feed and quietly disagreeing with the rest.
+  const pnlSeries = window.szPmBookExtend(
+    data.pnlSeries, hist && hist.rows, pmTransfers);
   // Whether there is a series to draw at all, and whether the one being drawn is
   // the daily snapshot with the live call still out. Only the first gates the
   // P&L figures — the second just labels them, since a snapshot is the same

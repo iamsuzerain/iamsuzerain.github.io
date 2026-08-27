@@ -400,6 +400,87 @@ function szPmIncomeNet(r) {
     + (r.sponsored || 0) + (r.uma || 0) - (r.fees || 0);
 }
 
+// ---------- book-value trading P&L ----------
+// Polymarket's user-pnl feed mis-marks the book after a neg-risk conversion, and
+// betmoar's `tradingProfit` mirrors it field-for-field, so the two are one source
+// rather than two. On 2026-08-27T01:00Z a $1.9k conversion in "Largest Company end
+// of August?" moved the reported lifetime figure +$20,041 in a single hour while
+// the book was down $569 and the only other activity was a $13 maker rebate. The
+// positions endpoint booked the same event correctly — five created legs at
+// 3.44c, cost basis intact — so the corruption is confined to the P&L feed. It
+// does not clear when the next point lands; it clears when the market closes,
+// which is what rules the feed out as a live source rather than merely a noisy one.
+//
+// From the seam forward the curve is therefore walked off book value, on the
+// identity that a book moves by what it earns:
+//
+//     trading(d) = trading(d-1) + dNAV - d(non-trading income) - transfers
+//
+// Every term already lands in polymarket-breakdown-history.json daily except
+// transfers, which is the manual ledger in content.json. Nothing new is fetched
+// and no new cron is needed — this is a reading of rows already being written.
+//
+// Checked against the 41 days where both exist, the derived walk tracks the
+// recorded one to -$1,380 on a +$19,598 move, step mean -$34/day against a step
+// sd of $757. The per-day residual is betmoar's portfolio mark disagreeing with
+// polymarket's P&L mark; it is mean-reverting, not cumulative, so it costs
+// accuracy on any one day and almost nothing over a window. A random walk of the
+// same step sd would have drifted +/-$4,848 over the same span.
+//
+// Before the seam the feed is trusted and used as-is: it is the only source
+// reaching back to 2024-11-28, and its settled history reads clean through all 12
+// prior conversions. The seam is the last day whose scraped `trading` was taken
+// before the corruption began, so both sides of the join are known good.
+//
+// The cost of the switch is that transfers are now load-bearing for P&L: money
+// moved in reads as NAV that was not earned. Unlogged, it becomes phantom profit.
+// szPmBookDivergence below is the check for exactly that.
+const SZ_PM_BOOK_SEAM = '2026-08-25';
+
+// `series` is the feed's cumulative curve as [{d, v}], `bdRows` the breakdown
+// history already restated to close-of-day by szPmDateSnapshotRows, `transfers`
+// the {date, amount} ledger. Degrades to the plain truncated feed whenever the
+// history cannot carry the walk, so a missing or stale file loses the tail rather
+// than inventing one.
+function szPmBookExtend(series, bdRows, transfers, seam) {
+  const cut = seam || SZ_PM_BOOK_SEAM;
+  const pts = (series || []).filter(p => p.d <= cut);
+  if (!pts.length) return series || [];
+  const rows = (bdRows || [])
+    .filter(r => r && r.d >= cut && r.nav != null)
+    .sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  // The walk measures deltas, so it needs the seam day itself as its base. Without
+  // that row the first step would be attributed to the wrong pair of days.
+  if (rows.length < 2 || rows[0].d !== cut) return pts;
+  const moved = (from, to) => (transfers || []).reduce(
+    (a, t) => a + ((t && t.date > from && t.date <= to) ? (t.amount || 0) : 0), 0);
+  const out = pts.slice();
+  let v = pts[pts.length - 1].v;
+  for (let i = 1; i < rows.length; i++) {
+    const a = rows[i - 1], b = rows[i];
+    v += (b.nav - a.nav) - (szPmIncomeNet(b) - szPmIncomeNet(a)) - moved(a.d, b.d);
+    out.push({ d: b.d, v: +v.toFixed(2) });
+  }
+  return out;
+}
+
+// How far the feed has walked away from book value since the seam. The feed stops
+// being the source here and becomes the check: a large reading means either the
+// feed is mis-marking a conversion again, or capital moved without reaching the
+// transfer ledger. Both are worth knowing about, and neither is visible from
+// inside the derived series alone.
+function szPmBookDivergence(series, bdRows, transfers, seam) {
+  const cut = seam || SZ_PM_BOOK_SEAM;
+  const feed = (series || []).filter(p => p.d > cut);
+  if (!feed.length) return null;
+  const book = szPmBookExtend(series, bdRows, transfers, cut);
+  const last = book[book.length - 1];
+  if (!last || last.d <= cut) return null;
+  const paired = feed.filter(p => p.d <= last.d).pop();
+  if (!paired) return null;
+  return { d: paired.d, feed: paired.v, book: last.v, gap: +(paired.v - last.v).toFixed(2) };
+}
+
 // Index of the first point in a cumulative-pnl series that moves off the opening
 // value, backed up one point so the flat run's last day survives as the origin.
 // The Polymarket feed returns every day since the wallet existed, including a
@@ -785,6 +866,9 @@ window.szRangeCutoff = szRangeCutoff;
 window.szRangeIsCalendar = szRangeIsCalendar;
 window.szRangeBaseIndex = szRangeBaseIndex;
 window.szPmIncomeNet = szPmIncomeNet;
+window.SZ_PM_BOOK_SEAM = SZ_PM_BOOK_SEAM;
+window.szPmBookExtend = szPmBookExtend;
+window.szPmBookDivergence = szPmBookDivergence;
 window.szPnlFirstMoveIndex = szPnlFirstMoveIndex;
 window.szPnlLifeStartDay = szPnlLifeStartDay;
 window.szPmIncomeCurve = szPmIncomeCurve;
