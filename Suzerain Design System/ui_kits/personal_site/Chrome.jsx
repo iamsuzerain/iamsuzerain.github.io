@@ -455,7 +455,29 @@ function szPmBookExtend(series, bdRows, transfers, seam) {
   const moved = (from, to) => (transfers || []).reduce(
     (a, t) => a + ((t && t.date > from && t.date <= to) ? (t.amount || 0) : 0), 0);
   const out = pts.slice();
+  // Anchor on the scrape's own reading of the seam day, not the feed's close of
+  // it. Those are the same day by label and six hours apart in fact: the feed
+  // point is the 00:00 UTC close, the scrape is taken ~06:00, and every delta
+  // below is scrape-to-scrape. Anchoring on the close and then stepping from the
+  // scrape leaves 00:00-06:00 counted by neither — -$269.71 on the day this
+  // landed, carried by the whole curve after it. It is the error pmScrapeEarned
+  // exists to prevent over in the overview, with the sign flipped: that one
+  // measured the carry from the labeled day's close and double-counted the
+  // stretch, this one skipped it.
+  //
+  // Moving the seam point onto the scrape's clock as well is what makes the join
+  // honest rather than just relocating the gap: from here on, level and deltas
+  // share one phase. It costs that point a $270 restatement and makes the first
+  // derived step a 30-hour day — a labeling artifact, against a level that would
+  // otherwise be permanently wrong.
+  //
+  // Safe by construction: the seam is chosen as a day whose scraped `trading` was
+  // taken before the corruption began, which is the whole reason it sits there.
   let v = pts[pts.length - 1].v;
+  if (rows[0].trading != null && out[out.length - 1].d === cut) {
+    v = rows[0].trading;
+    out[out.length - 1] = { d: cut, v };
+  }
   for (let i = 1; i < rows.length; i++) {
     const a = rows[i - 1], b = rows[i];
     v += (b.nav - a.nav) - (szPmIncomeNet(b) - szPmIncomeNet(a)) - moved(a.d, b.d);
