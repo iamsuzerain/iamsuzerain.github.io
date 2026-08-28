@@ -1280,6 +1280,15 @@
     border-bottom: 1px solid rgba(167,139,250,0.4);
   }
   .cmb-annot-cap-link:hover { border-bottom-color: var(--violet-300); }
+  /* A note that opens a post says so at the end of its own sentence. Inline,
+     not a row under the body: half the log carries a slug, and a block link
+     would grow the card by a line on every one of them — which pushes the
+     chart down each time you step onto one. */
+  .cmb-annot-cap-more {
+    color: var(--violet-300); text-decoration: none;
+    border-bottom: 1px solid rgba(167,139,250,0.4);
+  }
+  .cmb-annot-cap-more:hover { border-bottom-color: var(--violet-300); }
 
   /* ========== Politics ==========
      Logged or not — no conviction ramp. The note carries the nuance; a scale

@@ -205,7 +205,7 @@ function cmbMarkers(series, log) {
       const diff = Math.abs(days[i] - d);
       if (diff < bestDiff) { bestDiff = diff; best = i; }
     }
-    return { i: best, date: entry.date, body: entry.body, link: entry.link, v: series[best].v };
+    return { i: best, date: entry.date, body: entry.body, link: entry.link, slug: entry.slug, v: series[best].v };
   }).filter(Boolean);
 }
 
@@ -221,6 +221,29 @@ function cmbCaptionBody(entry) {
       <a className="cmb-annot-cap-link" href={l.href}>{l.text}</a>
       {entry.body.slice(i + l.text.length)}
     </>
+  );
+}
+
+// A note that carries a slug is the blurb of a post, not a standalone note —
+// see buildStream in Hero.jsx, where the row itself becomes the link. The
+// caption can't do that: its head already holds three buttons, so wrapping the
+// block would put anchors inside anchors. The link rides at the end of the body
+// instead, titled from the manifest once it lands and labeled generically until
+// then (App.jsx re-renders the tree when POSTS arrives).
+function cmbPostLink(entry) {
+  if (!entry || !entry.slug) return null;
+  const post = (window.POSTS || []).find(p => p.slug === entry.slug);
+  // The leading space is a text node, not margin: it is the only break
+  // opportunity between the body's last word and the title, and without one the
+  // pair is a single unbreakable run that overhangs the card on a phone. The
+  // arrow is glued on with a non-breaking space so it can't wrap alone.
+  return (
+    <React.Fragment>
+      {' '}
+      <a className="cmb-annot-cap-more" href={`#/thoughts/${entry.slug}`}>
+        {post ? post.title : 'read the post'} →
+      </a>
+    </React.Fragment>
   );
 }
 
@@ -759,7 +782,9 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
             aria-expanded={!capHidden}
             aria-label={capHidden ? 'show note' : 'hide note'}>{capHidden ? '+' : '−'}</button>
         </div>
-        {!capHidden && <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}</p>}
+        {!capHidden && (
+          <p className="cmb-annot-cap-body">{cmbCaptionBody(cur)}{cmbPostLink(cur)}</p>
+        )}
       </div>
     )}
     <div className="pm-chart-wrap">
