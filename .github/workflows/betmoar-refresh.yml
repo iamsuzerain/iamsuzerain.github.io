@@ -3,7 +3,14 @@ name: betmoar-breakdown-refresh
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # daily at 06:00 UTC
+    # 06:07 UTC = 23:07 Pacific. Midnight Pacific is 07:00 UTC, so all of hour 6
+    # lands on the right side of that deadline while still stamping the row with
+    # the correct UTC date — date.today() on the runner is what keys
+    # polymarket-breakdown-history.json. The minute is off the top of the hour
+    # deliberately: GitHub queues the most schedule events at :00, and this cron
+    # sat there for months. It stays ahead of polymarket-pnl-refresh at 06:10,
+    # which rebuilds nav-history off the breakdown history this run writes.
+    - cron: '7 6 * * *'   # daily at 06:07 UTC
   workflow_dispatch: {}
 
 permissions:
@@ -66,9 +73,12 @@ jobs:
       # nav-history two different workflows apart. On the cron path that gap is
       # ~12 minutes and invisible. A manual dispatch fell outside it entirely and
       # left the file on the previous day's scrape until the next scheduled run —
-      # up to a day for an afternoon dispatch. Both crons also drift 43-72min
-      # past their nominal times under queue pressure, so neither the stagger nor
-      # the clock is something to date data by.
+      # up to a day for an afternoon dispatch. Both crons also drift past their
+      # nominal times under queue pressure — usually under an hour, but 6-12h
+      # every day since 2026-08-27 — so neither the stagger nor the clock is
+      # something to date data by. A scheduled task on the local machine
+      # dispatches this workflow at 23:00 Pacific for that reason; the cron is
+      # the backstop for nights that machine is off.
       #
       # Reads polymarket-pnl.json from disk without refreshing it: that feed only
       # supplies the walk-back for days before betmoar began reporting balances
