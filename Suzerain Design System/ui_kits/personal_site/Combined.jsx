@@ -791,7 +791,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
       <SzChartSvg frame={F} hover={hv} n={plot.length} className="pf-navchart pm-chart-svg">
         <SzChartDefs ramp="nav" id="cmb-nav"/>
 
-        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.2)" dash="2 4"/>
+        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
 
         {/* component lines — faint, recessed beneath the aggregate */}
         <path d={linePath('ibkr')} fill="none" stroke={CMB_C_IBKR} strokeWidth="1" opacity="0.3"/>
@@ -1151,10 +1151,10 @@ function CmbCorrStrip({ roll }) {
           <SzChartDefs ramp="corr" id="cmb-corr"/>
           {/* ±0.25 guides, so the eye can judge how flat "flat" is */}
           {[dom / 2, -dom / 2].map((g, k) => (
-            <SzRule key={k} frame={F} y={y(g)} stroke="rgba(229,225,241,0.07)" dash={null}/>
+            <SzRule key={k} frame={F} y={y(g)} stroke="rgba(229,225,241,0.07)"/>
           ))}
           <path d={area} fill="url(#cmb-corr-fill)"/>
-          <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.22)"/>
+          <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.12)"/>
           <path d={line} fill="none" stroke="url(#cmb-corr-stroke)" strokeWidth="1.4"
             strokeLinejoin="round" strokeLinecap="round"/>
           {hovered && (

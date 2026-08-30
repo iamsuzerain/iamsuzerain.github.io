@@ -200,12 +200,14 @@ function SzChartDefs({ ramp, id }) {
 
 // ---------- marks ----------
 // The reference rule a series is read against: zero on a P&L curve, the running
-// peak on an underwater strip, 1 on a rolling beta. Pass dash={null} for a solid
-// rule — the default only fills in for `undefined`, so null draws unbroken.
-function SzRule({ frame, y, stroke = 'rgba(229,225,241,0.18)', dash = '3 5' }) {
+// peak on an underwater strip, 1 on a rolling beta. A faint solid hairline: the
+// dashes read as texture at this weight, and a rule this recessed is already
+// unmistakably not a series. Solid at the old alpha would have roughly doubled
+// the ink, so the weight comes back down through opacity instead.
+function SzRule({ frame, y, stroke = 'rgba(229,225,241,0.10)' }) {
   return (
     <line x1={frame.PAD_L} x2={frame.W - frame.PAD_R} y1={y} y2={y}
-      stroke={stroke} strokeDasharray={dash}/>
+      stroke={stroke}/>
   );
 }
 
@@ -214,7 +216,7 @@ function SzRule({ frame, y, stroke = 'rgba(229,225,241,0.18)', dash = '3 5' }) {
 function SzCrosshairLine({ frame, x }) {
   return (
     <line x1={x} x2={x} y1={frame.PAD_T} y2={frame.H - frame.PAD_B}
-      stroke="rgba(229,225,241,0.25)" strokeDasharray="2 3"/>
+      stroke="rgba(229,225,241,0.16)"/>
   );
 }
 

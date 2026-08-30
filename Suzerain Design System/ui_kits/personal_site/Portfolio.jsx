@@ -585,7 +585,7 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
           <line key={i}
             x1={F.PAD_L} x2={F.W - F.PAD_R}
             y1={y(v)} y2={y(v)}
-            stroke="rgba(167,139,250,0.08)" strokeDasharray="2 4"/>
+            stroke="rgba(167,139,250,0.05)"/>
         ))}
         <SzRule frame={F} y={zeroY}/>
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
@@ -994,7 +994,7 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', 
               simply does not exist yet, rather than being zero. */}
           {firstIdx > 0 && (
             <line x1={x(firstIdx)} x2={x(firstIdx)} y1={F.PAD_T} y2={F.H - F.PAD_B}
-              stroke="rgba(167,139,250,0.22)" strokeDasharray="1 4"/>
+              stroke="rgba(167,139,250,0.10)"/>
           )}
           <path d={line} fill="none" stroke="url(#pf-roll-stroke)" strokeWidth="1.35"/>
           {/* cy null over the warm-up: hairline only, nothing to mark. */}

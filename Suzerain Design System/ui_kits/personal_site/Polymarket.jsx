@@ -722,7 +722,7 @@ function PmSpark({ series, unit }) {
       <SzChartSvg frame={F} hover={hv} n={series.length} className="pf-navchart pm-chart-svg">
         <SzChartDefs ramp="nav" id="pm"/>
 
-        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.2)" dash="2 4"/>
+        <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
         <path d={area} fill="url(#pm-fill)"/>
         <path d={line} fill="none" stroke="url(#pm-stroke)" strokeWidth="1.75"/>
 
@@ -1267,7 +1267,7 @@ function PmRewardsChart({ rows }) {
     <div className="pm-chart-wrap">
       <SzChartSvg frame={F} hover={hv} n={n}>
         <SzChartDefs ramp="rewards" id="pm-rewards"/>
-        <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.14)"/>
+        <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.08)"/>
         {/* Crosshair below the curves and its dots above them, so the hairline
             never cuts across a line it is meant to be reading. */}
         {hv.i != null && <SzCrosshairLine frame={F} x={x(hv.i)}/>}
