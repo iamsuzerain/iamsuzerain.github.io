@@ -10,7 +10,7 @@ Writes JSON to stdout. Pipe it into ui_kits/personal_site/data/portfolio.json.
 Stdlib only.
 """
 from __future__ import annotations
-import json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+import bisect, json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService"
@@ -750,32 +750,103 @@ def build_asset_class(contribution: list[dict]) -> list[dict]:
 
 TRADING_DAYS = 252  # annualization factor for daily-sampled series
 
+# The effective fed funds rate, one row per business day, written by
+# scripts/riskfree/fetch-riskfree.py. Read from disk rather than fetched here:
+# one script owns the series, and a Sharpe that quietly depended on a second
+# network call would go back to rf 0 every time that call had a bad morning.
+RISKFREE_STORE = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "riskfree.json"))
 
-def build_risk(perf_series: list[dict], positions: list[dict]) -> dict:
+
+def load_riskfree() -> list[dict]:
+    """[{d, v}] ascending, v in annual percent. Missing file → [] (rf 0)."""
+    try:
+        with open(RISKFREE_STORE, "r", encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError):
+        return []
+    rows = [r for r in (doc.get("series") or [])
+            if r.get("d") and isinstance(r.get("v"), (int, float))]
+    rows.sort(key=lambda r: r["d"])
+    return rows
+
+
+def rf_steps(dates: list[str], rf_rows: list[dict], periods: int = TRADING_DAYS) -> list[float]:
+    """The risk-free return charged against each step of `dates`.
+
+    Index i holds the step ENDING at dates[i] — so it aligns one-for-one with
+    returns built as wealth_i / wealth_{i-1} - 1, and index 0 is 0.0 because no
+    step has happened yet. All zeros when there is no rf series, which is the
+    old rf-0 behavior rather than a failure.
+
+    Each step is charged the annual rate in force when it opened, divided by
+    `periods` — the same factor the returns are annualized by. Deliberately not
+    an actual/365 accrual over the calendar days the step spans: that would pay
+    interest for weekends the 252-day annualization does not count as elapsed
+    time, leaving the numerator's two halves on different calendars and the
+    printed rf a tenth of a point below the rate a reader can look up. One
+    convention per series is the whole point — the overview passes periods=365
+    against its calendar-daily curve and gets the same treatment.
+
+    EFFR publishes on business days only, so the lookup carries the last
+    published rate forward: Friday's rate is what a Monday step opens on.
+    szRfSteps in Chrome.jsx is the same function; the two have to stay in step
+    or the tiles and this file disagree about the same window.
+    """
+    out = [0.0] * len(dates)
+    if not rf_rows or len(dates) < 2:
+        return out
+    keys = [r["d"] for r in rf_rows]
+    for i in range(1, len(dates)):
+        j = bisect.bisect_right(keys, dates[i - 1]) - 1
+        rate = rf_rows[max(j, 0)]["v"] / 100.0   # before the first row: its rate
+        out[i] = rate / periods
+    return out
+
+
+def build_risk(perf_series: list[dict], positions: list[dict],
+               rf_rows: list[dict] | None = None) -> dict:
     """Risk/return analytics derived from the daily TWR curve (perf_series) and
     current positions. perf_series carries cumulative return as a ratio, so the
     wealth curve is 1 + v and daily HPRs are wealth_i / wealth_{i-1} - 1.
 
-    Sharpe/Sortino assume a 0% risk-free rate (short-horizon rf is negligible
-    against a ~50% annual return and keeps the figure provider-independent).
+    Sharpe and Sortino are excess of the fed funds rate that was actually in
+    force on each of those days (rf_steps above), not of a convenient 0. Zero
+    was defensible against a ~50% annual return and indefensible as a standing
+    assumption: cash paid 5.33% for most of 2023-24, so an rf-0 Sharpe credits
+    the book with roughly rf/vol it never earned — a quarter of a point at this
+    book's vol — and holds still when the Fed moves. `rf` comes back on the
+    result so the tiles can print the rate they were charged.
+
+    vol stays the book's own volatility (raw returns, not excess). It is a
+    published figure in its own right, and rf moves the mean of a daily series
+    without meaningfully moving its spread, so this also keeps the identity the
+    tiles imply — sharpe = (ann return - rf) / ann vol — true as displayed.
     """
     wealth = [1.0 + p["v"] for p in perf_series]
-    rets = [wealth[i] / wealth[i - 1] - 1.0 for i in range(1, len(wealth))
-            if wealth[i - 1] > 0]
+    steps = rf_steps([p["d"] for p in perf_series], rf_rows or [])
+    rets, rfs = [], []
+    for i in range(1, len(wealth)):
+        if wealth[i - 1] > 0:
+            rets.append(wealth[i] / wealth[i - 1] - 1.0)
+            rfs.append(steps[i])
 
-    sharpe = vol = sortino = None
+    sharpe = vol = sortino = rf_ann = None
     if len(rets) >= 20:
         n = len(rets)
         mean = sum(rets) / n
         var = sum((r - mean) ** 2 for r in rets) / (n - 1)
         sd = math.sqrt(var)
-        # Downside deviation about a 0 target (only losses contribute).
-        dvar = sum(min(r, 0.0) ** 2 for r in rets) / n
+        excess = [r - f for r, f in zip(rets, rfs)]
+        # Downside deviation about the risk-free rate: a day that merely lagged
+        # cash is not a loss, so only excess below 0 contributes.
+        dvar = sum(min(e, 0.0) ** 2 for e in excess) / n
         dd = math.sqrt(dvar)
-        ann_ret = mean * TRADING_DAYS
+        ann_excess = (sum(excess) / n) * TRADING_DAYS
+        rf_ann = (sum(rfs) / n) * TRADING_DAYS
         vol = sd * math.sqrt(TRADING_DAYS)
-        sharpe = ann_ret / vol if vol else None
-        sortino = ann_ret / (dd * math.sqrt(TRADING_DAYS)) if dd else None
+        sharpe = ann_excess / vol if vol else None
+        sortino = ann_excess / (dd * math.sqrt(TRADING_DAYS)) if dd else None
 
     # Drawdown over the wealth curve: peak-to-trough decline as a negative ratio.
     max_dd = cur_dd = 0.0
@@ -800,6 +871,11 @@ def build_risk(perf_series: list[dict], positions: list[dict]) -> dict:
         "sharpe": round(sharpe, 2) if sharpe is not None else None,
         "sortino": round(sortino, 2) if sortino is not None else None,
         "vol": round(vol, 4) if vol is not None else None,
+        # The average fed funds rate over the window, as a ratio — the rf the
+        # Sharpe above was actually charged, annualized the same way. None (not
+        # 0) when the series was missing, so a reader can tell "cash paid
+        # nothing" from "we did not know what cash paid".
+        "rf": round(rf_ann, 4) if rf_ann else None,
         "maxDrawdown": round(max_dd, 4),
         "currentDrawdown": round(cur_dd, 4),
         "concentration": {
@@ -1078,7 +1154,7 @@ def transform(root: ET.Element) -> dict:
             "buyingPower": nav * 2,
         },
         "pnl": build_pnl(root, nav_series, nav, cash_flows, nav_correction, perf_series),
-        "risk": build_risk(perf_series, positions),
+        "risk": build_risk(perf_series, positions, load_riskfree()),
         "contribution": contribution,
         "byAssetClass": build_asset_class(contribution),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],

@@ -879,19 +879,35 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
 // Risk/return analytics for the combined book, off the reconstructed equity
 // curve (window-start capital base + cumulative combined P&L). data.series is
 // calendar-daily (cmbSampleDaily fills every day), so we annualize by 365 — not
-// the 252 the IBKR tab uses on its trading-day perfSeries. rf assumed 0.
-function cmbRisk(series, notional, benchKey = 'spx') {
+// the 252 the IBKR tab uses on its trading-day perfSeries.
+//
+// Sharpe is excess of the fed funds rate in force on each of those days
+// (rfRows = data/riskfree.json's series; without it this is the old rf-0
+// figure). 365 goes to szRfSteps too, so a calendar day here is charged a
+// calendar day of interest and the printed rf is the same average rate the
+// IBKR tab prints for the same span, despite the two annualizing differently.
+function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
   if (!series || series.length < 21 || !notional || notional <= 0) return null;
   const PER = 365;
   const eq = series.map(p => notional + p.v);
-  const rp = [];
-  for (let i = 1; i < eq.length; i++) if (eq[i - 1] > 0) rp.push(eq[i] / eq[i - 1] - 1);
+  const steps = window.szRfSteps ? window.szRfSteps(series.map(p => p.d), rfRows, PER) : null;
+  const rp = [], rf = [];
+  for (let i = 1; i < eq.length; i++) {
+    if (eq[i - 1] > 0) {
+      rp.push(eq[i] / eq[i - 1] - 1);
+      rf.push(steps ? steps[i] : 0);
+    }
+  }
   const n = rp.length;
   if (n < 20) return null;
   const mean = rp.reduce((a, b) => a + b, 0) / n;
+  const meanRf = rf.reduce((a, b) => a + b, 0) / n;
   const sd = Math.sqrt(rp.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+  // Raw vol, not the excess series' — see pfRiskWindow in Portfolio.jsx for why
+  // the published volatility stays the book's own.
   const vol = sd * Math.sqrt(PER);
-  const sharpe = vol ? (mean * PER) / vol : null;
+  const sharpe = vol ? ((mean - meanRf) * PER) / vol : null;
+  const rfAnn = meanRf ? meanRf * PER : null;
 
   let peak = eq[0], maxDD = 0;
   for (const e of eq) {
@@ -917,7 +933,7 @@ function cmbRisk(series, notional, benchKey = 'spx') {
       if (vb > 0 && va > 0) { beta = cov / vb; r2 = (cov * cov) / (vb * va); }
     }
   }
-  return { sharpe, vol, maxDD, beta, r2 };
+  return { sharpe, vol, maxDD, beta, r2, rf: rfAnn };
 }
 
 // ---------- cross-book correlation: does polymarket diversify ibkr? ----------
@@ -1600,6 +1616,7 @@ function Combined({ setView }) {
       );
       const contentP    = cmbGetJson('data/content.json');
       const benchP      = cmbGetJson('data/benchmarks.json');
+      const rfP         = cmbGetJson('data/riskfree.json');
       const pmNavP      = cmbGetJson('data/polymarket-nav-history.json');
       const navHistP    = cmbGetJson('data/nav-history.json');
       const breakdownP  = cmbGetJson('data/polymarket-breakdown.json');
@@ -1631,6 +1648,11 @@ function Combined({ setView }) {
       const bj = await benchP;
       const benchmarks = (bj && bj.benchmarks) || null;
 
+      // Fed funds, for the Sharpe on the risk panel. Best-effort like the rest:
+      // missing, the tile falls back to rf 0 and its note says so.
+      const rfj = await rfP;
+      const rfRows = (rfj && rfj.series && rfj.series.length) ? rfj.series : null;
+
       // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
       // before the Flex window so the MAX range keeps charting aged-out markers.
       // Daily Polymarket NAV back to the first transfer — recorded where it
@@ -1657,6 +1679,7 @@ function Combined({ setView }) {
       const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
       built.log = log;
       built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
+      built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
       return built;
     }
     load()
@@ -1696,7 +1719,7 @@ function Combined({ setView }) {
     : [];
   const HistoryPicker = window.HistoryPicker;
   const BenchPicker = window.BenchPicker;
-  const risk = cmbRisk(win.series, win.notional, primary);
+  const risk = cmbRisk(win.series, win.notional, primary, data.rf);
   // Shared risk panels, on the combined equity curve. The overview samples every
   // calendar day (prediction markets trade weekends), so vol annualizes on 365.
   const SZ = window.SZ_RISK || {};
@@ -1816,7 +1839,8 @@ function Combined({ setView }) {
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
           <div className={`cmb-risk-grid${data.corr ? ' cmb-risk-grid-5' : ''}`}>
-            <CmbStat label="sharpe"  value={risk.sharpe != null ? risk.sharpe.toFixed(2) : '—'} note="risk-adjusted · rf 0"/>
+            <CmbStat label="sharpe"  value={risk.sharpe != null ? risk.sharpe.toFixed(2) : '—'}
+              note={`excess of cash · rf ${risk.rf ? pct1(risk.rf) : '0'}`}/>
             <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
             <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}

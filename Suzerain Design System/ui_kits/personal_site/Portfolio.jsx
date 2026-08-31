@@ -39,6 +39,13 @@ function fmtPctBare(n, dp = 1) {
   return (n * 100).toFixed(dp) + '%';
 }
 
+// The rf a risk tile was charged, for its kicker. A null rate means the fed
+// funds file did not load, and the Sharpe next to it is the rf-0 figure — say
+// "0", because that is the assumption the number was computed under.
+function pfRfLabel(rf) {
+  return rf ? fmtPctBare(rf, 1) : '0';
+}
+
 // ---------- shared daily-return helpers ----------
 // perfSeries carries cumulative return as a ratio, so the wealth curve is 1 + v
 // and a daily holding-period return is wealth_i / wealth_{i-1} - 1. The
@@ -259,23 +266,42 @@ function pfAlphaDollars(pnl, nav, benchSeries) {
 }
 
 // Sharpe / annualized vol / max drawdown over a (windowed) TWR series. Mirrors
-// the Python build_risk: daily HPRs off the 1+v wealth curve, 252-day annualized,
-// rf 0. Returns null for windows with too few points.
-function pfRiskWindow(perf) {
+// the Python build_risk: daily HPRs off the 1+v wealth curve, 252-day
+// annualized, excess of the fed funds rate in force on each day (rfRows =
+// data/riskfree.json's series; omit it and this is the old rf-0 figure).
+// Returns null for windows with too few points.
+//
+// The window matters more here than in the Python: that one only ever computes
+// the trailing year, while this recomputes on every range the picker offers —
+// so a 3M window sitting inside a cutting cycle is charged that quarter's rate,
+// not the year's average. `rf` comes back with the rest so the tile can print
+// what it was charged.
+function pfRiskWindow(perf, rfRows) {
   if (!perf || perf.length < 21) return null;
+  const PER = 252;
   const wealth = perf.map(p => 1 + p.v);
-  const rets = [];
-  for (let i = 1; i < wealth.length; i++) if (wealth[i - 1] > 0) rets.push(wealth[i] / wealth[i - 1] - 1);
+  const steps = window.szRfSteps ? window.szRfSteps(perf.map(p => p.d), rfRows, PER) : null;
+  const rets = [], rfs = [];
+  for (let i = 1; i < wealth.length; i++) {
+    if (wealth[i - 1] > 0) {
+      rets.push(wealth[i] / wealth[i - 1] - 1);
+      rfs.push(steps ? steps[i] : 0);
+    }
+  }
   const n = rets.length;
   if (n < 20) return null;
   const mean = rets.reduce((a, b) => a + b, 0) / n;
+  const meanRf = rfs.reduce((a, b) => a + b, 0) / n;
   const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
-  const PER = 252;
+  // vol stays the book's own volatility, not the excess series': it is a
+  // published number in its own right, and subtracting a near-constant moves a
+  // daily series' mean without moving its spread. That also keeps the identity
+  // the three tiles imply — sharpe = (ann return - rf) / ann vol — true as read.
   const vol = sd * Math.sqrt(PER);
-  const sharpe = vol ? (mean * PER) / vol : null;
+  const sharpe = vol ? ((mean - meanRf) * PER) / vol : null;
   const dd = drawdownSeries(perf);
   const maxDrawdown = dd.length ? Math.min(0, ...dd.map(p => p.v)) : 0;
-  return { sharpe, vol, maxDrawdown };
+  return { sharpe, vol, maxDrawdown, rf: meanRf ? meanRf * PER : null };
 }
 
 // ---------- distribution moments ----------
@@ -1196,6 +1222,7 @@ function Portfolio() {
   const [err, setErr] = usePortState(null);
   const [bench, setBench] = usePortState(null);
   const [hist, setHist] = usePortState(null);
+  const [rf, setRf] = usePortState(null);
   const [range, setRange] = usePortState('1Y');
   // Percent by default: this page's headline metric is TWR (the "1y" tile says
   // so), and the benchmark overlays are exact in percent where the dollar
@@ -1222,6 +1249,12 @@ function Portfolio() {
     fetch('data/nav-history.json', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(h => { if (h && h.rows) setHist(h); })
+      .catch(() => {});
+    // Fed funds (best-effort). Without it the risk tiles fall back to rf 0 and
+    // say so, rather than holding the whole panel hostage to one small file.
+    fetch('data/riskfree.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (j && j.series && j.series.length) setRf(j.series); })
       .catch(() => {});
   }, []);
 
@@ -1259,7 +1292,7 @@ function Portfolio() {
   const PfHistoryPicker = window.HistoryPicker;
   // Plain computations (not hooks) — these run after the early returns above, so a
   // useMemo here would violate the rules of hooks. Both are cheap.
-  const winRisk = pfRiskWindow(win.perf) || risk;
+  const winRisk = pfRiskWindow(win.perf, rf) || risk;
   // Beta, alpha and capture all name a benchmark, so they follow the picker
   // rather than staying pinned to SPX while the chart above draws something
   // else. First selected wins; an empty selection falls back to spx so these
@@ -1347,7 +1380,7 @@ function Portfolio() {
 
       {risk && (
         <div className="pf-stats pf-stats-risk">
-          <StatTile label="sharpe"  value={fmtNum(winRisk.sharpe)}          kicker="risk-adjusted · rf 0"/>
+          <StatTile label="sharpe"  value={fmtNum(winRisk.sharpe)}          kicker={`excess of cash · rf ${pfRfLabel(winRisk.rf)}`}/>
           <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
           <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)} kicker="peak-to-trough"/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}

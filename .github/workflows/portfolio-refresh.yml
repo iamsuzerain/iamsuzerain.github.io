@@ -24,6 +24,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: fetch fed funds (EFFR) for the risk-free leg
+        # Ahead of the IBKR step on purpose: fetch-ibkr.py reads this file off
+        # disk to charge its Sharpe and Sortino the rate that was actually in
+        # force. Best-effort - a NY Fed hiccup keeps the committed rates, and a
+        # run with no file at all falls back to rf 0 rather than failing.
+        run: |
+          mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/riskfree/fetch-riskfree.py" \
+            > /tmp/riskfree.json \
+            && mv /tmp/riskfree.json "Suzerain Design System/ui_kits/personal_site/data/riskfree.json" \
+            || echo "EFFR fetch failed - keeping previous riskfree.json"
+
       - name: fetch IBKR flex statement
         env:
           IBKR_FLEX_TOKEN: ${{ secrets.IBKR_FLEX_TOKEN }}
@@ -55,7 +67,8 @@ jobs:
           git config user.email "portfolio-bot@users.noreply.github.com"
           git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/nav-history.json" \
-                  "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json"
+                  "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/riskfree.json"
           # Stage first, then test the index rather than running `git diff` over
           # data/, which is blind to untracked files - benchmarks.json is created
           # fresh on a run where it did not previously exist.

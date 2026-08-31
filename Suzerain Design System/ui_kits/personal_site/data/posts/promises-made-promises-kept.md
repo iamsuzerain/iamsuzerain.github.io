@@ -6,7 +6,7 @@ However, we can reconstruct most of the data from old statements. We had a reall
 
 <figure style="margin:32px 0">
 <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 738" role="img"
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 752" role="img"
        style="display:block;width:100%;min-width:680px;height:auto;font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,monospace)">
     <title>time-weighted &#183; 5 jan 2022 &#8211; 29 dec 2023: account cumulative return against the S&#38;P 500 total return, with monthly returns beneath</title>
     <defs>
@@ -127,6 +127,7 @@ However, we can reconstruct most of the data from old statements. We had a reall
     <text x="238.5" y="718" text-anchor="middle" font-size="10" fill="var(--fg-4,#8b7aa8)">2022</text>
     <text x="615.5" y="718" text-anchor="middle" font-size="10" fill="var(--fg-4,#8b7aa8)">2023</text>
     <text x="50" y="732" font-size="9.5" letter-spacing="0.1em" fill="var(--fg-4,#8b7aa8)">SOURCE: IBKR PORTFOLIOANALYST, TIME-WEIGHTED RETURN. BENCHMARK: S&#38;P 500 TOTAL RETURN. BOTH FIGURES SHARE ONE PAIR OF AXES.</text>
+    <text x="50" y="746" font-size="9.5" letter-spacing="0.1em" fill="var(--fg-4,#8b7aa8)">SHARPE IS EXCESS OF THE EFFECTIVE FED FUNDS RATE, 3.4% AVERAGE OVER THIS WINDOW.</text>
   </svg>
 </div>
 </figure>
@@ -135,7 +136,7 @@ That all fell apart in a series of cascading failures in 2024-2025, after I had 
 
 <figure style="margin:32px 0">
 <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 738" role="img"
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 752" role="img"
        style="display:block;width:100%;min-width:680px;height:auto;font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,monospace)">
     <title>time-weighted &#183; 1 jan 2024 &#8211; 31 dec 2025: account cumulative return against the S&#38;P 500 total return, with monthly returns beneath</title>
     <defs>
@@ -268,6 +269,7 @@ That all fell apart in a series of cascading failures in 2024-2025, after I had 
     <text x="238.5" y="718" text-anchor="middle" font-size="10" fill="var(--fg-4,#8b7aa8)">2024</text>
     <text x="615.5" y="718" text-anchor="middle" font-size="10" fill="var(--fg-4,#8b7aa8)">2025</text>
     <text x="50" y="732" font-size="9.5" letter-spacing="0.1em" fill="var(--fg-4,#8b7aa8)">SOURCE: IBKR PORTFOLIOANALYST, TIME-WEIGHTED RETURN. BENCHMARK: S&#38;P 500 TOTAL RETURN. BOTH FIGURES SHARE ONE PAIR OF AXES.</text>
+    <text x="50" y="746" font-size="9.5" letter-spacing="0.1em" fill="var(--fg-4,#8b7aa8)">SHARPE IS EXCESS OF THE EFFECTIVE FED FUNDS RATE, 4.7% AVERAGE OVER THIS WINDOW.</text>
   </svg>
 </div>
 </figure>

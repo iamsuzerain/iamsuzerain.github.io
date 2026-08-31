@@ -732,6 +732,62 @@ function HistoryPicker({ quarters, value, onPick }) {
   );
 }
 
+// ---------- risk-free rate ----------
+// data/riskfree.json (scripts/riskfree/fetch-riskfree.py owns it; nothing here
+// reaches the network): the NY Fed's effective federal funds rate, one row per
+// business day, as an annual percent. It is the rf leg of every Sharpe and
+// Sortino on the site — those used to assume 0, which quietly gifted the book
+// whatever cash was paying, and moved the ratio only when the book moved rather
+// than when the Fed did.
+//
+// szRfAt returns a lookup for "the rate in force on date d": the last row at or
+// before it, carried forward, because EFFR publishes on business days and
+// Friday's rate is the one a Monday opens on. Before the first row it returns
+// that first row's rate rather than 0 — a series that starts late is a gap in
+// what we fetched, not a period when cash paid nothing.
+function szRfAt(rows) {
+  if (!rows || !rows.length) return null;
+  return function (d) {
+    let lo = 0, hi = rows.length - 1, hit = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (rows[mid].d <= d) { hit = mid; lo = mid + 1; } else { hi = mid - 1; }
+    }
+    return rows[hit < 0 ? 0 : hit].v / 100;
+  };
+}
+
+// The risk-free return charged against each step of `dates`. Index i holds the
+// step ENDING at dates[i], so it aligns one-for-one with returns built as
+// wealth[i]/wealth[i-1] - 1; index 0 is 0 because no step has happened yet.
+// All zeros without a series, which is the old rf-0 behavior rather than a
+// failure.
+//
+// Each step is charged the annual rate in force when it opened, over `periods`
+// — the same factor its return is annualized by. Not an actual/365 accrual over
+// the calendar days the step spans: that pays interest for weekends a 252-day
+// annualization does not count as elapsed time, which puts the numerator's two
+// halves on different calendars. One convention per series, so the overview's
+// calendar-daily curve passes 365 and the IBKR one 252. rf_steps in
+// scripts/ibkr-flex/fetch-ibkr.py is the same function; they have to agree or
+// the tiles and portfolio.json disagree about the same window.
+function szRfSteps(dates, rfRows, periods = 252) {
+  const out = new Array(dates ? dates.length : 0).fill(0);
+  const at = szRfAt(rfRows);
+  if (!at || !dates || dates.length < 2) return out;
+  for (let i = 1; i < dates.length; i++) out[i] = at(dates[i - 1]) / periods;
+  return out;
+}
+
+// The rf those steps add up to, annualized the same way — i.e. the average fed
+// funds rate over the window, which is what the tiles print. null for an empty
+// window so a tile can say "rf 0" only when it means it.
+function szRfAnnual(steps, periods = 252) {
+  if (!steps || !steps.length) return null;
+  const sum = steps.reduce((a, b) => a + b, 0);
+  return sum ? (sum / steps.length) * periods : null;
+}
+
 // ---------- benchmarks ----------
 // One registry for every page that draws a benchmark line. The keys match
 // data/benchmarks.json (scripts/benchmarks/fetch-benchmarks.py owns the closes;
@@ -861,6 +917,9 @@ window.HistoryPicker = HistoryPicker;
 window.BenchPicker = BenchPicker;
 window.SZ_BENCHES = SZ_BENCHES;
 window.SZ_BENCH_DEFAULT = SZ_BENCH_DEFAULT;
+window.szRfAt = szRfAt;
+window.szRfSteps = szRfSteps;
+window.szRfAnnual = szRfAnnual;
 window.szBenchSort = szBenchSort;
 window.szBenchPrimary = szBenchPrimary;
 window.szBenchColor = szBenchColor;

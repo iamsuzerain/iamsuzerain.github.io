@@ -247,6 +247,43 @@ or year the two would otherwise disagree about which period they are describing.
 A run on 1 January against a 31 December statement would compute a ytd that has
 not started yet.
 
+### The risk-free rate is an input, not an assumption
+
+Sharpe and Sortino are excess of the **effective fed funds rate that was in force
+on each day of the window** — not of 0, which is what they assumed until
+2026-08-30. Zero was a defensible shortcut against a ~50% annual return and an
+indefensible standing position: cash paid 5.33% through most of 2023-24 and over
+3.5% now, so an rf-0 Sharpe hands the book roughly `rf / vol` it never earned
+(~0.24 at this book's vol, 3.11 → 2.88 on the trailing year) and, worse, holds
+still when the Fed moves.
+
+The rates come from `scripts/riskfree/fetch-riskfree.py`, which pulls EFFR
+straight from the NY Fed and writes `data/riskfree.json`. `fetch-ibkr.py` reads
+that file **off disk** — it never fetches it — so the refresh workflow runs the
+EFFR step first. A missing file is not an error: `load_riskfree()` returns `[]`,
+the Sharpe falls back to rf 0, and `risk.rf` comes back `null` rather than `0` so
+the difference between "cash paid nothing" and "we did not know what cash paid"
+survives into the JSON.
+
+Two conventions worth knowing:
+
+- **Each step is charged `rate / periods`**, the same factor its return is
+  annualized by (252 here, 365 on the overview's calendar-daily curve) — not an
+  actual/365 accrual over the calendar days the step spans. The accrual version
+  pays interest for weekends a 252-day annualization does not count as elapsed
+  time, which puts the two halves of the numerator on different calendars and
+  prints an rf a tenth of a point under the rate a reader can look up.
+- **`vol` stays the book's own volatility**, computed on raw returns rather than
+  excess ones. It is a published figure in its own right, and subtracting a
+  near-constant moves a daily series' mean without moving its spread — so this
+  also keeps the identity the tiles imply, `sharpe = (ann return − rf) / ann
+  vol`, true exactly as displayed.
+
+`szRfSteps` in `Chrome.jsx` is the same function, because the tiles recompute the
+whole risk block per selected range. They have to agree: the site's 1Y tile and
+this file's `risk.sharpe` describe the same window and are checked against each
+other by eye every time the page is opened.
+
 ---
 
 ## 6 — Gotchas
