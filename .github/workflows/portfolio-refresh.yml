@@ -13,7 +13,46 @@ permissions:
   contents: write
 
 jobs:
+  # The 23:10 Pacific scheduled task on the local machine dispatches this
+  # workflow directly; the cron above is the backstop for nights that machine is
+  # off. GitHub has been firing schedule events 6-12h late since 2026-08-27, so
+  # by the time a cron lands the dispatcher has usually already run — and the
+  # late run would re-scrape and overwrite that snapshot with whatever the
+  # numbers look like eight hours on.
+  #
+  # So on the schedule path only: if today's UTC data is already committed, stop
+  # here. workflow_dispatch always runs — that is how the dispatcher itself
+  # arrives, and it keeps a manual force-refresh possible.
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          DATA: "Suzerain Design System/ui_kits/personal_site/data/portfolio.json"
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, pathlib
+          from datetime import datetime, timezone
+          today = datetime.now(timezone.utc).date().isoformat()
+          p = pathlib.Path(os.environ["DATA"])
+          gen = ""
+          if p.exists():
+              gen = str(json.loads(p.read_text()).get("generatedAt") or "")[:10]
+          fresh = gen == today
+          run = not (os.environ["EVENT"] == "schedule" and fresh)
+          print(f"event={os.environ['EVENT']} generatedAt={gen or 'none'} "
+                f"today={today} already-fresh={fresh} -> run={run}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              print(f"run={'true' if run else 'false'}", file=f)
+          PYEOF
+
   refresh:
+    needs: guard
+    if: needs.guard.outputs.run == 'true'
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
