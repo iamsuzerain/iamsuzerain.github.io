@@ -39,11 +39,16 @@ function fmtPctBare(n, dp = 1) {
   return (n * 100).toFixed(dp) + '%';
 }
 
-// The rf a risk tile was charged, for its kicker. A null rate means the fed
-// funds file did not load, and the Sharpe next to it is the rf-0 figure — say
-// "0", because that is the assumption the number was computed under.
-function pfRfLabel(rf) {
-  return rf ? fmtPctBare(rf, 1) : '0';
+// The Sharpe tile's kicker. The interval, not the rf it was charged: a lone
+// Sharpe reads as a measurement when it is really an estimate, and on this
+// book's sample the band runs 0.67–5.08 — which is the thing a reader most
+// needs and least expects. Falls back to naming what the Sharpe is measured
+// against when there is no interval to print (too few sessions, or a risk
+// block written before the field existed).
+function pfCiLabel(r) {
+  return (r && r.sharpeLo != null && r.sharpeHi != null)
+    ? `95% ci ${fmtNum(r.sharpeLo)} – ${fmtNum(r.sharpeHi)}`
+    : 'excess of cash';
 }
 
 // ---------- shared daily-return helpers ----------
@@ -265,10 +270,10 @@ function pfAlphaDollars(pnl, nav, benchSeries) {
   return pnl.map((p, i) => ({ d: p.d, v: +(p.v - notional * b[i]).toFixed(2) }));
 }
 
-// Sharpe / annualized vol / max drawdown over a (windowed) TWR series. Mirrors
-// the Python build_risk: daily HPRs off the 1+v wealth curve, 252-day
-// annualized, excess of the fed funds rate in force on each day (rfRows =
-// data/riskfree.json's series; omit it and this is the old rf-0 figure).
+// Sharpe / Sortino / annualized vol / max drawdown over a (windowed) TWR
+// series. Mirrors the Python build_risk: daily HPRs off the 1+v wealth curve,
+// 252-day annualized, excess of the fed funds rate in force on each day (rfRows
+// = data/riskfree.json's series; omit it and this is the old rf-0 figure).
 // Returns null for windows with too few points.
 //
 // The window matters more here than in the Python: that one only ever computes
@@ -299,9 +304,56 @@ function pfRiskWindow(perf, rfRows) {
   // the three tiles imply — sharpe = (ann return - rf) / ann vol — true as read.
   const vol = sd * Math.sqrt(PER);
   const sharpe = vol ? ((mean - meanRf) * PER) / vol : null;
+  // Sortino's denominator: the same excess series, but only the days that fell
+  // short of cash, and squared about a fixed 0 rather than about their own
+  // mean. Divided by every session and not just the losing ones — trailing cash
+  // rarely is the achievement, so the count belongs in the denominator — and by
+  // n rather than n-1, because a fixed threshold costs no degree of freedom.
+  // build_risk does this identically; the two have to agree on the convention
+  // or the tile and portfolio.json print different Sortinos for the same year.
+  let dvar = 0;
+  for (let i = 0; i < n; i++) { const e = Math.min(rets[i] - rfs[i], 0); dvar += e * e; }
+  const downside = Math.sqrt(dvar / n) * Math.sqrt(PER);
+  const sortino = downside ? ((mean - meanRf) * PER) / downside : null;
+
+  // How much of that Sharpe is sample rather than skill. The standard error of
+  // a Sharpe estimate widens with negative skew and with fat tails, and the
+  // fat-tail term scales with SR² — so a high Sharpe drawn from a lumpy
+  // distribution is a weaker claim than the same number drawn from a smooth
+  // one (Bailey & López de Prado 2012). The moments are of the excess series,
+  // since that is the series whose Sharpe this is, and γ₄ is raw kurtosis: 3
+  // is normal, not 0. ReturnDistribution's pfMoments reports excess kurtosis
+  // off the raw returns for a different purpose — the two are not interchangeable.
+  //
+  // Centered on `sharpe` above rather than on a separately derived estimate, so
+  // the printed interval always brackets the printed number. That costs a
+  // de-annualization: the variance formula wants a per-period SR.
+  let m2 = 0, m3 = 0, m4 = 0;
+  const exMean = mean - meanRf;
+  for (let i = 0; i < n; i++) {
+    const z = rets[i] - rfs[i] - exMean;
+    m2 += z * z; m3 += z * z * z; m4 += z * z * z * z;
+  }
+  const exSd = Math.sqrt(m2 / (n - 1));
+  let sharpeSe = null, sharpeLo = null, sharpeHi = null;
+  if (sharpe != null && exSd > 0) {
+    const g3 = (m3 / n) / exSd ** 3;
+    const g4 = (m4 / n) / exSd ** 4;
+    const srP = sharpe / Math.sqrt(PER);
+    const v = (1 - g3 * srP + ((g4 - 1) / 4) * srP ** 2) / (n - 1);
+    // The bracket can only go negative on a degenerate sample; guard rather
+    // than emit a NaN interval around a real Sharpe.
+    if (v > 0) {
+      sharpeSe = Math.sqrt(v) * Math.sqrt(PER);
+      sharpeLo = sharpe - 1.96 * sharpeSe;
+      sharpeHi = sharpe + 1.96 * sharpeSe;
+    }
+  }
+
   const dd = drawdownSeries(perf);
   const maxDrawdown = dd.length ? Math.min(0, ...dd.map(p => p.v)) : 0;
-  return { sharpe, vol, maxDrawdown, rf: meanRf ? meanRf * PER : null };
+  return { sharpe, sortino, vol, downside, sharpeSe, sharpeLo, sharpeHi,
+    maxDrawdown, rf: meanRf ? meanRf * PER : null };
 }
 
 // ---------- distribution moments ----------
@@ -1379,8 +1431,14 @@ function Portfolio() {
       </div>
 
       {risk && (
-        <div className="pf-stats pf-stats-risk">
-          <StatTile label="sharpe"  value={fmtNum(winRisk.sharpe)}          kicker={`excess of cash · rf ${pfRfLabel(winRisk.rf)}`}/>
+        <div className="pf-stats pf-stats-5 pf-stats-risk">
+          <StatTile label="sharpe"  value={fmtNum(winRisk.sharpe)}          kicker={pfCiLabel(winRisk)}/>
+          {/* Sortino charges the same rf as Sharpe and divides by the same
+              excess returns — only the denominator changes, from every day's
+              spread to the shortfall days alone. So the kicker prints that
+              denominator rather than repeating the rf: the gap between it and
+              the vol tile two along is the entire reason this tile is here. */}
+          <StatTile label="sortino" value={fmtNum(winRisk.sortino)}         kicker={`downside dev ${fmtPctBare(winRisk.downside)}`}/>
           <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
           <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)} kicker="peak-to-trough"/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}

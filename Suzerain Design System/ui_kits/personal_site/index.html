@@ -588,6 +588,19 @@
   }
   /* second stat row (risk metrics) sits tight under the P&L row */
   .pf-stats-risk { margin-top: -18px; }
+  /* Five across once Sortino sits next to Sharpe. The value size comes down a
+     notch and the kicker's tracking tightens so "downside dev 11.2%" still
+     fits one line at a fifth of the width — the same trade .cmb-risk-grid-5
+     makes for the same reason. */
+  .pf-stats-5 { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .pf-stats-5 .pf-stat { padding: 16px 14px; }
+  .pf-stats-5 .pf-stat-value { font-size: 26px; }
+  .pf-stats-5 .pf-stat-kicker { letter-spacing: 0.06em; }
+  /* Cramped well before the 640px two-column rule takes over, so drop to three
+     in between. Below 640 the shared .pf-stats query wins on source order. */
+  @media (max-width: 900px) {
+    .pf-stats-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
   .pf-strip-head {
     display: flex; justify-content: space-between; align-items: baseline;
     margin-top: 16px; margin-bottom: 2px;
@@ -709,17 +722,25 @@
   }
   .cmb-risk-grid .pf-stat + .pf-stat { border-left: 1px solid var(--border-soft); }
   .cmb-risk-grid .pf-stat:first-child { padding-left: 0; }
-  /* Five columns once the correlation tile joins. Tighter padding and a smaller
-     value size keep "−0.00" and its longer kicker on one line at this width. */
+  /* Five columns for the base row, six once the correlation tile joins. Tighter
+     padding and a smaller value size keep "−0.00" and its longer kicker on one
+     line at these widths. */
   .cmb-risk-grid-5 { grid-template-columns: repeat(5, 1fr); }
   .cmb-risk-grid-5 .pf-stat { padding: 2px 14px; }
   .cmb-risk-grid-5 .pf-stat-value { font-size: 26px; }
-  .cmb-risk-grid-5 .pf-stat-kicker { letter-spacing: 0.06em; }
-  /* Five across gets cramped before the 640px two-column rule takes over, so
-     drop to three in between. Below 640 the shared .cmb-risk-grid query wins. */
+  .cmb-risk-grid-6 { grid-template-columns: repeat(6, 1fr); }
+  .cmb-risk-grid-6 .pf-stat { padding: 2px 12px; }
+  .cmb-risk-grid-6 .pf-stat-value { font-size: 24px; }
+  .cmb-risk-grid-5 .pf-stat-kicker,
+  .cmb-risk-grid-6 .pf-stat-kicker { letter-spacing: 0.06em; }
+  /* Five or six across gets cramped before the 640px two-column rule takes
+     over, so drop to three in between. Below 640 the shared .cmb-risk-grid
+     query wins. */
   @media (max-width: 900px) {
-    .cmb-risk-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 18px; }
-    .cmb-risk-grid-5 .pf-stat:nth-child(3n+1) { padding-left: 0; border-left: none; }
+    .cmb-risk-grid-5,
+    .cmb-risk-grid-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 18px; }
+    .cmb-risk-grid-5 .pf-stat:nth-child(3n+1),
+    .cmb-risk-grid-6 .pf-stat:nth-child(3n+1) { padding-left: 0; border-left: none; }
   }
 
   .pf-panel {

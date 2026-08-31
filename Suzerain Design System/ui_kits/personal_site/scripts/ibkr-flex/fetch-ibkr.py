@@ -831,7 +831,8 @@ def build_risk(perf_series: list[dict], positions: list[dict],
             rets.append(wealth[i] / wealth[i - 1] - 1.0)
             rfs.append(steps[i])
 
-    sharpe = vol = sortino = rf_ann = None
+    sharpe = vol = sortino = downside = rf_ann = None
+    sharpe_se = sharpe_lo = sharpe_hi = None
     if len(rets) >= 20:
         n = len(rets)
         mean = sum(rets) / n
@@ -839,14 +840,42 @@ def build_risk(perf_series: list[dict], positions: list[dict],
         sd = math.sqrt(var)
         excess = [r - f for r, f in zip(rets, rfs)]
         # Downside deviation about the risk-free rate: a day that merely lagged
-        # cash is not a loss, so only excess below 0 contributes.
+        # cash is not a loss, so only excess below 0 contributes. The sum
+        # divides by every session rather than by the losing ones, so a book
+        # that rarely trails cash is credited for the count instead of having
+        # its handful of bad days averaged into a large denominator. n, not
+        # n-1, because the threshold is a fixed 0 and not an estimated mean:
+        # there is no degree of freedom to give back.
         dvar = sum(min(e, 0.0) ** 2 for e in excess) / n
-        dd = math.sqrt(dvar)
         ann_excess = (sum(excess) / n) * TRADING_DAYS
         rf_ann = (sum(rfs) / n) * TRADING_DAYS
         vol = sd * math.sqrt(TRADING_DAYS)
+        downside = math.sqrt(dvar) * math.sqrt(TRADING_DAYS)
         sharpe = ann_excess / vol if vol else None
-        sortino = ann_excess / (dd * math.sqrt(TRADING_DAYS)) if dd else None
+        sortino = ann_excess / downside if downside else None
+
+        # How much of that Sharpe is sample rather than skill. The standard
+        # error of a Sharpe estimate widens with negative skew and with fat
+        # tails, and the fat-tail term scales with SR**2, so a high Sharpe off
+        # a lumpy distribution is a weaker claim than the same number off a
+        # smooth one (Bailey & Lopez de Prado 2012). Moments are of the excess
+        # series, and g4 is raw kurtosis: 3 is normal, not 0.
+        #
+        # Centered on `sharpe` above rather than on a separately derived
+        # estimate, so the interval always brackets the number published beside
+        # it. pfRiskWindow in Portfolio.jsx does this identically -- the tiles
+        # recompute per range window, and the two have to agree on the year.
+        ex_mean = sum(excess) / n
+        ex_sd = math.sqrt(sum((e - ex_mean) ** 2 for e in excess) / (n - 1))
+        if sharpe is not None and ex_sd > 0:
+            g3 = sum(((e - ex_mean) / ex_sd) ** 3 for e in excess) / n
+            g4 = sum(((e - ex_mean) / ex_sd) ** 4 for e in excess) / n
+            sr_p = sharpe / math.sqrt(TRADING_DAYS)
+            var_sr = (1 - g3 * sr_p + (g4 - 1) / 4 * sr_p ** 2) / (n - 1)
+            if var_sr > 0:
+                sharpe_se = math.sqrt(var_sr) * math.sqrt(TRADING_DAYS)
+                sharpe_lo = sharpe - 1.96 * sharpe_se
+                sharpe_hi = sharpe + 1.96 * sharpe_se
 
     # Drawdown over the wealth curve: peak-to-trough decline as a negative ratio.
     max_dd = cur_dd = 0.0
@@ -871,6 +900,18 @@ def build_risk(perf_series: list[dict], positions: list[dict],
         "sharpe": round(sharpe, 2) if sharpe is not None else None,
         "sortino": round(sortino, 2) if sortino is not None else None,
         "vol": round(vol, 4) if vol is not None else None,
+        # Sortino's denominator, annualized like vol. Published alongside the
+        # ratio because it is the whole content of the comparison: sortino
+        # beats sharpe by exactly the amount this sits below vol, and a reader
+        # who cannot see it has to take the spread on faith.
+        "downside": round(downside, 4) if downside is not None else None,
+        # The 95% interval around the Sharpe above, and the standard error it
+        # was built from. Published so a reader of the raw JSON sees the same
+        # uncertainty the tile prints, and so the tile has something to fall
+        # back on for windows too short to estimate it in the browser.
+        "sharpeSe": round(sharpe_se, 2) if sharpe_se is not None else None,
+        "sharpeLo": round(sharpe_lo, 2) if sharpe_lo is not None else None,
+        "sharpeHi": round(sharpe_hi, 2) if sharpe_hi is not None else None,
         # The average fed funds rate over the window, as a ratio — the rf the
         # Sharpe above was actually charged, annualized the same way. None (not
         # 0) when the series was missing, so a reader can tell "cash paid

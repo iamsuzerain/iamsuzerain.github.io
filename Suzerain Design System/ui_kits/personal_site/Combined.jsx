@@ -907,6 +907,37 @@ function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
   // the published volatility stays the book's own.
   const vol = sd * Math.sqrt(PER);
   const sharpe = vol ? ((mean - meanRf) * PER) / vol : null;
+  // Downside deviation about the same per-day rf, divided by every session and
+  // about a fixed 0 — see pfRiskWindow in Portfolio.jsx for the convention and
+  // why it is the one build_risk uses. Only PER differs here, and it differs
+  // for both halves of the ratio at once.
+  let dvar = 0;
+  for (let i = 0; i < n; i++) { const e = Math.min(rp[i] - rf[i], 0); dvar += e * e; }
+  const downside = Math.sqrt(dvar / n) * Math.sqrt(PER);
+  const sortino = downside ? ((mean - meanRf) * PER) / downside : null;
+
+  // Standard error of the Sharpe, widened for skew and fat tails — see
+  // pfRiskWindow in Portfolio.jsx for the formula and why the interval is
+  // centered on the printed Sharpe rather than on its own estimate.
+  let m2 = 0, m3 = 0, m4 = 0;
+  const exMean = mean - meanRf;
+  for (let i = 0; i < n; i++) {
+    const z = rp[i] - rf[i] - exMean;
+    m2 += z * z; m3 += z * z * z; m4 += z * z * z * z;
+  }
+  const exSd = Math.sqrt(m2 / (n - 1));
+  let sharpeSe = null, sharpeLo = null, sharpeHi = null;
+  if (sharpe != null && exSd > 0) {
+    const g3 = (m3 / n) / exSd ** 3;
+    const g4 = (m4 / n) / exSd ** 4;
+    const srP = sharpe / Math.sqrt(PER);
+    const v = (1 - g3 * srP + ((g4 - 1) / 4) * srP ** 2) / (n - 1);
+    if (v > 0) {
+      sharpeSe = Math.sqrt(v) * Math.sqrt(PER);
+      sharpeLo = sharpe - 1.96 * sharpeSe;
+      sharpeHi = sharpe + 1.96 * sharpeSe;
+    }
+  }
   const rfAnn = meanRf ? meanRf * PER : null;
 
   let peak = eq[0], maxDD = 0;
@@ -933,7 +964,8 @@ function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
       if (vb > 0 && va > 0) { beta = cov / vb; r2 = (cov * cov) / (vb * va); }
     }
   }
-  return { sharpe, vol, maxDD, beta, r2, rf: rfAnn };
+  return { sharpe, sortino, vol, downside, sharpeSe, sharpeLo, sharpeHi,
+    maxDD, beta, r2, rf: rfAnn };
 }
 
 // ---------- cross-book correlation: does polymarket diversify ibkr? ----------
@@ -1838,9 +1870,21 @@ function Combined({ setView }) {
             <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
-          <div className={`cmb-risk-grid${data.corr ? ' cmb-risk-grid-5' : ''}`}>
+          <div className={`cmb-risk-grid ${data.corr ? 'cmb-risk-grid-6' : 'cmb-risk-grid-5'}`}>
+            {/* The interval, not the rf — same call as the ibkr tab's sharpe
+                tile, and for the same reason: the band is what a lone Sharpe
+                hides. Falls back to naming the benchmark when the sample is
+                too short to bracket. */}
             <CmbStat label="sharpe"  value={risk.sharpe != null ? risk.sharpe.toFixed(2) : '—'}
-              note={`excess of cash · rf ${risk.rf ? pct1(risk.rf) : '0'}`}/>
+              note={risk.sharpeLo != null
+                ? `95% ci ${risk.sharpeLo.toFixed(2)} – ${risk.sharpeHi.toFixed(2)}`
+                : 'excess of cash'}/>
+            {/* Same rf and same excess returns as the tile to its left; only
+                the denominator narrows to the shortfall days. The note prints
+                that denominator, so its distance from the vol tile is legible
+                without arithmetic. */}
+            <CmbStat label="sortino" value={risk.sortino != null ? risk.sortino.toFixed(2) : '—'}
+              note={`downside dev ${risk.downside != null ? pct1(risk.downside) : '—'}`}/>
             <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
             <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
