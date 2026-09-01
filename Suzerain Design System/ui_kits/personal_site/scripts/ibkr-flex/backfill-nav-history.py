@@ -24,8 +24,22 @@ Usage:
   backfill-nav-history.py [--write] [--out PATH]
 Prints a summary by default; only touches nav-history.json with --write.
 
-Stdlib only (shells out to git). Safe to re-run: output is a pure function of
-git history plus the working-tree portfolio.json.
+Stdlib only (shells out to git). Output is a pure function of the replay corpus
+plus the working-tree portfolio.json.
+
+The corpus is NOT this repo. On 2026-09-01 the public repo's history was
+rewritten to drop every historical portfolio.json snapshot -- they published the
+book position by position, day by day, to anyone who could run `git log`. What
+survives here reaches back only to that rewrite. The full pre-rewrite history is
+preserved privately, and that is what this script wants:
+
+    git clone -b site-pre-scrub/main https://github.com/iamsuzerain/warehouse.git site-history
+    cd site-history
+    python "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/backfill-nav-history.py"
+
+Point it at this repo instead and the replay is a handful of snapshots rather
+than a few hundred, so --write refuses to shrink an existing nav-history.json
+unless --allow-shrink says that is really what you meant.
 """
 from __future__ import annotations
 import argparse, importlib.util, json, os, subprocess, sys
@@ -77,6 +91,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true", help="write nav-history.json (default: dry run)")
     ap.add_argument("--out", default=os.path.join(DATA, "nav-history.json"))
+    ap.add_argument("--allow-shrink", action="store_true",
+                    help="write even if the rebuild is shorter than the file on disk")
     args = ap.parse_args()
 
     commits = git("log", "--reverse", "--format=%H", "--", PF_REL).split()
@@ -116,6 +132,24 @@ def main() -> int:
     if not args.write:
         print("dry run — pass --write to update nav-history.json", file=sys.stderr)
         return 0
+
+    # A rebuild shorter than what is already on disk means the replay corpus is
+    # wrong -- almost certainly this repo instead of the warehouse archive (see
+    # the module docstring). Writing anyway would quietly truncate the MAX range
+    # on the site's charts while the script reported success, which is the one
+    # failure mode here that looks exactly like a normal run.
+    if not args.allow_shrink:
+        try:
+            with open(args.out, encoding="utf-8") as f:
+                have = json.load(f).get("rows") or []
+        except (FileNotFoundError, ValueError):
+            have = []
+        if have and (len(rows) < len(have) or rows[0]["d"] > have[0]["d"]):
+            print(f"refusing to write: rebuild is {len(rows)} rows from "
+                  f"{rows[0]['d']}, on disk is {len(have)} rows from "
+                  f"{have[0]['d']} -- wrong replay corpus? use --allow-shrink "
+                  f"to override", file=sys.stderr)
+            return 1
 
     out = {
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
