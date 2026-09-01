@@ -949,12 +949,32 @@ function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
 
   // Beta vs the chosen benchmark, if its column is present (benchmark equity =
   // notional + that column's dollars).
+  //
+  // Paired session to session, not calendar day to calendar day, for the reason
+  // spelled out over pfPairedReturns in Portfolio.jsx: `series` is calendar-daily
+  // and the benchmark column is forward-filled raw closes, so a weekend or
+  // holiday enters as a day the benchmark returned exactly 0 while the book —
+  // polymarket trades every day — did not. Those days add variance to the book's
+  // leg without adding covariance, so they drag beta and deflate r2. The pull is
+  // mild on a book this uncorrelated (QTD beta 0.13 -> 0.15, r2 unmoved at 0.03)
+  // and would grow with the correlation.
+  //
+  // A day the column did not move is a day the benchmark did not trade; genuinely
+  // flat closes do not occur at four decimals. The first confirmed session only
+  // seeds `prev` — its own left endpoint is unverifiable — so this gives up one
+  // pair to keep every pair it does emit spanning the same days on both legs.
   let beta = null, r2 = null;
   if (series[0][benchKey] != null) {
     const beq = series.map(p => notional + (p[benchKey] || 0));
     const a = [], b = [];
+    let prev = -1;
     for (let i = 1; i < eq.length; i++) {
-      if (eq[i - 1] > 0 && beq[i - 1] > 0) { a.push(eq[i] / eq[i - 1] - 1); b.push(beq[i] / beq[i - 1] - 1); }
+      if (beq[i] === beq[i - 1]) continue;             // benchmark did not trade
+      if (prev >= 0 && eq[prev] > 0 && beq[prev] > 0) {
+        a.push(eq[i] / eq[prev] - 1);
+        b.push(beq[i] / beq[prev] - 1);
+      }
+      prev = i;
     }
     const m = a.length;
     if (m >= 20) {

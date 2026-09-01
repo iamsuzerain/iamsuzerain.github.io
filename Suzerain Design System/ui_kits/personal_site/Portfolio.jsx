@@ -68,15 +68,42 @@ function pfDailyReturns(perf) {
 
 // Portfolio and benchmark daily returns on one shared date axis, so every
 // paired statistic (beta, correlation, capture) compares like with like.
+//
+// The axis is the BENCHMARK's trading calendar, and each session pairs with the
+// previous session rather than the previous calendar day. The combined book is
+// sampled every calendar day (cmbSampleDaily in Combined.jsx) while polymarket
+// trades seven days a week, so pairing on the raw date axis forward-filled the
+// benchmark across weekends and holidays and manufactured days whose return was
+// exactly 0. pfCapture drops those from both buckets — they are neither b > 0
+// nor b < 0 — which threw away 19 of the 61 days in the 2026 Q3 window (the 18
+// weekend days plus july 3), carrying $34k of gross polymarket P&L, +$19k of it
+// net. Folding them back moved QTD up capture 53.9% -> 66.7%.
+//
+// Stepping session to session puts friday close -> monday close on BOTH legs:
+// contiguous, non-overlapping, and nothing discarded. Nearly a no-op for the
+// IBKR perfSeries, which carries no weekend rows — but not entirely one: Flex
+// still stamps a NAV row on the ten exchange holidays a year (labor day,
+// thanksgiving, good friday, juneteenth, ...), and those fold into the next
+// session here rather than entering beta as a zero-benchmark day.
 function pfPairedReturns(perf, benchSeries) {
   if (!perf || perf.length < 2 || !benchSeries) return null;
-  const bcum = rebaseBenchmark(benchSeries, perf.map(p => p.d));
+  const dates = perf.map(p => p.d);
+  const bcum = rebaseBenchmark(benchSeries, dates);
   if (!bcum) return null;
+  // At a session date the forward-fill in rebaseBenchmark resolves to that
+  // date's own close, so bcum is still the right column to read — we are only
+  // choosing which rows of it count.
+  const sessions = new Set(benchSeries.map(p => p.d));
   const out = [];
-  for (let i = 1; i < perf.length; i++) {
-    const pa = 1 + perf[i - 1].v, pb = 1 + perf[i].v;
-    const ba = 1 + bcum[i - 1], bb = 1 + bcum[i];
-    if (pa > 0 && ba > 0) out.push({ d: perf[i].d, p: pb / pa - 1, b: bb / ba - 1 });
+  let prev = -1;
+  for (let i = 0; i < perf.length; i++) {
+    if (!sessions.has(dates[i])) continue;   // weekend, holiday, or off-calendar
+    if (prev >= 0) {
+      const pa = 1 + perf[prev].v, pb = 1 + perf[i].v;
+      const ba = 1 + bcum[prev], bb = 1 + bcum[i];
+      if (pa > 0 && ba > 0) out.push({ d: dates[i], p: pb / pa - 1, b: bb / ba - 1 });
+    }
+    prev = i;
   }
   return out;
 }
