@@ -1101,8 +1101,16 @@ def build_pnl(root: ET.Element, nav_series: list[dict], nav: float, cash_flows: 
 
 
 def mask_account(acct_id: str) -> str:
-    if not acct_id: return "U••••"
-    return "U••••" + acct_id[-3:]
+    """Discard the account number entirely; the statement's id never ships.
+
+    This used to keep the last three digits. Nothing reads them -- the site
+    renders the result once, in the portfolio subhead -- but every committed
+    snapshot of portfolio.json carried them, so the repo's history published a
+    stable partial identifier a few hundred times over. A constant costs the
+    display nothing and leaves nothing to accumulate. acct_id is taken and
+    dropped on purpose: the call site is where the real number stops.
+    """
+    return "U••••"
 
 
 # ── Manual corrections for known-bad vendor marks ───────────────────────────
