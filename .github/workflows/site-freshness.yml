@@ -1,0 +1,99 @@
+name: site-freshness
+# Is the site actually serving what main says it should?
+#
+# Both times Pages has failed here, it failed silently. On 2026-08-06 the legacy
+# branch builder sat in deployment_in_progress past its timeout while
+# deploy-pages itself reported success, and the site served six-hour-old content.
+# On 2026-09-02 a deploy run parked on the github-pages environment gate — an
+# empty gate, no reviewers and no wait timer, so nothing to approve and nothing
+# to expire — and never started: no runner, not one step. It held the `pages`
+# concurrency group for 23 hours while every deploy behind it was coalesced away
+# as superseded, which is that group working exactly as designed and therefore
+# quiet. The site sat a day stale behind a green check on the last run to finish.
+#
+# Neither failure is reachable from inside deploy-pages. `timeout-minutes` only
+# bounds a job once a runner picks it up, and the 2026-09-02 job never got one;
+# the `timeout:` input to actions/deploy-pages (added and reverted the same
+# morning in 4f32a48 / d9f8e30) only ticks while the job is already running. So
+# this checks the outcome instead of the mechanism: whatever goes wrong upstream,
+# the published bundle stops matching main and this goes red.
+#
+# A failed run is the whole point — cancelled runs notify nobody, which is why
+# 2026-09-02 went unnoticed for a day. This one fails, and a failure emails.
+
+on:
+  schedule:
+    # Every four hours, deliberately off the top of the hour: GitHub queues the
+    # most schedule events at :00, and betmoar-refresh already documents a cron
+    # that sat there for months. Cadence is a ceiling, not a promise — schedule
+    # events have been landing 6-12h late since 2026-08-27. That only delays
+    # detection; it cannot produce a false alarm, because the verdict below is
+    # computed from the tip commit's own age rather than from when this runs.
+    - cron: '35 */4 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Depth 1 is enough: this needs the tip commit's timestamp, nothing older.
+      - uses: actions/checkout@v4
+
+      - name: compare published bundle against main
+        env:
+          # How long the tip of main may go undeployed before this is a fault
+          # rather than a deploy still in flight. A healthy deploy publishes in
+          # about thirty seconds, and Pages then fronts the HTML with a CDN that
+          # can hold it for ten minutes. An hour clears both by a wide margin and
+          # still catches an outage on the day it starts.
+          STALE_AFTER_MINUTES: 60
+        run: |
+          set -euo pipefail
+
+          expected="${GITHUB_SHA:0:8}"
+
+          # Cache-buster on the query string as well as the headers. The HTML is
+          # CDN-fronted, and a check that read a cached copy would report the
+          # previous deploy's sha and cry stale about a deploy that already
+          # landed. A site that cannot be fetched at all fails here, which is
+          # also worth waking up for.
+          live_html=$(curl -sS --fail --retry 3 --retry-delay 5 --max-time 30 \
+            -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
+            "https://iamsuzerain.github.io/?freshness=$(date -u +%s)")
+
+          # deploy-pages stamps the bundle with the commit sha precisely so a
+          # returning browser cannot silently reuse an old one. That stamp is
+          # also the only thing on the page that says which commit built it.
+          live=$(printf '%s' "$live_html" \
+            | grep -o 'app\.min\.js?v=[0-9a-f]\{8\}' | head -1 | sed 's/.*v=//' || true)
+
+          if [ -z "$live" ]; then
+            echo "::error::Published index.html carries no app.min.js?v=<sha> stamp — what is served is not a built page."
+            exit 1
+          fi
+
+          echo "published: $live"
+          echo "main:      $expected"
+
+          if [ "$live" = "$expected" ]; then
+            echo "site is current"
+            exit 0
+          fi
+
+          tip_epoch=$(git log -1 --format=%ct "$GITHUB_SHA")
+          age_min=$(( ( $(date -u +%s) - tip_epoch ) / 60 ))
+          echo "tip of main has been undeployed for ${age_min}m"
+
+          if [ "$age_min" -le "$STALE_AFTER_MINUTES" ]; then
+            echo "inside the ${STALE_AFTER_MINUTES}m grace window — a deploy is most likely still in flight"
+            exit 0
+          fi
+
+          echo "::error::Site is stale: serving $live, main is $expected, undeployed for ${age_min}m."
+          echo "First place to look is deploy-pages for a run stuck in waiting or queued. One"
+          echo "parked run holds the pages concurrency group, and every deploy behind it is"
+          echo "cancelled as superseded — silently, because that is the group working correctly."
+          exit 1
