@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T11:25:31Z",
+  "generatedAt": "2026-09-03T11:21:54Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -32,16 +32,16 @@
   },
   "headline": {
     "settlement": {
-      "n": 642,
-      "wins": 593,
+      "n": 643,
+      "wins": 594,
       "pushes": 0,
-      "hitRate": 0.9237,
-      "volume": 3606518.47,
-      "realizedPnl": 16519.91,
+      "hitRate": 0.9238,
+      "volume": 3626739.02,
+      "realizedPnl": 16539.37,
       "roi": 0.0046,
       "brier": 0.0418,
-      "avgImplied": 0.9027,
-      "edge": 0.021,
+      "avgImplied": 0.9029,
+      "edge": 0.0209,
       "calibrationError": 0.0299
     },
     "exit": {
@@ -224,16 +224,16 @@
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 177,
-        "wins": 176,
+        "n": 178,
+        "wins": 177,
         "pushes": 0,
         "winRate": 0.9944,
         "avgImplied": 0.9949,
-        "volume": 1167067.65,
-        "realizedPnl": 5525.3,
-        "grossPnl": 5807.88,
+        "volume": 1187288.2,
+        "realizedPnl": 5544.76,
+        "grossPnl": 5827.34,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.9687,
+        "wilsonLo": 0.9689,
         "wilsonHi": 0.999
       }
     ],
@@ -669,23 +669,23 @@
     },
     "sports": {
       "combined": {
-        "n": 280,
-        "volume": 727477.77,
-        "realizedPnl": -14846.64,
-        "roi": -0.0204,
-        "hitRate": 0.8065,
-        "avgImplied": 0.8207,
-        "edge": -0.0143,
-        "top1Share": 0.1512
+        "n": 281,
+        "volume": 747698.32,
+        "realizedPnl": -14827.18,
+        "roi": -0.0198,
+        "hitRate": 0.8071,
+        "avgImplied": 0.8214,
+        "edge": -0.0142,
+        "top1Share": 0.1511
       },
       "settlement": {
-        "n": 229,
-        "volume": 564003.24,
-        "realizedPnl": 8225.34,
-        "roi": 0.0146,
-        "hitRate": 0.8777,
-        "avgImplied": 0.8499,
-        "edge": 0.0278,
+        "n": 230,
+        "volume": 584223.79,
+        "realizedPnl": 8244.8,
+        "roi": 0.0141,
+        "hitRate": 0.8783,
+        "avgImplied": 0.8505,
+        "edge": 0.0277,
         "top1Share": 0.0821
       },
       "exit": {
@@ -733,10 +733,10 @@
     }
   },
   "openBook": {
-    "n": 97,
-    "cost": 143672.36,
-    "mark": 178725.1,
-    "unrealized": 35052.74
+    "n": 98,
+    "cost": 145422.35,
+    "mark": 182272.32,
+    "unrealized": 36849.96
   },
   "excluded": {
     "hedged": {
