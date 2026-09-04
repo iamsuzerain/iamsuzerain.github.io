@@ -9,18 +9,18 @@
     "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "totals": {
-    "trading": 6494,
+    "trading": 6856,
     "lp": 5982,
     "yield": 39,
     "maker": 1938,
     "taker": 81,
     "sponsored": 486,
     "uma": 0,
-    "fees": 2856
+    "fees": 2864
   },
   "balances": {
-    "positions": 187235,
-    "cash": 61960,
-    "nav": 249195
+    "positions": 191100,
+    "cash": 58852,
+    "nav": 249952
   }
 }
