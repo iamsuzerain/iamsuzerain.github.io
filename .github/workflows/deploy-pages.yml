@@ -44,10 +44,31 @@ jobs:
         with:
           node-version: 20
 
+      # esbuild is the only network dependency in the build, and it is a big one:
+      # the package declares 25 optional @esbuild/* platform deps (so npm fetches
+      # 26 packuments to pick one) plus a ~10MB linux-x64 binary. On 2026-09-04
+      # that cold install took 427s instead of the usual 5-7 — no error, no retry,
+      # just silence, because npm says nothing about a request that is slow rather
+      # than failing. Caching ~/.npm (which holds both _cacache and the _npx
+      # install) and preferring it over revalidation keeps the registry off the
+      # critical path once the key is warm.
+      - name: cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-esbuild-0.25.0
+
       # Pre-compile JSX so the published site doesn't ship Babel standalone
       # (~2.5MB) or transpile in the browser. Local dev still uses in-browser
       # Babel via the text/babel tags in index.html.
+      #
+      # timeout-minutes bounds a stall: this job holds the `pages` concurrency
+      # group, so without it a hung npx blocks every refresh bot's deploy behind
+      # it for the 6-hour job default.
       - name: bundle jsx
+        timeout-minutes: 3
+        env:
+          npm_config_prefer_offline: "true"
         working-directory: Suzerain Design System/ui_kits/personal_site
         run: |
           : > app.min.js
@@ -69,6 +90,9 @@ jobs:
       # step. The source file's comments are ~60% of its bytes and exist for the
       # next person editing the tokens, not for anyone loading the page.
       - name: minify css
+        timeout-minutes: 3
+        env:
+          npm_config_prefer_offline: "true"
         working-directory: Suzerain Design System/ui_kits/personal_site
         run: |
           npx -y esbuild@0.25.0 colors_and_type.css --minify > colors_and_type.min.css
