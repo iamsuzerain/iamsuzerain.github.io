@@ -61,7 +61,25 @@
   .sz-skyline-photo {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
+    /* The photo is the heaviest thing the site serves and it is on every route,
+       so it pays for itself in AVIF: the same 2560x1440 pixels at q58 are 234KB
+       against the 4.1MB baseline JPEG, and at 1:1 both the lit windows and the
+       rain streaks — the low-contrast detail a lossy codec erases first — come
+       through. Two declarations rather than one: a browser without image-set()
+       drops the second and keeps the url() above it, which is why the .jpg is
+       now a 508KB progressive re-encode and not the original master (that is
+       still in git history if it is ever wanted back).
+       No narrow-viewport tier on purpose. background-size: cover on a portrait
+       phone scales by height, so 1440px tall is already being upscaled ~1.8x
+       there — mobile wants more pixels than the desktop does, not fewer, and a
+       downscaled variant would only buy ~150KB by making the worst case softer.
+       If mobile ever needs its own file it should be a portrait crop, which is
+       a composition decision, not a compression one. */
     background-image: url('assets/window-view.jpg');
+    background-image: image-set(
+      url('assets/window-view.avif') type('image/avif'),
+      url('assets/window-view.webp') type('image/webp'),
+      url('assets/window-view.jpg')  type('image/jpeg'));
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
