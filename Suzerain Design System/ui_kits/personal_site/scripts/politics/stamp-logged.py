@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Stamp `logged` on any endorsement that changed since the last commit.
+"""Stamp the log's dates: `logged` per endorsement, `updated` for the file.
 
 The date in the blurb is meant to say when a position was *taken*, which is
 not something worth hand-maintaining — it is exactly the kind of field that
 goes stale silently. This compares the working copy of politics.json against
 the committed one and stamps today's date on any race whose pick moved,
 leaving everything else alone.
+
+The header date the page prints ("updated <date>") speaks for the whole file
+rather than for any one race, so it rolls on any edit to the log — a race
+added, a note reworded, an enthusiasm cooled — and not only on a pick moving.
+A header that moved solely with the picks would keep claiming a freshness the
+rest of the file no longer has.
 
 Run it before committing a change to the log:
 
@@ -38,9 +44,13 @@ TRACKED = ("pick",)
 
 def committed_copy(path):
     """The version of politics.json in HEAD, or None if it isn't committed."""
+    # encoding is not optional: `text=True` alone decodes with the locale
+    # codepage, which on Windows is cp1252. The log is full of em dashes and
+    # accented names, and mangling them makes a race compare unequal to itself
+    # — which re-stamps it as "moved" on every single run.
     repo = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True, text=True, cwd=str(path.parent),
+        capture_output=True, text=True, encoding="utf-8", cwd=str(path.parent),
     )
     if repo.returncode != 0:
         return None
@@ -48,7 +58,7 @@ def committed_copy(path):
     rel = path.resolve().relative_to(root).as_posix()
     show = subprocess.run(
         ["git", "show", f"HEAD:{rel}"],
-        capture_output=True, text=True, cwd=str(root),
+        capture_output=True, text=True, encoding="utf-8", cwd=str(root),
     )
     if show.returncode != 0 or not show.stdout.strip():
         return None
@@ -73,6 +83,11 @@ def old_races(old, scope, place):
     return {race_key(r): r for r in races}
 
 
+def content(doc):
+    """Everything the header date speaks for — the file apart from itself."""
+    return {k: v for k, v in doc.items() if k != "updated"}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="report without writing")
@@ -90,6 +105,10 @@ def main():
     if old is None:
         print("no committed politics.json to compare against — "
               "stamping only races that have no date yet")
+
+    # Read before the loop below stamps anything, so a `logged` written by this
+    # run is never itself the edit that justifies rolling the header.
+    file_moved = old is not None and content(doc) != content(old)
 
     changed = []
     for scope in ("world", "us"):
@@ -116,14 +135,22 @@ def main():
                     if not args.check:
                         race["logged"] = today
 
-    if not changed:
-        print("no endorsements changed — nothing to stamp")
+    header = file_moved and doc.get("updated") != today
+    if not changed and not header:
+        print("nothing changed — nothing to stamp")
         return 0
 
-    verb = "would stamp" if args.check else "stamped"
-    print(f"{verb} {today} on {len(changed)}:")
-    for c in changed:
-        print(f"  {c}")
+    if changed:
+        verb = "would stamp" if args.check else "stamped"
+        print(f"{verb} {today} on {len(changed)}:")
+        for c in changed:
+            print(f"  {c}")
+
+    if header:
+        verb = "would roll" if args.check else "rolled"
+        print(f"{verb} the header date {doc.get('updated')} -> {today}")
+        if not args.check:
+            doc["updated"] = today
 
     if args.check:
         return 1
