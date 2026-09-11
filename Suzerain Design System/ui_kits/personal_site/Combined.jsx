@@ -415,8 +415,9 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // End the series on the last day either feed actually reports, not the wall
   // clock. Padding forward to `now` used to push the trailing-range cutoff a day
   // past the polymarket view's — same range name, window-start a day apart, and
-  // one day of polymarket P&L is four figures. Polymarket is fetched live so it
-  // is the fresher of the two; `max` therefore lands on the same last day the
+  // one day of polymarket P&L is four figures. Polymarket's tail is walked off
+  // the morning's betmoar scrape (szPmBookExtend), so it is the fresher of the
+  // two; `max` therefore lands on the same last day the
   // polymarket view sees, and clamping to `nowDay` keeps a future-dated file
   // from projecting the axis forward.
   const lastFeedDay = Math.max(
@@ -1831,23 +1832,10 @@ function Combined({ setView }) {
       // Every feed below is independent, so they all go out on the same tick.
       // This used to be a sequential await-chain: ten round trips end to end,
       // which on a slow link is most of the time spent on "merging feeds".
-      // Only the two genuine fallbacks (pnl snapshot, clob rewards) stay lazy —
+      // Only the two genuine fallbacks (live pnl, clob rewards) stay lazy —
       // they fire only when their primary comes back empty.
       const pPromise    = window.szJson('data/portfolio.json');
-      // `null` for a wallet whose call failed, so the sum below can tell that
-      // apart from a wallet with no history. Summing a failed wallet as zero
-      // silently drops its entire book out of the polymarket curve — the two
-      // wallets currently sit at roughly -$34k and +$34k, so either one going
-      // missing moves the combined line by tens of thousands of dollars and
-      // nothing on the page says the feed was short.
-      const pmPromise   = Promise.all(
-        CMB_WALLETS.map(w =>
-          fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(10000) })
-            .then(r => r.ok ? r.json() : null)
-            .then(j => Array.isArray(j) ? j : null)
-            .catch(() => null)
-        )
-      );
+      const pnlSnapP    = cmbGetJson('data/polymarket-pnl.json');
       const contentP    = cmbGetJson('data/content.json');
       const benchP      = cmbGetJson('data/benchmarks.json');
       const rfP         = cmbGetJson('data/riskfree.json');
@@ -1858,16 +1846,37 @@ function Combined({ setView }) {
 
       const portfolio = await pPromise;
 
-      // Polymarket: live API per wallet (summed), fall back to the daily snapshot
-      // cron. All-or-nothing: a partial live answer is discarded rather than
-      // charted, because the snapshot is summed across every wallet or not
-      // written at all, which makes it the more truthful of the two.
+      // Polymarket: the daily snapshot, and the live API per wallet (summed) only
+      // when that is missing. It used to be the other way round, and the live
+      // call was nearly all of the wait on "merging feeds": user-pnl-api computes
+      // the series cold, 2-8s a wallet on a first call, while every file above
+      // lands in one same-origin round trip. None of what it added over the
+      // snapshot survived the build, either — cmbPmPoints hands the rows to
+      // szPmBookExtend, which drops every point past SZ_PM_BOOK_SEAM and walks
+      // the tail off the breakdown history, so the only rows this page reads
+      // are settled ones the snapshot already holds. Checked 2026-09-11: the
+      // same series from either source, `corr` equal to 15 places (the snapshot
+      // rounds to 3dp, the live sum carries float noise).
       let pmRows = [];
-      const pmLists = await pmPromise;
-      if (!pmLists.some(l => l == null)) pmRows = cmbSumPnlSeries(pmLists);
+      const snap = await pnlSnapP;
+      if (snap) pmRows = snap.rows || [];
       if (!pmRows.length) {
-        const snap = await cmbGetJson('data/polymarket-pnl.json');
-        if (snap) pmRows = snap.rows || [];
+        // All-or-nothing: `null` for a wallet whose call failed, and one null
+        // discards the lot. Summing a failed wallet as zero silently drops its
+        // entire book out of the polymarket curve — the two wallets currently
+        // sit at roughly -$34k and +$34k, so either one going missing moves the
+        // combined line by tens of thousands of dollars and nothing on the page
+        // says the feed was short. The budget is sized for the cold path, as on
+        // the polymarket view: a cold call has been measured at 7.8s.
+        const pmLists = await Promise.all(
+          CMB_WALLETS.map(w =>
+            fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(25000) })
+              .then(r => r.ok ? r.json() : null)
+              .then(j => Array.isArray(j) ? j : null)
+              .catch(() => null)
+          )
+        );
+        if (!pmLists.some(l => l == null)) pmRows = cmbSumPnlSeries(pmLists);
       }
 
       // Dated log entries → chart annotations; pmTransfers is the manually
@@ -1925,7 +1934,7 @@ function Combined({ setView }) {
       <div className="sz-kicker">◆ book</div>
       <h2 className="sz-h2">couldn't build book feed.</h2>
       <p><code>{err}</code></p>
-      <p className="sz-dim">needs <code>data/portfolio.json</code> (daily IBKR cron). polymarket is fetched live.</p>
+      <p className="sz-dim">needs <code>data/portfolio.json</code> (daily IBKR cron). polymarket reads <code>data/polymarket-pnl.json</code>, live if that is missing.</p>
     </section>
   );
   if (!data) return (

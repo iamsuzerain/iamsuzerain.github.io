@@ -1,6 +1,7 @@
 name: polymarket-pnl-refresh
-# Snapshots the Polymarket cumulative user-pnl series daily so the Total view
-# has a durable fallback when the live data-api is unreachable.
+# Snapshots the Polymarket cumulative user-pnl series daily. The book view reads
+# it first, with the live user-pnl-api as its fallback; the polymarket view draws
+# it while its own live call is out.
 
 on:
   schedule:
