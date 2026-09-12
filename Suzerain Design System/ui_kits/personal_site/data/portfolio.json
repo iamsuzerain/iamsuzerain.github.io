@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T04:51:47Z",
+  "generatedAt": "2026-09-12T06:10:57Z",
   "account": {
     "id": "U\u2022\u2022\u2022\u2022",
     "currency": "USD",
@@ -37,9 +37,9 @@
     "maxDrawdown": -0.0706,
     "currentDrawdown": -0.0706,
     "concentration": {
-      "top": 211.6406,
-      "top3": 212.3187,
-      "hhi": 44792.0497
+      "top": 0.2946,
+      "top3": 0.6582,
+      "hhi": 0.1734
     }
   },
   "contribution": [
@@ -3472,7 +3472,7 @@
   "allocation": [
     {
       "label": "us equities",
-      "pct": 0.0028395946599479257,
+      "pct": 0.3241838657133379,
       "gross": 437839.0,
       "net": 437839.0,
       "short": false,
@@ -3480,7 +3480,7 @@
     },
     {
       "label": "crypto",
-      "pct": 2.3156783906923928e-05,
+      "pct": 0.0026437068044678886,
       "gross": 3570.56,
       "net": 3570.56,
       "short": false,
@@ -3488,7 +3488,7 @@
     },
     {
       "label": "options",
-      "pct": 0.0018992308166507611,
+      "pct": 0.21682671710441745,
       "gross": 292843.67,
       "net": 64169.23,
       "short": false,
@@ -3496,15 +3496,15 @@
     },
     {
       "label": "futures",
-      "pct": 0.9938216754359205,
-      "gross": 153238028.9,
-      "net": 153238028.9,
+      "pct": 0.29464822248548955,
+      "gross": 397948.5,
+      "net": 397948.5,
       "short": false,
       "color": "#34d399"
     },
     {
       "label": "cash",
-      "pct": 0.00012960587895442373,
+      "pct": 0.014796525522199197,
       "gross": 19984.02,
       "net": 19984.02,
       "short": false,
@@ -3512,7 +3512,7 @@
     },
     {
       "label": "other",
-      "pct": 0.001286736424619514,
+      "pct": 0.14690096237008798,
       "gross": 198402.75,
       "net": 198402.75,
       "short": false,
@@ -3524,13 +3524,18 @@
       "symbol": "ZQU6",
       "name": "ZQ SEP26",
       "qty": 382.0,
-      "mktValue": 153238028.895,
-      "costBasis": 153292665.95000005,
+      "mktValue": 397948.5,
+      "costBasis": 0.0,
       "unrealized": -54637.055,
       "assetClass": "FUT",
       "subCategory": "",
       "currency": "USD",
-      "weight": 211.6406119059765
+      "shockBp": 25.0,
+      "contractValue": 153238028.895,
+      "contractCost": 153292665.95000005,
+      "face": 1910000000.0,
+      "dv01": 15917.94,
+      "weight": 0.5496159449086568
     },
     {
       "symbol": "MU",
