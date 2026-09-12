@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11",
+  "generatedAt": "2026-09-12",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -9,7 +9,7 @@
     "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "totals": {
-    "trading": 26268,
+    "trading": 60468,
     "lp": 7480,
     "yield": 39,
     "maker": 3358,
@@ -19,8 +19,8 @@
     "fees": 2931
   },
   "balances": {
-    "positions": 267020,
-    "cash": 4969,
-    "nav": 271990
+    "positions": 303050,
+    "cash": 2913,
+    "nav": 305963
   }
 }
