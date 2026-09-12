@@ -300,6 +300,37 @@ other by eye every time the page is opened.
 - **NAV time series** needs a Flex period of at least `Month to Date`, ideally
   `Year to Date` or `Last 365 Calendar Days`. Shorter periods give a short
   sparkline.
+- **`positionValue` on a future is not a position size.** It is quantity x mark
+  x price multiplier — a quoted contract value. Taken as size, 382 ZQ read $153M
+  against a $751k NAV: a 204x weight that put the allocation donut at 99%
+  futures and HHI at 41,609. The open-trade equity (`fifoPnlUnrealized`) is no
+  better — it is a P&L rather than a size, it depends on entry price, and it is
+  not in NAV anyway, since futures settle to cash daily (NAV minus cash minus
+  every non-futures market value leaves $82.76, not −$22,801). Margin would be
+  the honest answer to what the position costs and it isn't available: no
+  Activity Flex section carries it, this runs in Actions with no TWS to ask, and
+  it moves with volatility and by contract month, so a figure fetched today is
+  wrong by the next roll. So a rate future is sized by its **risk**: `mktValue` =
+  `dv01` x `RATE_SHOCK_BP`, currently 25bp — one FOMC move, the unit the fed
+  funds market trades in. `costBasis` = 0, the quoted numbers are preserved as
+  `contractValue` / `contractCost`, and `face` (382 x $5M = $1.91B) is published
+  but never sizes anything: $1.91B of one-month fed funds has the duration of
+  ~$16M of 10-year paper, so the notional reads as leverage the position doesn't
+  carry.
+- **`FUTURES_SPECS` holds only permanent contract definitions,** keyed by
+  commodity root — `face` and `perBp`, neither of which ever changes. That's
+  what makes the sizing self-maintaining: nothing to re-read on a roll. `perBp`
+  is also the switch: a root that has one is rate-quoted and sizes off dv01, and
+  a price-quoted contract (ES, GC, CL) has none, so its contract value stands as
+  the size — for those it genuinely *is* the notional exposure. A root missing
+  from the table falls back to contract value and prints `futures-spec: no spec
+  for root …` to stderr: correct for a price-quoted contract, and loud enough to
+  catch a rate contract that needs adding.
+- **Concentration is computed on shares of gross exposure,** not the
+  `mktValue / NAV` weight on each row. A book holding futures is levered against
+  NAV, so those weights sum past 1 — which would put top-3 over 100% and HHI
+  past its own ceiling of 1. Shares of gross sum to 1 by construction, so top /
+  top-3 / HHI keep their scale whatever `RATE_SHOCK_BP` is set to.
 
 ---
 
