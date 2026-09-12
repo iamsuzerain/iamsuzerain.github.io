@@ -112,6 +112,99 @@ def classify(asset_class: str, sub_category: str, currency: str) -> str:
     return "other"
 
 
+# ── Futures contract specs ──────────────────────────────────────────────────
+# IBKR reports OpenPosition/positionValue for a future as quantity x mark x
+# price multiplier. That is a quoted contract value, and it is neither the size
+# of the position nor its exposure. Read as position size it is off by four
+# orders of magnitude: 382 ZQ at 96.29 reports $153M of "value" against a $751k
+# NAV, a 204x weight, and one line swamps every position-weighted number
+# downstream — the allocation donut reads 99% futures, and top / top-3 / HHI
+# concentration go to 204 / 205 / 41609.
+#
+# The open-trade equity (fifoPnlUnrealized) is not the answer either. It is a
+# P&L, not a size: two identical 382-lot positions opened a month apart at
+# different prices carry the same risk and would report different "values". It is
+# also not in NAV — futures settle to cash daily, so NAV minus cash minus every
+# non-futures market value leaves $82.76, not the -$22,801 of open-trade equity.
+# Sizing a leg by it double-counts against the cash slice that already holds it.
+#
+# Margin would be the honest answer to what a futures position costs the book,
+# and it is not available: no Activity Flex section carries per-position margin,
+# this runs in Actions where there is no TWS to ask, and the number moves with
+# volatility and by contract month, so one fetched today would be wrong by the
+# next roll. Anything that needs a human or a second feed to stay correct is not
+# a sizing rule this pipeline can keep.
+#
+# What it can compute is risk. A rate future's size is what a move in rates does
+# to it — dv01 x RATE_SHOCK_BP — and dv01 comes from the position and a per-bp
+# value that is a permanent property of the contract. Nothing to re-read, ever:
+#
+#   face — notional controlled:  382 x $5M    = $1.91B
+#   dv01 — P&L per basis point:  382 x $41.67 = $15,918/bp
+#   size — one 25bp Fed move:    15,918 x 25  = $397,948
+#
+# face is published but never used for sizing: $1.91B of one-month fed funds is
+# the duration of $16M of 10-year paper, so quoting the notional reads as
+# leverage the position does not carry. dv01 is the figure that travels.
+#
+# Specs are per commodity root (the key _futures_root() returns), and every field
+# is a contract definition that does not change. perBp is what makes a root
+# rate-quoted: a price-quoted contract (ES, GC, CL) has none, and its contract
+# value genuinely is its notional exposure, so that stands as the size. A root
+# missing from the table falls back to contract value and says so on stderr —
+# right for a price-quoted contract, and loud enough to catch a rate contract
+# that needs adding.
+FUTURES_SPECS: dict[str, dict] = {
+    # CME 30-Day Federal Funds: $5,000,000 notional, $41.67 per basis point.
+    "ZQ": {"face": 5_000_000.0, "perBp": 41.67},
+}
+
+# The shock every rate future is sized by. 25bp is one FOMC move — the unit the
+# fed funds market actually trades in — so the sizing value answers "what does
+# one Fed move do to this leg" rather than quoting a notional nobody has at risk.
+# Change it here and every downstream number moves together; 10bp keeps futures
+# near a fifth of this book, 100bp puts them at twice its NAV.
+RATE_SHOCK_BP = 25.0
+
+
+def futures_sizing(symbol: str, qty: float, contract_value: float,
+                   contract_cost: float, unrealized: float) -> dict:
+    """The fields that re-size one futures leg (see FUTURES_SPECS).
+
+    mktValue becomes what RATE_SHOCK_BP is worth to the position, positive
+    whichever way it points (direction comes off contractValue in
+    build_allocation). The statement's own numbers stay under contractValue /
+    contractCost for anything that wants them back, and unrealized is left
+    exactly as reported: it is the leg's P&L and stays the leg's P&L.
+
+    costBasis goes to 0 so the positions table prints an em dash for return
+    rather than a number. Against contract value that column reads -0.01% for a
+    leg down 3% of the book, and a return on a shock figure is not a return on
+    anything. Publishing nothing beats publishing a second meaning in a column
+    that means cost-basis return on every other row.
+    """
+    root = _futures_root(symbol)
+    spec = FUTURES_SPECS.get(root)
+    if spec is None:
+        # Root only. This lands in a world-readable Actions log, so it carries no
+        # quantity and no dollar amount — the same rule as the flow canary.
+        print(f"futures-spec: no spec for root {root!r}; sizing that leg by its "
+              f"quoted contract value (see FUTURES_SPECS)", file=sys.stderr)
+        spec = {}
+    face, per_bp = spec.get("face"), spec.get("perBp")
+    dv01 = qty * per_bp if per_bp is not None else None
+    return {
+        "mktValue": round(abs(dv01) * RATE_SHOCK_BP, 2) if dv01 is not None
+                    else contract_value,
+        "costBasis": 0.0,
+        "shockBp": RATE_SHOCK_BP if dv01 is not None else None,
+        "contractValue": contract_value,
+        "contractCost": contract_cost,
+        "face": round(qty * face, 2) if face is not None else None,
+        "dv01": round(dv01, 2) if dv01 is not None else None,
+    }
+
+
 def build_positions(root: ET.Element) -> list[dict]:
     out = []
     for p in root.iter("OpenPosition"):
@@ -121,17 +214,23 @@ def build_positions(root: ET.Element) -> list[dict]:
         mkt = to_float(p.get("positionValue") or p.get("fifoPnlUnrealized"))
         cost = to_float(p.get("costBasisMoney"))
         unreal = to_float(p.get("fifoPnlUnrealized"))
-        out.append({
+        asset_class = p.get("assetCategory") or ""
+        row = {
             "symbol": symbol,
             "name": p.get("description") or symbol,
             "qty": qty,
             "mktValue": mkt,
             "costBasis": cost,
             "unrealized": unreal,
-            "assetClass": p.get("assetCategory") or "",
+            "assetClass": asset_class,
             "subCategory": p.get("subCategory") or "",
             "currency": p.get("currency") or "USD",
-        })
+        }
+        # FUT only. A futures *option* (FOP) quotes premium x multiplier, which
+        # is a real market value like any other option, so it is left alone.
+        if asset_class.upper() == "FUT":
+            row.update(futures_sizing(symbol, qty, mkt, cost, unreal))
+        out.append(row)
     return sorted(out, key=lambda r: -abs(r["mktValue"]))
 
 
@@ -149,22 +248,36 @@ def build_allocation(positions: list[dict], cash: float) -> list[dict]:
     Each slice reports |value| as `pct` (what the arc draws, summing to 1.0) and
     keeps the signed `net` and unsigned `gross` in dollars, so the UI can mark a
     bucket that is net short rather than implying every slice is a long.
+
+    A futures leg contributes what a RATE_SHOCK_BP move is worth to it rather
+    than a market value, because it has none to contribute — see FUTURES_SPECS.
+    That makes this a mixed denominator, market value plus rate risk at a stated
+    shock, which is the honest price of putting a contract that settles daily on
+    the same ring as a share of stock. The notional those contracts control is on
+    the position rows as `face`; it never sizes an arc.
     """
     buckets: dict[str, dict] = {}
 
     def bucket(k: str) -> dict:
-        return buckets.setdefault(k, {"gross": 0.0, "net": 0.0})
+        return buckets.setdefault(k, {"gross": 0.0, "net": 0.0, "dir": 0.0})
 
     for p in positions:
         b = bucket(classify(p["assetClass"], p["subCategory"], p["currency"]))
         b["gross"] += abs(p["mktValue"])
         b["net"] += p["mktValue"]
+        # Direction is read off the contracts, not the dollars. Everywhere else
+        # the sign of market value *is* the direction — a written option marks
+        # negative — but a futures leg's mktValue is what a rate shock is worth
+        # to it, positive whichever way the position points. contractValue
+        # carries the quantity's sign (futures rows only).
+        b["dir"] += p.get("contractValue", p["mktValue"])
     if cash:
         # A negative cash balance is a margin loan — real financing exposure, so
         # it counts toward gross rather than being dropped.
         b = bucket("cash")
         b["gross"] += abs(cash)
         b["net"] += cash
+        b["dir"] += cash
 
     total = sum(b["gross"] for b in buckets.values()) or 1.0
     # Canonical order first, then anything classify() emitted that isn't listed —
@@ -180,7 +293,7 @@ def build_allocation(positions: list[dict], cash: float) -> list[dict]:
             "pct": b["gross"] / total,
             "gross": round(b["gross"], 2),
             "net": round(b["net"], 2),
-            "short": b["net"] < 0,
+            "short": b["dir"] < 0,
             "color": CLASS_COLORS.get(k, "#5a4480"),
         })
     return alloc
@@ -805,7 +918,7 @@ def rf_steps(dates: list[str], rf_rows: list[dict], periods: int = TRADING_DAYS)
 
 
 def build_risk(perf_series: list[dict], positions: list[dict],
-               rf_rows: list[dict] | None = None) -> dict:
+               rf_rows: list[dict] | None = None, cash: float = 0.0) -> dict:
     """Risk/return analytics derived from the daily TWR curve (perf_series) and
     current positions. perf_series carries cumulative return as a ratio, so the
     wealth curve is 1 + v and daily HPRs are wealth_i / wealth_{i-1} - 1.
@@ -890,8 +1003,16 @@ def build_risk(perf_series: list[dict], positions: list[dict],
     if wealth and peak > 0:
         cur_dd = wealth[-1] / peak - 1.0
 
-    # Single-name concentration from portfolio weights (mktValue / NAV).
-    weights = sorted((abs(p.get("weight", 0.0)) for p in positions), reverse=True)
+    # Single-name concentration on shares of gross exposure — the same
+    # denominator build_allocation uses, Σ|market value| plus |cash| — rather
+    # than the mktValue/NAV weight carried on each row. A book holding futures is
+    # levered against NAV: those weights sum past 1, which puts top-3 over 100%
+    # and HHI past its own ceiling of 1, and both stop meaning anything. Shares
+    # of gross always sum to 1, so all three keep their scale however the
+    # futures legs are sized (see FUTURES_SPECS).
+    gross = sum(abs(p["mktValue"]) for p in positions) + abs(cash)
+    weights = sorted((abs(p["mktValue"]) / gross for p in positions),
+                     reverse=True) if gross > 0 else []
     top = weights[0] if weights else 0.0
     top3 = sum(weights[:3])
     hhi = sum(w * w for w in weights)  # Herfindahl index on position weights
@@ -1121,7 +1242,10 @@ def mask_account(acct_id: str) -> str:
 # POSITION_OVERRIDES — corrected total market value for a position leg, keyed by
 #   (date, symbol). Fixes the OpenPosition snapshot (weights/allocation) on the
 #   statement whose as-of date matches; a no-op on later statements, where that
-#   date is no longer the open-position snapshot.
+#   date is no longer the open-position snapshot. On a futures leg the value to
+#   write is the corrected open-trade equity: mktValue there is a shock figure
+#   derived from FUTURES_SPECS rather than a vendor mark, so a bad futures mark
+#   shows up in the P&L and that is the only part the override touches.
 # NAV_OVERRIDES — corrected end-of-day NAV, keyed by date. Patches that day's
 #   point in the historical equity curve on every run, so the spike never
 #   reappears once the statement rolls forward.
@@ -1154,6 +1278,11 @@ def apply_mark_overrides(positions: list[dict], nav_series: list[dict],
     for p in positions:
         if as_of and (as_of, p["symbol"]) in POSITION_OVERRIDES:
             corrected = POSITION_OVERRIDES[(as_of, p["symbol"])]
+            if (p["assetClass"] or "").upper() == "FUT":
+                # The override is the corrected open-trade equity; the shock
+                # figure in mktValue is not a vendor mark to correct.
+                p["unrealized"] = corrected
+                continue
             p["unrealized"] = corrected - p["costBasis"]
             p["mktValue"] = corrected
     nav_correction = 0.0
@@ -1203,7 +1332,7 @@ def transform(root: ET.Element) -> dict:
             "buyingPower": nav * 2,
         },
         "pnl": build_pnl(root, nav_series, nav, cash_flows, nav_correction, perf_series),
-        "risk": build_risk(perf_series, positions, load_riskfree()),
+        "risk": build_risk(perf_series, positions, load_riskfree(), cash),
         "contribution": contribution,
         "byAssetClass": build_asset_class(contribution),
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
