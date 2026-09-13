@@ -124,6 +124,31 @@ def fetch_stats(action_hash, wallet):
             return json.loads(m.group())
     raise ValueError(f"stats object not found in response: {raw[:200]}")
 
+def fetch_positions_value(wallet):
+    """Open-position market value: sum of currentValue over data-api /positions.
+
+    Betmoar's `portfolioValue` tracks data-api /value, and /value is not a
+    stable read of /positions. On 2026-09-13 it swung one wallet between
+    $10.8k and $6.7k within twenty minutes while /positions returned identical
+    books both times; the scrape caught a low read and left ~$8k of positions
+    out of NAV while counting the cash spent on them. /positions is paged
+    because the other wallet already holds ~100.
+    """
+    total, offset, limit = 0.0, 0, 500
+    while True:
+        r = requests.get("https://data-api.polymarket.com/positions",
+                         params={"user": wallet, "sizeThreshold": 0,
+                                 "limit": limit, "offset": offset},
+                         impersonate="chrome", timeout=15)
+        r.raise_for_status()
+        page = r.json()
+        if not isinstance(page, list):
+            raise ValueError(f"unexpected /positions response: {r.text[:200]}")
+        total += sum(p.get("currentValue") or 0 for p in page)
+        if len(page) < limit:
+            return total
+        offset += limit
+
 def main():
     try:
         action_hash = discover_action_hash()
@@ -148,6 +173,22 @@ def main():
     except Exception as e:
         print(f"error fetching stats: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # A failed /positions call falls back to betmoar's figure rather than failing the
+    # run — losing the day's breakdown is worse than a possibly stale position
+    # value — but says so, and the source is recorded in the output.
+    positions_source = "polymarket"
+    for w, s in zip(WALLETS, per_wallet):
+        try:
+            live = fetch_positions_value(w)
+            print(f"positions {w}: polymarket {live:,.0f} vs betmoar "
+                  f"{s.get('portfolioValue') or 0:,.0f}", file=sys.stderr)
+            s["portfolioValue"] = live
+        except Exception as e:
+            positions_source = "betmoar"
+            print(f"WARNING: polymarket /positions failed for {w} ({e}); using "
+                  f"betmoar portfolioValue, which can miss recent positions",
+                  file=sys.stderr)
 
     def dollars(val):
         return round(val) if val else 0
@@ -191,9 +232,11 @@ def main():
             "fees":      dollars(sum(implied_fees(s) for s in per_wallet)),
         },
         # Current Polymarket net asset value, summed across wallets: open-position
-        # market value (portfolioValue) + idle USDC (usdcBalance). Used by the
-        # book view's capital-deployment bar to weigh Poly against IBKR NAV.
+        # market value (Polymarket /positions, see fetch_positions_value) + idle USDC
+        # (betmoar usdcBalance). Used by the book view's capital-deployment bar
+        # to weigh Poly against IBKR NAV.
         "balances": {
+            "positionsSource": positions_source,
             "positions": sum_field("portfolioValue"),
             "cash":      sum_field("usdcBalance"),
             "nav":       dollars(sum(
