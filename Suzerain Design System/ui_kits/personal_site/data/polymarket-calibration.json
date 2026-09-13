@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T10:53:36Z",
+  "generatedAt": "2026-09-13T11:59:10Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -42,26 +42,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 657,
-      "wins": 608,
+      "n": 660,
+      "wins": 611,
       "pushes": 0,
-      "hitRate": 0.9254,
-      "volume": 3637980.34,
-      "realizedPnl": 16834.92,
-      "roi": 0.0046,
-      "brier": 0.0409,
-      "avgImplied": 0.9042,
-      "edge": 0.0212,
-      "calibrationError": 0.0299
+      "hitRate": 0.9258,
+      "volume": 3641197.7,
+      "realizedPnl": 17015.86,
+      "roi": 0.0047,
+      "brier": 0.0408,
+      "avgImplied": 0.9044,
+      "edge": 0.0214,
+      "calibrationError": 0.03
     },
     "exit": {
       "n": 263,
       "wins": 177,
       "pushes": 8,
       "hitRate": 0.6941,
-      "volume": 1069366.54,
-      "realizedPnl": -17942.06,
-      "roi": -0.0168
+      "volume": 1069104.11,
+      "realizedPnl": -17679.63,
+      "roi": -0.0165
     }
   },
   "buckets": {
@@ -189,17 +189,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 49,
-        "wins": 44,
+        "n": 50,
+        "wins": 45,
         "pushes": 0,
-        "winRate": 0.898,
-        "avgImplied": 0.8527,
-        "volume": 149275.14,
-        "realizedPnl": -69341.2,
-        "grossPnl": 92743.56,
-        "winRateByVolume": 0.4571,
-        "wilsonLo": 0.7824,
-        "wilsonHi": 0.9556
+        "winRate": 0.9,
+        "avgImplied": 0.8535,
+        "volume": 150097.49,
+        "realizedPnl": -69239.56,
+        "grossPnl": 92845.2,
+        "winRateByVolume": 0.4601,
+        "wilsonLo": 0.7864,
+        "wilsonHi": 0.9565
       },
       {
         "lo": 0.9,
@@ -219,16 +219,16 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 222,
-        "wins": 221,
+        "n": 224,
+        "wins": 223,
         "pushes": 0,
         "winRate": 0.9955,
-        "avgImplied": 0.9722,
-        "volume": 1625759.59,
-        "realizedPnl": 45131.08,
-        "grossPnl": 46412.46,
+        "avgImplied": 0.9721,
+        "volume": 1628154.6,
+        "realizedPnl": 45210.38,
+        "grossPnl": 46491.76,
         "winRateByVolume": 0.9996,
-        "wilsonLo": 0.9749,
+        "wilsonLo": 0.9751,
         "wilsonHi": 0.9992
       },
       {
@@ -326,32 +326,32 @@
       {
         "lo": 0.5,
         "hi": 0.6,
-        "n": 5,
+        "n": 6,
         "wins": 4,
         "pushes": 0,
-        "winRate": 0.8,
-        "avgImplied": 0.5722,
-        "volume": 2743.06,
-        "realizedPnl": 127.61,
-        "grossPnl": 149.05,
-        "winRateByVolume": 0.8909,
-        "wilsonLo": 0.3755,
-        "wilsonHi": 0.9638
+        "winRate": 0.6667,
+        "avgImplied": 0.5609,
+        "volume": 3892.04,
+        "realizedPnl": -611.54,
+        "grossPnl": 888.2,
+        "winRateByVolume": 0.6279,
+        "wilsonLo": 0.3,
+        "wilsonHi": 0.9032
       },
       {
         "lo": 0.6,
         "hi": 0.7,
-        "n": 12,
+        "n": 11,
         "wins": 8,
         "pushes": 0,
-        "winRate": 0.6667,
-        "avgImplied": 0.6502,
-        "volume": 50869.6,
-        "realizedPnl": -2352.29,
-        "grossPnl": 6123.55,
-        "winRateByVolume": 0.7936,
-        "wilsonLo": 0.3906,
-        "wilsonHi": 0.8619
+        "winRate": 0.7273,
+        "avgImplied": 0.6529,
+        "volume": 49458.19,
+        "realizedPnl": -1350.71,
+        "grossPnl": 5121.97,
+        "winRateByVolume": 0.8163,
+        "wilsonLo": 0.4343,
+        "wilsonHi": 0.9025
       },
       {
         "lo": 0.7,
@@ -679,34 +679,34 @@
     },
     "sports": {
       "combined": {
-        "n": 285,
-        "volume": 756595.6,
-        "realizedPnl": -6771.42,
-        "roi": -0.0089,
-        "hitRate": 0.8099,
-        "avgImplied": 0.8226,
-        "edge": -0.0127,
-        "top1Share": 0.132
+        "n": 288,
+        "volume": 759550.53,
+        "realizedPnl": -6328.05,
+        "roi": -0.0083,
+        "hitRate": 0.8118,
+        "avgImplied": 0.8234,
+        "edge": -0.0116,
+        "top1Share": 0.1322
       },
       "settlement": {
-        "n": 233,
-        "volume": 588814.95,
-        "realizedPnl": 8420.72,
-        "roi": 0.0143,
-        "hitRate": 0.8798,
-        "avgImplied": 0.852,
-        "edge": 0.0279,
-        "top1Share": 0.0815
+        "n": 236,
+        "volume": 592032.31,
+        "realizedPnl": 8601.66,
+        "roi": 0.0145,
+        "hitRate": 0.8814,
+        "avgImplied": 0.8531,
+        "edge": 0.0283,
+        "top1Share": 0.0809
       },
       "exit": {
         "n": 52,
-        "volume": 167780.65,
-        "realizedPnl": -15192.14,
-        "roi": -0.0905,
+        "volume": 167518.22,
+        "realizedPnl": -14929.71,
+        "roi": -0.0891,
         "hitRate": 0.4902,
-        "avgImplied": 0.6908,
-        "edge": -0.2006,
-        "top1Share": 0.2141
+        "avgImplied": 0.6886,
+        "edge": -0.1984,
+        "top1Share": 0.2156
       }
     },
     "tech": {
@@ -743,53 +743,53 @@
     }
   },
   "openBook": {
-    "n": 107,
-    "cost": 228836.67,
-    "mark": 293236.55,
-    "unrealized": 64399.88
+    "n": 109,
+    "cost": 234077.93,
+    "mark": 298483.99,
+    "unrealized": 64406.06
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 2601.61,
-      "mark": 2568.75,
-      "unrealized": -32.87
+      "mark": 2574.56,
+      "unrealized": -27.05
     },
     "geopolitics": {
       "n": 29,
-      "cost": 57935.09,
-      "mark": 64556.77,
-      "unrealized": 6621.68
+      "cost": 59778.69,
+      "mark": 66518.05,
+      "unrealized": 6739.36
     },
     "macro": {
       "n": 3,
       "cost": 90419.68,
-      "mark": 146717.84,
-      "unrealized": 56298.16
+      "mark": 146481.64,
+      "unrealized": 56061.96
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 327.6,
-      "unrealized": -10.8
+      "mark": 300.6,
+      "unrealized": -37.8
     },
     "politics": {
-      "n": 63,
-      "cost": 71101.36,
-      "mark": 72479.7,
-      "unrealized": 1378.34
+      "n": 65,
+      "cost": 75987.57,
+      "mark": 77573.16,
+      "unrealized": 1585.59
     },
     "sports": {
       "n": 8,
-      "cost": 4657.04,
-      "mark": 4821.18,
-      "unrealized": 164.14
+      "cost": 3168.48,
+      "mark": 3270.32,
+      "unrealized": 101.84
     },
     "tech": {
       "n": 1,
       "cost": 1783.49,
-      "mark": 1764.72,
-      "unrealized": -18.77
+      "mark": 1765.66,
+      "unrealized": -17.83
     }
   },
   "excluded": {
@@ -1754,12 +1754,15 @@
     ["macro","2026-09-10","e",27326.77,-137.22,0,0.5289],
     ["politics","2026-09-10","e",2589.49,59.2,1,0.6056],
     ["politics","2026-09-10","e",18.85,0.0,null,0.84],
-    ["sports","2026-09-10","e",1411.41,-1001.58,0,0.6199],
     ["macro","2026-09-11","e",84.29,-32.87,0,0.0066],
     ["politics","2026-09-11","e",1902.57,123.15,1,0.8715],
     ["sports","2026-09-11","s",2502.28,95.9,1,0.9631],
     ["politics","2026-09-12","e",955.7,41.23,1,0.8628],
     ["sports","2026-09-12","e",2617.3,7295.57,1,0.231],
-    ["sports","2026-09-12","e",2090.68,545.72,1,0.7674]
+    ["sports","2026-09-12","e",1148.98,-739.15,0,0.5046],
+    ["sports","2026-09-12","s",822.35,101.64,1,0.89],
+    ["sports","2026-09-12","e",2090.68,545.72,1,0.7674],
+    ["sports","2026-09-13","s",680.44,26.27,1,0.9628],
+    ["sports","2026-09-13","s",1714.57,53.03,1,0.97]
   ]
 }
