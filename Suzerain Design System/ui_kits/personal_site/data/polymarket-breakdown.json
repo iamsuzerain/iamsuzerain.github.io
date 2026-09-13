@@ -19,8 +19,9 @@
     "fees": 2936
   },
   "balances": {
-    "positions": 294086,
+    "positionsSource": "polymarket",
+    "positions": 302323,
     "cash": 2448,
-    "nav": 296534
+    "nav": 304770
   }
 }
