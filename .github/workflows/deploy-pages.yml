@@ -74,7 +74,13 @@ jobs:
           npm_config_prefer_offline: "true"
         working-directory: Suzerain Design System/ui_kits/personal_site
         run: |
+          # Vendored libraries lead the bundle so their globals exist before any
+          # component runs; the `;` guards against a file ending without one.
           : > app.min.js
+          for v in react.production.min react-dom.production.min marked.min; do
+            cat "vendor/$v.js" >> app.min.js
+            printf '\n;\n' >> app.min.js
+          done
           for f in Chrome Chart Nav Hero About Portfolio Polymarket Combined Politics Writing App; do
             npx -y esbuild@0.25.0 "$f.jsx" --format=iife --minify >> app.min.js
           done
@@ -84,10 +90,13 @@ jobs:
           # revalidating — shipped fixes simply did not reach anyone who already
           # had the page open, which is indistinguishable from the fix not working.
           sed -i '/@babel\/standalone/d' index.html
+          sed -i '/<script src="vendor\//d' index.html
           sed -i "s|<script type=\"text/babel\" src=\"Chrome.jsx\"></script>|<script src=\"app.min.js?v=${GITHUB_SHA:0:8}\"></script>|" index.html
           sed -i '/type="text\/babel"/d' index.html
           grep -q "app.min.js?v=${GITHUB_SHA:0:8}" index.html
+          ! grep -q '<script src="\(https\?:\|vendor/\)' index.html   # no third-party or unbundled script left
           rm -f *.jsx
+          rm -rf vendor
 
       # Mirrors the "minify the stylesheet" step in build.sh — keep the two in
       # step. The source file's comments are ~60% of its bytes and exist for the
