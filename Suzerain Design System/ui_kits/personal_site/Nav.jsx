@@ -17,6 +17,29 @@ function useStuck(threshold = 8) {
   return stuck;
 }
 
+// True while the reader is scrolling down past the first screen, false as soon
+// as they scroll back up. The class it sets only has styles at the phone
+// breakpoint, where the sticky nav costs a sixth of the screen; on desktop it
+// toggles on an element with no rule for it. The 6px dead band keeps a resting
+// thumb's jitter from flickering the nav.
+function useScrollingDown(after = 160) {
+  const [down, setDown] = React.useState(false);
+  React.useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < after) setDown(false);
+      else if (y > last + 6) setDown(true);
+      else if (y < last - 6) setDown(false);
+      else return;
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [after]);
+  return down;
+}
+
 // Views are hash routes, so every nav destination already has a URL. Rendering
 // them as <a href> rather than <button onClick> costs nothing and hands back the
 // things people expect a link to do: middle-click and cmd-click to a new tab,
@@ -27,6 +50,19 @@ function navHref(id) { return id === 'hero' ? '#/' : '#/' + id; }
 
 function Nav({ view }) {
   const stuck = useStuck();
+  const scrollingDown = useScrollingDown();
+  // On a phone the items share one row that scrolls sideways, so the current
+  // view can sit off the right edge; center it in the strip (the browser clamps
+  // at either end), which keeps it clear of the edge fade. A no-op wherever the
+  // row fits, which is every desktop width.
+  const itemsRef = React.useRef(null);
+  React.useEffect(() => {
+    const strip = itemsRef.current;
+    const active = strip && strip.querySelector('.sz-nav-item.active');
+    if (!active || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollLeft = active.offsetLeft - strip.offsetLeft
+      - (strip.clientWidth - active.offsetWidth) / 2;
+  }, [view]);
   // Whatever view is mounted publishes its $/% switch into Chrome.jsx's slot;
   // the nav hosts it so the control rides the scroll rather than sitting in a
   // panel head the reader has long since scrolled past. Null on views without
@@ -44,7 +80,7 @@ function Nav({ view }) {
     { id: 'about', label: 'about' },
   ];
   return (
-    <nav className={`sz-nav ${stuck ? 'sz-nav-stuck' : ''}`}>
+    <nav className={`sz-nav ${stuck ? 'sz-nav-stuck' : ''} ${scrollingDown ? 'sz-nav-away' : ''}`}>
       <a className="sz-brand" href={navHref('hero')}>
         <svg width="22" height="22" viewBox="0 0 64 64" fill="none" aria-hidden>
           <defs>
@@ -65,7 +101,7 @@ function Nav({ view }) {
         <span>suzerain</span>
         <Cursor />
       </a>
-      <div className="sz-nav-items">
+      <div className="sz-nav-items" ref={itemsRef}>
         {items.slice(1).map((it) => (
           <a
             key={it.id}

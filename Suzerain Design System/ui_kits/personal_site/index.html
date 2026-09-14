@@ -1021,7 +1021,10 @@
     /* 48px of gutter each side costs a 360px phone more than a quarter of its
        width — and the tables shrunk below were being squeezed by the container,
        not by their own type. */
-    .sz-stage { padding: 16px 18px 72px; }
+    /* 12, not 18: with the panel's own padding below, the two insets together
+       left a 375px phone's tables 293px to draw in. */
+    .sz-stage { padding: 16px 12px 72px; }
+    .pf-panel { padding: 16px 14px; }
     /* Wide content can scroll sideways; the fade says so. Only on narrow
        screens, where these actually overflow — on desktop it would dim a
        column edge for no reason. */
@@ -1042,16 +1045,44 @@
     .cmb-risk-grid .pf-stat:nth-child(odd) { padding-left: 0; border-left: none; }
     .pf-row { grid-template-columns: minmax(0, 1fr); }
     .sz-nav {
-      gap: 12px; padding: 12px 14px; margin-bottom: 48px;
-      row-gap: 8px;   /* wrapping itself is unconditional now — see above */
+      gap: 12px; padding: 10px 14px 4px; margin-bottom: 48px;
+      row-gap: 2px;   /* wrapping itself is unconditional now — see above */
+      transition: transform var(--dur-base) var(--ease-out),
+                  background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out);
     }
+    /* Sticky, the nav held a sixth of a phone screen through every table. It
+       steps out of the way while the reader scrolls down and returns the
+       moment they scroll up. Nav.jsx sets the class at every width; this is
+       the only rule for it. */
+    .sz-nav.sz-nav-away { transform: translateY(calc(-100% - 20px)); }
+    /* The items wrapped onto two rows of their own. One row that scrolls
+       sideways instead, with the same edge fade the tables use to say so. */
     .sz-nav-items {
-      gap: 14px; margin-left: 0; order: 3; flex-basis: 100%;
-      flex-wrap: wrap;
+      gap: 16px; margin-left: 0; order: 3; flex-basis: 100%;
+      flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(90deg, #000 0, #000 85%, transparent 100%);
+      mask-image: linear-gradient(90deg, #000 0, #000 85%, transparent 100%);
     }
+    .sz-nav-items::-webkit-scrollbar { display: none; }
+    /* Runway past the last item, so scrolled to the end it clears the fade
+       instead of resting inside it. A flex child rather than padding, which not
+       every engine counts toward a flex container's scroll width. */
+    .sz-nav-items::after { content: ''; flex: 0 0 36px; }
+    .sz-nav-item { white-space: nowrap; padding: 10px 0; }
     .sz-nav-unit { gap: 8px; }
     .pf-table { font-size: 11px; }
     .pf-table th, .pf-table td { padding: 7px 8px; }
+  }
+  /* Touch only, and only at phone width: the range and unit buttons drew 21px
+     tall, about half a fingertip. A mouse on a narrowed desktop window keeps the
+     compact size. */
+  @media (max-width: 760px) and (pointer: coarse) {
+    .pf-range { gap: 6px; }
+    .pf-range-btn { min-height: 32px; padding: 6px 10px; }
+    .pf-unit .pf-range-btn { min-width: 36px; }
+    .pf-range-menu-item { padding-top: 10px; padding-bottom: 10px; }
   }
 
   /* ========== Polymarket view overrides ========== */
