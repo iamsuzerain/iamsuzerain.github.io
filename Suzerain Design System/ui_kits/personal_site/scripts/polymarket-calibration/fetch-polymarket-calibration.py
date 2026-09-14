@@ -866,8 +866,11 @@ def by_category(records):
 # Columns of a `lots` row, in order. Arrays rather than objects because this is
 # the one ~900-row array in the payload: repeating seven keys on every row would
 # roughly triple its bytes for data the panel reads positionally anyway.
+# `market` and `outcome` come last so the seven statistical columns keep their
+# positions; they are read only by the lot tape's tooltip, which names the
+# position under the pointer.
 LOT_COLUMNS = ["category", "closedOn", "via", "volume", "realizedPnl",
-               "win", "impliedEntry"]
+               "win", "impliedEntry", "market", "outcome"]
 LOTS_SENTINEL = "__LOTS_GO_HERE__"
 
 
@@ -877,9 +880,10 @@ def lots_rows(records):
     `byCategory` is a lifetime aggregate and so cannot be sliced after the fact,
     which is the whole reason this exists: the panel recomputes category_stats
     in the browser over whichever window is selected. That needs one row per
-    closed lot — but only the seven fields those statistics actually read, not
-    the full record (title, conditionId, shares, entry/exit/settle prices),
-    which is what keeps this a ~50KB addition rather than a ~500KB one.
+    closed lot — but only the seven fields those statistics actually read, plus
+    the market title and outcome the lot tape labels positions with. Not the
+    full record (conditionId, shares, entry/exit/settle prices), which is what
+    keeps this a ~130KB addition rather than a ~500KB one.
 
     `win` is 1 / 0 / null, null being a push — the same three-way split
     category_stats draws when it keeps a scratch exit in `n` and `volume` but
@@ -892,7 +896,7 @@ def lots_rows(records):
              "s" if r["resolvedVia"] == "settlement" else "e",
              r["volume"], r["realizedPnl"],
              None if r.get("push") else (1 if r["win"] else 0),
-             r["impliedEntry"]]
+             r["impliedEntry"], r["title"], r["outcome"]]
             for r in records]
     rows.sort(key=lambda x: (x[1] or "", x[0]))
     return rows
@@ -911,7 +915,7 @@ def check_lots(records, rows):
              "resolvedVia": "settlement" if v == "s" else "exit",
              "volume": vol, "realizedPnl": pnl,
              "win": w == 1, "push": w is None, "impliedEntry": imp}
-            for c, d, v, vol, pnl, w, imp in rows]
+            for c, d, v, vol, pnl, w, imp, *_ in rows]
     a, b = by_category(records), by_category(faux)
     bad = [k for k in set(a) | set(b) if a.get(k) != b.get(k)]
     if bad:
@@ -1050,9 +1054,9 @@ def main():
             "minLotUsd": MIN_LOT_USD,
         },
         # The trimmed per-lot rows the attribution panel windows by date. The
-        # FULL records are still not emitted — shipping title, conditionId,
-        # shares and three prices per lot would bloat the payload ~10x for
-        # fields no view reads. See lots_rows for the seven that are kept.
+        # FULL records are still not emitted — shipping conditionId, shares
+        # and three prices per lot would bloat the payload for fields no view
+        # reads. See lots_rows for the columns that are kept.
         "lots": LOTS_SENTINEL,
     }
 
