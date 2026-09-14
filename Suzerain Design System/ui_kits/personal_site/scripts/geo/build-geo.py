@@ -219,6 +219,65 @@ def dateline_parts(ring):
     return parts
 
 
+def clip_lat(poly, lat, north):
+    """Keep the side of a ring north (or south) of a parallel, following the cut."""
+    def at(a, b):
+        dy = b[1] - a[1]
+        t = 0.0 if dy == 0 else (lat - a[1]) / dy
+        return (a[0] + (b[0] - a[0]) * t, lat)
+
+    keep = (lambda p: p[1] >= lat) if north else (lambda p: p[1] <= lat)
+    out = _clip_edge(poly, keep, at)
+    return out if len(out) >= 3 else []
+
+
+def merge_rings(a, b):
+    """Dissolve the one run of vertices two rings share into a single outline.
+
+    Both rings walk the shared chain in opposite directions. The union is A's
+    own run, the chain's first vertex, B's own run, then the chain's last.
+    Only good for a single contiguous shared run — which is all the Western
+    Sahara fix needs, and it asserts as much rather than drawing garbage.
+    """
+    key = lambda p: (round(p[0], 6), round(p[1], 6))
+    a = a[:-1] if key(a[0]) == key(a[-1]) else list(a)
+    b = b[:-1] if key(b[0]) == key(b[-1]) else list(b)
+    in_b = {key(p) for p in b}
+    start = next(i for i, p in enumerate(a) if key(p) not in in_b)
+    a = a[start:] + a[:start]
+    j = next(i for i, p in enumerate(a) if key(p) in in_b)
+    own, chain = a[:j], a[j:]
+    assert all(key(p) in in_b for p in chain), "shared vertices are not one run"
+    c0, ck = key(chain[0]), key(chain[-1])
+    i0 = next(i for i, p in enumerate(b) if key(p) == c0)
+    b = b[i0 + 1:] + b[:i0 + 1]
+    q = []
+    for p in b:
+        if key(p) == ck:
+            break
+        q.append(p)
+    return own + [chain[0]] + q + [chain[-1]]
+
+
+# Natural Earth's 110m Morocco runs down the Atlantic coast to 21°N, leaving
+# "W. Sahara" as an inland sliver. The site doesn't draw Western Sahara as part
+# of Morocco: cut Morocco at the 27°40′N parallel (27.66 in the quantized
+# source, where its inland corner sits) and give everything south of it to
+# Western Sahara as one shape.
+SAHARA_LAT = 27.66
+
+
+def separate_western_sahara(rings_by_name):
+    morocco = rings_by_name.get("Morocco")
+    sahara = rings_by_name.get("W. Sahara")
+    if not morocco or not sahara or len(morocco) != 1 or len(sahara) != 1:
+        sys.exit("Morocco / W. Sahara geometry changed shape — revisit separate_western_sahara")
+    north = clip_lat(morocco[0], SAHARA_LAT, north=True)
+    south = clip_lat(morocco[0], SAHARA_LAT, north=False)
+    rings_by_name["Morocco"] = [north]
+    rings_by_name["W. Sahara"] = [merge_rings(sahara[0], south)]
+
+
 def bounds(rings):
     xs = [p[0] for r in rings for p in r]
     ys = [p[1] for r in rings for p in r]
@@ -302,14 +361,21 @@ def build_world(width=980):
     topo = load("world")
     arcs = decode_arcs(topo)
     layer = topo["objects"]["countries"]
-    features = []
+    raw = []
     for geom in layer["geometries"]:
         name = (geom.get("properties") or {}).get("name")
         if not name:
             continue
         rings = geometry_rings(arcs, geom)
-        if not rings:
-            continue
+        if rings:
+            raw.append((geom, name, rings))
+
+    by_name = {name: rings for _, name, rings in raw}
+    separate_western_sahara(by_name)
+
+    features = []
+    for geom, name, _ in raw:
+        rings = by_name[name]
         projected = [
             [robinson(lon, lat) for lon, lat in part]
             for ring in rings
