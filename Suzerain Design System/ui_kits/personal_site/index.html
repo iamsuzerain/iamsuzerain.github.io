@@ -1276,6 +1276,12 @@
   .pm-tt-val.pos { color: var(--pos); }
   .pm-tt-val.neg { color: var(--neg); }
   .pf-tt-bench { font-size: 10px; margin-top: 2px; letter-spacing: 0.04em; }
+  /* A market title runs to ~90 characters, so it wraps, and it is the one line
+     in the box allowed to: nowrap on the rest keeps the figure column intact. */
+  .pm-tt-market {
+    font-size: 11px; color: var(--fg-2); white-space: normal;
+    width: max-content; max-width: min(260px, 70vw); line-height: 1.35;
+  }
 
   /* Attribution hover. Label left, figure right, so the numbers stack into a
      column the eye runs straight down instead of hunting along each line. The

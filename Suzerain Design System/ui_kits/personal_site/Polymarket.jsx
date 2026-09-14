@@ -6,6 +6,7 @@ const {
   useState: usePmState,
   useEffect: usePmEffect,
   useRef: usePmRef,
+  useMemo: usePmMemo,
 } = React;
 
 // Chart machinery (Chart.jsx, loaded ahead of this file) — the same box,
@@ -932,9 +933,11 @@ function pmCatStats(rows) {
 // own method.lotColumns, and named here once so nothing downstream indexes them.
 // `win` is 1 / 0 / null, null meaning a push: in `n` and `volume`, out of the
 // hit-rate denominator, exactly as the generator has it.
-function pmLotRow([category, closedOn, via, volume, realizedPnl, win, impliedEntry]) {
+// `market` and `outcome` are absent on a payload older than the lot tape, which
+// then falls back to naming the category.
+function pmLotRow([category, closedOn, via, volume, realizedPnl, win, impliedEntry, market, outcome]) {
   return {
-    category, closedOn,
+    category, closedOn, market, outcome,
     resolvedVia: via === 's' ? 'settlement' : 'exit',
     volume, realizedPnl,
     win: win === 1, push: win == null,
@@ -1510,6 +1513,186 @@ function PmCalibration({ cal }) {
   );
 }
 
+// ---------- lot tape: realized P&L one position at a time ----------
+// The calibration panel scores the averages; this draws what the averages are
+// made of. Every closed lot is one step of equal width, in the order the lots
+// closed, so a buy-the-favorite book reads as what it is: a long staircase of
+// small wins and a few cliffs. Width is per position, not per day, on purpose —
+// on a date axis a quiet month and a busy one would draw the same, and the
+// texture of the steps is the whole reading.
+//
+// Steps rather than a spline: a lot lands all at once, and a smoothed cliff
+// would draw P&L that accrued across positions that never carried it.
+//
+// Lots only carry a date, so within a day the feed's own order stands (the sort
+// is stable). That can reorder same-day steps but never moves where a day ends.
+const PM_TAPE_FRAME = szFrame(220, 20, 32);
+
+// Everything that depends only on the lots, not the pointer. The hover state
+// lives in the same component, so without this every mousemove rebuilt a path
+// of one segment per lot.
+function pmTapeGeometry(F, lots) {
+  const n = lots.length + 1;   // a leading $0 point, so the first lot is a step too
+  const run = [0];
+  for (const l of lots) run.push(run[run.length - 1] + l.realizedPnl);
+  const { y0, y1, lo: min, hi: max } = szDomain(run, { pad: 0.08, floor: 1, min: 0 });
+  const { x, y } = szScales(F, n, y0, y1);
+  let line = `M${x(0).toFixed(2)},${y(0).toFixed(2)}`;
+  for (let i = 1; i < n; i++) line += ` H${x(i).toFixed(2)} V${y(run[i]).toFixed(2)}`;
+  const area = szAreaPath(line, x(0), x(n - 1), F.H - F.PAD_B);
+  return { n, run, min, max, x, y, line, area };
+}
+
+function PmLotTape({ lots }) {
+  const F = PM_TAPE_FRAME;
+  const hv = useChartHover(F);
+  const geo = usePmMemo(() => (lots.length < 2 ? null : pmTapeGeometry(F, lots)), [lots]);
+  if (!geo) return null;
+  const { n, run, min, max, x, y, line, area } = geo;
+
+  // At ~1.4 viewBox units a step, the nearest index is almost never the cliff
+  // the pointer is sitting on. So the hover reads the biggest move within a
+  // hair of the pointer (~1% of the width either side) — the cliffs are what a
+  // reader reaches for, and a small win beside one is still reachable by
+  // moving off it.
+  const reach = Math.max(1, Math.round(lots.length * 0.008));
+  let hi = null;
+  // `hv.i < n`: a hover index from a longer window can outlive the switch to a
+  // shorter one for a render.
+  if (hv.i != null && hv.i < n) {
+    hi = Math.max(1, hv.i);
+    for (let k = Math.max(1, hv.i - reach); k <= Math.min(n - 1, hv.i + reach); k++) {
+      if (Math.abs(lots[k - 1].realizedPnl) > Math.abs(lots[hi - 1].realizedPnl)) hi = k;
+    }
+  }
+  const lot = hi != null ? lots[hi - 1] : null;
+
+  const maxIdx = run.indexOf(max);
+  const minIdx = run.indexOf(min);
+  const first = lots[0].closedOn, last = lots[lots.length - 1].closedOn;
+  const axisMode = pmSpanDays(first, last) <= 95 ? 'day'
+    : (first.slice(0, 4) === last.slice(0, 4) ? 'month' : 'monthyear');
+  // The axis is positions, not time, so evenly spaced ticks land on whatever
+  // dates the busy stretches happen to hold — two "Jun 26"s side by side. Tick
+  // the first lot of each new label instead, dropping any that would crowd the
+  // one before it: the gaps between them then say how busy each month was.
+  // 16% is sized for a phone, where a "Mar 26" is ~13% of the plot.
+  const ticks = [];
+  lots.forEach((l, k) => {
+    const label = pmAxisLabel(l.closedOn, axisMode);
+    const prev = k ? pmAxisLabel(lots[k - 1].closedOn, axisMode) : null;
+    if (label === prev) return;
+    if (ticks.length && (k + 1 - ticks[ticks.length - 1].i) / n < 0.16) return;
+    ticks.push({ i: k + 1, d: l.closedOn });
+  });
+  const signed = (v) => (v >= 0 ? '+' : '') + pmUSD(v);
+
+  return (
+    <div className="pm-chart-wrap">
+      <SzChartSvg frame={F} hover={hv} n={n} className="pf-navchart pm-chart-svg">
+        <SzChartDefs ramp="nav" id="pm-tape"/>
+        <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.1)"/>
+        <path d={area} fill="url(#pm-tape-fill)"/>
+        <path d={line} fill="none" stroke="url(#pm-tape-stroke)" strokeWidth="1.25"
+          strokeLinejoin="round"/>
+        {max > 0 && <circle cx={x(maxIdx)} cy={y(max)} r="2.5" fill="#a78bfa" opacity="0.7"/>}
+        {min < 0 && <circle cx={x(minIdx)} cy={y(min)} r="2.5" fill="#ff9ae8" opacity="0.7"/>}
+        {lot && <SzCrosshair frame={F} x={x(hi)} cy={y(run[hi])}
+          fill={lot.realizedPnl >= 0 ? '#ff4fd8' : '#a78bfa'}/>}
+      </SzChartSvg>
+
+      {max > 0 && <div className="pm-peak" style={{ left: `${(x(maxIdx) / F.W) * 100}%`, top: `${(y(max) / F.H) * 100}%` }}>peak {pmUSDCompact(max)}</div>}
+      {min < 0 && <div className="pm-trough" style={{ left: `${(x(minIdx) / F.W) * 100}%`, top: `${(y(min) / F.H) * 100}%` }}>trough {pmUSDCompact(min)}</div>}
+      <SzAxisZero frame={F} y={y(0)}>$0</SzAxisZero>
+      {/* Not SzAxisX: that pins its last tick's label to end at the tick, which
+          is right for a series' final day and wrong here, where the last month
+          boundary can sit anywhere — "Sep 26" would read as the stretch before
+          September. Only a tick actually near an edge is pulled inside. */}
+      <div className="pf-axis-x">
+        {ticks.map(t => (
+          <span key={t.i}
+            className={t.i <= 1 ? 'start' : t.i / n > 0.94 ? 'end' : ''}
+            style={{ left: `${(x(t.i) / F.W) * 100}%` }}>{pmAxisLabel(t.d, axisMode)}</span>
+        ))}
+      </div>
+
+      {lot && (
+        <SzTooltip frame={F} x={x(hi)} y={y(run[hi])} className="cmb-tooltip">
+          <div className="pm-tt-date">{fmtDate(lot.closedOn)} · {lot.category} · {lot.resolvedVia === 'settlement' ? 'resolved' : 'swing'}</div>
+          <div className="pm-tt-market">
+            {lot.market || lot.category}{lot.market && lot.outcome ? ` · ${lot.outcome}` : ''}
+          </div>
+          <div className="cmb-tt-row">entry<span className="cmb-tt-num">{(lot.impliedEntry * 100).toFixed(1)}¢</span></div>
+          <div className="cmb-tt-row">staked<span className="cmb-tt-num">{pmUSD(lot.volume, true)}</span></div>
+          {/* won/lost only where the market decided it; a swing trade was sold. */}
+          <div className="cmb-tt-row">{lot.push ? 'push' : lot.resolvedVia === 'exit' ? 'sold' : lot.win ? 'won' : 'lost'}<span className={`cmb-tt-num ${lot.realizedPnl >= 0 ? 'pos' : 'neg'}`}>{signed(lot.realizedPnl)}</span></div>
+          <div className="cmb-tt-row">running<span className={`cmb-tt-num ${run[hi] >= 0 ? 'pos' : 'neg'}`}>{signed(run[hi])}</span></div>
+        </SzTooltip>
+      )}
+    </div>
+  );
+}
+
+// One quarter per view by default. A whole book is ~700 steps into a plot a
+// phone draws ~320px wide, so a step is under a pixel and no single small
+// position can be read or hovered; a quarter keeps that to a few hundred.
+// Each quarter restarts at $0, so its line ends on what that quarter booked.
+//
+// A quarter only gets a button once it holds PM_CAT_MIN_N lots — the same
+// floor the attribution panel dims thin rows below. The 2025 quarters held
+// under ten each; as buttons they would be the bulk of the strip and the least
+// of the book. They are still in `all`.
+const pmLotQuarter = (d) => `${d.slice(0, 4)}Q${Math.floor((+d.slice(5, 7) - 1) / 3) + 1}`;
+
+// Resolved and swing lots on one line. The calibration panel keeps them apart
+// because a swing "win" is a profitable sale, not a correct forecast, so the
+// two can't share a hit rate. Dollars have no such problem: a swing trade's
+// P&L is as realized as a settlement's, and a tape of only one kind would skip
+// steps the book really took. The tooltip still says which kind each lot was.
+function PmLotTapePanel({ cal }) {
+  const [picked, setPicked] = usePmState(null);   // null = newest quarter
+  const allLots = usePmMemo(() => ((cal && cal.lots) || [])
+    .map(pmLotRow)
+    .filter(l => l.closedOn)
+    .map((l, k) => [l, k])
+    .sort((a, b) => (a[0].closedOn < b[0].closedOn ? -1 : a[0].closedOn > b[0].closedOn ? 1 : a[1] - b[1]))
+    .map(([l]) => l), [cal]);
+
+  const counts = {};
+  for (const l of allLots) { const q = pmLotQuarter(l.closedOn); counts[q] = (counts[q] || 0) + 1; }
+  const quarters = Object.keys(counts).filter(q => counts[q] >= PM_CAT_MIN_N).sort();
+  // A remembered pick that no longer has a button (the file changed under an
+  // open page) falls back to the newest, rather than highlighting nothing.
+  const q = picked === 'all' || quarters.includes(picked)
+    ? picked : (quarters[quarters.length - 1] || 'all');
+  const lots = usePmMemo(() => (q === 'all'
+    ? allLots : allLots.filter(l => pmLotQuarter(l.closedOn) === q)), [allLots, q]);
+
+  // The quarter still running reads "qtd", as it does on every range strip on
+  // the site: "q3 26" on a half-finished quarter would read as its full result.
+  const asOf = (cal && cal.generatedAt || '').slice(0, 10);
+  const running = asOf ? pmLotQuarter(asOf) : null;
+  const qLabel = (k) => k === running ? 'qtd' : window.szQuarterLabel(k);
+
+  if (allLots.length < 2) return null;
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">realized pnl · position by position</span>
+        <div className="pf-panel-head-right">
+          <span className="pf-panel-meta">{lots.length} positions in closing order · one step each</span>
+          <div className="pf-range">
+            <SzToggle options={[...quarters.map(k => [k, qLabel(k)]), ['all', 'all-time']]}
+              value={q} onChange={setPicked}/>
+          </div>
+        </div>
+      </div>
+      <PmLotTape lots={lots}/>
+    </div>
+  );
+}
+
 // ---------- Rewards accrual (market-making income over time) ----------
 // Two lines, each grouping the betmoar breakdown's income fields by the activity
 // that earned them, over the breakdown history. These are steady positive
@@ -1955,6 +2138,8 @@ function Polymarket() {
         openByCategory={cal.openByCategory}/>}
 
       {cal && <PmCalibration cal={cal}/>}
+
+      {cal && <PmLotTapePanel cal={cal}/>}
 
       <div className="pf-panel">
         <div className="pf-panel-head">
