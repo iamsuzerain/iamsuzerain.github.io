@@ -1550,21 +1550,15 @@ function PmLotTape({ lots }) {
   if (!geo) return null;
   const { n, run, min, max, x, y, line, area } = geo;
 
-  // At ~1.4 viewBox units a step, the nearest index is almost never the cliff
-  // the pointer is sitting on. So the hover reads the biggest move within a
-  // hair of the pointer (~1% of the width either side) — the cliffs are what a
-  // reader reaches for, and a small win beside one is still reachable by
-  // moving off it.
-  const reach = Math.max(1, Math.round(lots.length * 0.008));
-  let hi = null;
+  // The nearest step, plain. This used to snap to the biggest move within a
+  // few lots of the pointer so cliffs were easy to land on when a step was
+  // under a pixel — but that made any lot flanked by bigger ones unreachable,
+  // whichever way the pointer approached. Quarters are what keep steps wide
+  // enough to hit now; on all-time at phone width some sub-pixel lots still
+  // can't be singled out, which is the reason the quarters exist.
   // `hv.i < n`: a hover index from a longer window can outlive the switch to a
   // shorter one for a render.
-  if (hv.i != null && hv.i < n) {
-    hi = Math.max(1, hv.i);
-    for (let k = Math.max(1, hv.i - reach); k <= Math.min(n - 1, hv.i + reach); k++) {
-      if (Math.abs(lots[k - 1].realizedPnl) > Math.abs(lots[hi - 1].realizedPnl)) hi = k;
-    }
-  }
+  const hi = hv.i != null && hv.i < n ? Math.max(1, hv.i) : null;
   const lot = hi != null ? lots[hi - 1] : null;
 
   const maxIdx = run.indexOf(max);
