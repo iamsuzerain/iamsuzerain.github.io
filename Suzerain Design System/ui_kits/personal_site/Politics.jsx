@@ -175,12 +175,16 @@ function polFmtDate(iso) {
 
 // Whole days out, floored — the log is coarse and a shifting "in N days" that
 // depends on the clock time would be noise.
+//
+// Today is the reader's own calendar date, packed into a UTC epoch only so it
+// subtracts cleanly from the parsed ISO date. Reading the UTC date instead
+// filed an election under past sympathies from 5pm Pacific on election day.
 function polDaysOut(iso) {
   if (!iso) return null;
   const then = Date.parse(iso + 'T00:00:00Z');
   if (Number.isNaN(then)) return null;
   const now = new Date();
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((then - today) / 86400000);
 }
 
@@ -345,6 +349,109 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
         })}
       </svg>
       <div className="pol-caption">{hovered || ''}</div>
+    </div>
+  );
+}
+
+// Chip size and the gap a neighbor needs before it can share a row, in px.
+const POL_STRIP_CHIP = 12;
+const POL_STRIP_ROW = 17;
+const POL_STRIP_PAD = 10;
+
+// When, not where: every dated upcoming race on one axis from today to the
+// last date logged. The list below says the same thing row by row; the strip
+// is for seeing that October is crowded.
+//
+// Chips sit at their true date and stack only when they would touch — greedy
+// row assignment in date order, so a shared ballot stacks and two elections a
+// day apart do too once the panel is narrow enough to need it. Positions are
+// laid out in measured px rather than percent for that reason.
+function PolStrip({ rows, selected, onSelect, onHover }) {
+  const ref = React.useRef(null);
+  const [width, setWidth] = usePolState(0);
+  const [focus, setFocus] = usePolState(null);
+
+  usePolEffect(() => {
+    const measure = () => { if (ref.current) setWidth(ref.current.clientWidth); };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  const dated = rows.filter(r => polDaysOut(r.race.next) !== null);
+  const span = Math.max(1, ...dated.map(r => polDaysOut(r.race.next)));
+  const inner = Math.max(0, width - POL_STRIP_PAD * 2);
+  const xOf = (days) => POL_STRIP_PAD + (days / span) * inner;
+
+  const chips = [];
+  const rowEnds = [];
+  dated.forEach((r, i) => {
+    const x = xOf(polDaysOut(r.race.next));
+    let row = rowEnds.findIndex(end => x - end >= POL_STRIP_CHIP + 3);
+    if (row < 0) { row = rowEnds.length; rowEnds.push(-Infinity); }
+    rowEnds[row] = x;
+    chips.push({ ...r, x, row, key: `${r.name}-${r.race.office}-${i}` });
+  });
+  const rowsTall = Math.max(1, rowEnds.length);
+
+  // First of each month inside the span. A label crowding "today" at the
+  // left edge is dropped; its tick stays.
+  const ticks = [];
+  const now = new Date();
+  for (let k = 1; ; k++) {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() + k, 1));
+    const iso = d.toISOString().slice(0, 10);
+    const days = polDaysOut(iso);
+    if (days > span) break;
+    const x = xOf(days);
+    const [y, m] = iso.split('-');
+    const mo = polFmtDate(iso).split(' ')[0];
+    ticks.push({ iso, x, label: x - POL_STRIP_PAD < 40 ? '' : (m === '01' ? `${mo} ${y}` : mo) });
+  }
+
+  const shown = focus || chips.find(c => c.name === selected) || null;
+
+  return (
+    <div className="pol-strip">
+      <div
+        ref={ref}
+        className="pol-strip-plot"
+        style={{ height: rowsTall * POL_STRIP_ROW + 26 }}
+        onMouseLeave={() => { setFocus(null); onHover(null); }}
+      >
+        {width > 0 && (
+          <>
+            <span className="pol-strip-tick is-today" style={{ left: POL_STRIP_PAD }}>
+              <span className="pol-strip-label">today</span>
+            </span>
+            {ticks.map(t => (
+              <span key={t.iso} className="pol-strip-tick" style={{ left: t.x }}>
+                {t.label && <span className="pol-strip-label">{t.label}</span>}
+              </span>
+            ))}
+            {chips.map(c => (
+              <button
+                key={c.key}
+                className={`pol-strip-chip pol-swatch pol-sw-${polLevel(c.race)} ${selected === c.name ? 'is-selected' : ''}`}
+                style={{ left: c.x - POL_STRIP_CHIP / 2, bottom: 22 + c.row * POL_STRIP_ROW }}
+                aria-label={`${c.name}, ${c.race.office || 'race'}, ${polFmtDate(c.race.next)}, ${polLevel(c.race)}`}
+                onMouseEnter={() => { setFocus(c); onHover(c.name); }}
+                onFocus={() => { setFocus(c); onHover(c.name); }}
+                onBlur={() => setFocus(null)}
+                onClick={() => onSelect(selected === c.name ? null : c.name)}
+              />
+            ))}
+          </>
+        )}
+      </div>
+      <div className="pol-strip-readout" aria-live="polite">
+        {shown && (
+          <>
+            <span className="pol-strip-name">{shown.name}</span>
+            <span className="pol-dim"> · {shown.race.office || '—'} · {polLevel(shown.race)} · {polFmtDate(shown.race.next)} · {polCountdown(shown.race.next)}</span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -517,6 +624,11 @@ function Politics({ scope: routeScope }) {
             <span>upcoming · {upcoming.length}</span>
             {log && log.updated && <span className="pol-dim">updated {polFmtDate(log.updated)}</span>}
           </div>
+          {/* One date is one column of chips, which says nothing the header
+              doesn't — the US map, a whole slate on Nov 3, skips the strip. */}
+          {new Set(upcoming.map(u => u.race.next).filter(Boolean)).size > 1 && (
+            <PolStrip rows={upcoming} selected={selected} onSelect={setSelected} onHover={setHovered} />
+          )}
           <ul className="pol-list">
             {upcoming.map(({ name, race }, i) => (
               <li key={`${name}-${race.office}-${race.next}-${i}`}>
@@ -530,11 +642,13 @@ function Politics({ scope: routeScope }) {
                     <span className={`pol-swatch pol-sw-${polLevel(race)}`} aria-hidden />
                     {name}
                   </span>
-                  <span className="pol-row-level">{polLevel(race)}</span>
-                  <span className="pol-row-office sz-dim">{race.office || '—'}</span>
                   <span className="pol-row-pick">{race.pick || 'tbd'}</span>
                   <span className="pol-row-when sz-dim">{polFmtDate(race.next)}</span>
                   <span className="pol-row-out">{polCountdown(race.next) || '—'}</span>
+                  <span className="pol-row-meta">
+                    <span className="pol-row-level">{polLevel(race)}</span> · {race.office || '—'}
+                  </span>
+                  {race.note && <span className="pol-row-note">{race.note}</span>}
                 </button>
               </li>
             ))}
@@ -562,11 +676,12 @@ function Politics({ scope: routeScope }) {
                     <span className={`pol-swatch pol-sw-${polLevel(p)}`} aria-hidden />
                     {p.name}
                   </span>
-                  <span className="pol-row-level">{polLevel(p)}</span>
-                  <span className="pol-row-office sz-dim">{p.office || '—'}</span>
                   <span className="pol-row-pick">{p.pick || '—'}</span>
                   <span className="pol-row-when sz-dim">{polFmtDate(p.date)}</span>
-                  <span className="pol-row-out sz-dim">{p.note || ''}</span>
+                  <span className="pol-row-meta">
+                    <span className="pol-row-level">{polLevel(p)}</span> · {p.office || '—'}
+                  </span>
+                  {p.note && <span className="pol-row-note">{p.note}</span>}
                 </div>
               </li>
             ))}
