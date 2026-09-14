@@ -56,12 +56,21 @@ function Nav({ view }) {
   // at either end), which keeps it clear of the edge fade. A no-op wherever the
   // row fits, which is every desktop width.
   const itemsRef = React.useRef(null);
+  // Again once the web fonts land: on a cold load the first pass measures the
+  // fallback face, and the mono swap widens every label enough to push the last
+  // item back under the fade.
   React.useEffect(() => {
-    const strip = itemsRef.current;
-    const active = strip && strip.querySelector('.sz-nav-item.active');
-    if (!active || strip.scrollWidth <= strip.clientWidth) return;
-    strip.scrollLeft = active.offsetLeft - strip.offsetLeft
-      - (strip.clientWidth - active.offsetWidth) / 2;
+    let live = true;
+    const center = () => {
+      const strip = itemsRef.current;
+      const active = live && strip && strip.querySelector('.sz-nav-item.active');
+      if (!active || strip.scrollWidth <= strip.clientWidth) return;
+      strip.scrollLeft = active.offsetLeft - strip.offsetLeft
+        - (strip.clientWidth - active.offsetWidth) / 2;
+    };
+    center();
+    if (document.fonts) document.fonts.ready.then(center);
+    return () => { live = false; };
   }, [view]);
   // Whatever view is mounted publishes its $/% switch into Chrome.jsx's slot;
   // the nav hosts it so the control rides the scroll rather than sitting in a
