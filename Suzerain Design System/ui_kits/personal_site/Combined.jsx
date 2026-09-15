@@ -955,9 +955,9 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
         ))}
       </div>
     )}
-    {/* Always the dollar series: this rebuilds an equity curve from notional +
-        cumulative P&L, and reads as a percentage under both settings anyway. */}
-    <CmbDrawdownStrip series={series} notional={base}
+    {/* Always the return series: drawdown reads as a percentage under both
+        settings, and it has to be the same curve the headline chains. */}
+    <CmbDrawdownStrip series={pctSeries}
       markers={markers} cur={cur} onPick={pickAnnot}/>
     <CmbAlphaStrip series={plot} markers={markers} cur={cur} onPick={pickAnnot}
       unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
@@ -965,8 +965,9 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
   );
 }
 
-// Risk/return analytics for the combined book, off the reconstructed equity
-// curve (window-start capital base + cumulative combined P&L). data.series is
+// Risk/return analytics for the combined book, off the chained TWR series
+// (cmbPctSeries) — the wealth curve 1 + v, so every daily return is P&L over the
+// capital that earned it, exactly as the headline compounds it. data.series is
 // calendar-daily (cmbSampleDaily fills every day), so we annualize by 365 — not
 // the 252 the IBKR tab uses on its trading-day perfSeries.
 //
@@ -975,10 +976,10 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
 // figure). 365 goes to szRfSteps too, so a calendar day here is charged a
 // calendar day of interest and the printed rf is the same average rate the
 // IBKR tab prints for the same span, despite the two annualizing differently.
-function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
-  if (!series || series.length < 21 || !notional || notional <= 0) return null;
+function cmbRisk(series, benchKey = 'spx', rfRows = null) {
+  if (!series || series.length < 21) return null;
   const PER = 365;
-  const eq = series.map(p => notional + p.v);
+  const eq = series.map(p => 1 + p.v);
   const steps = window.szRfSteps ? window.szRfSteps(series.map(p => p.d), rfRows, PER) : null;
   const rp = [], rf = [];
   for (let i = 1; i < eq.length; i++) {
@@ -1036,8 +1037,8 @@ function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
     if (dd < maxDD) maxDD = dd;
   }
 
-  // Beta vs the chosen benchmark, if its column is present (benchmark equity =
-  // notional + that column's dollars).
+  // Beta vs the chosen benchmark, if its column is present (benchmark wealth =
+  // 1 + that column, which cmbPctSeries carries as the index's own return).
   //
   // Paired session to session, not calendar day to calendar day, for the reason
   // spelled out over pfPairedReturns in Portfolio.jsx: `series` is calendar-daily
@@ -1054,7 +1055,7 @@ function cmbRisk(series, notional, benchKey = 'spx', rfRows = null) {
   // pair to keep every pair it does emit spanning the same days on both legs.
   let beta = null, r2 = null;
   if (series[0][benchKey] != null) {
-    const beq = series.map(p => notional + (p[benchKey] || 0));
+    const beq = series.map(p => 1 + (p[benchKey] || 0));
     const a = [], b = [];
     let prev = -1;
     for (let i = 1; i < eq.length; i++) {
@@ -1180,12 +1181,13 @@ function cmbCorrelation(pnlHistory, pmPts, pmNavHistory) {
 // ---------- adapters onto the shared risk panels (window.SZ_RISK) ----------
 // Portfolio.jsx owns the distribution / rolling / capture / drawdown-episode
 // panels and expects a perfSeries: { d, v } with v a cumulative return *ratio*.
-// The book view carries cumulative *dollars* against a notional instead, so
-// convert rather than reimplement — equity is notional + v, and rebasing the
-// equity curve leaves daily returns unchanged.
-function cmbPerfSeries(series, notional) {
-  if (!series || series.length < 2 || !notional || notional <= 0) return null;
-  return series.map(p => ({ d: p.d, v: (notional + (p.v || 0)) / notional - 1 }));
+// That is the chained TWR from cmbPctSeries — the headline's own series — and
+// nothing else. This used to rebuild one as (notional + cumulative $) / notional,
+// a single window-start denominator for a book whose capital moved all year, so
+// the benchmark table printed +42.1% vs spx under a headline reading +41.89%.
+function cmbPerfSeries(pctSeries) {
+  if (!pctSeries || pctSeries.length < 2) return null;
+  return pctSeries.map(p => ({ d: p.d, v: p.v }));
 }
 
 // The benchmark goes in as raw closes (data.benchmarks[primary].series) rather
@@ -1212,17 +1214,17 @@ function CmbAnnotDot({ cx, cy, active, onClick, size = 5 }) {
 }
 
 // ---------- combined underwater (drawdown) strip ----------
-// Drawdown is a portfolio-level idea, so we rebuild an equity curve from the
-// window-start capital base (benchNotional) plus cumulative combined P&L, then
-// measure the % decline from its running peak. Splined to match CmbChart.
-function CmbDrawdownStrip({ series, notional, markers, cur, onPick }) {
+// Drawdown off the chained TWR wealth curve (1 + v of cmbPctSeries), so the
+// strip, the max-dd tile and the episode table all read the headline's series.
+// Splined to match CmbChart.
+function CmbDrawdownStrip({ series, markers, cur, onPick }) {
   const F = CMB_DD_FRAME;
   const hv = useChartHover(F);
-  if (!series || series.length < 2 || !notional || notional <= 0) return null;
+  if (!series || series.length < 2) return null;
 
-  let peak = notional + series[0].v;
+  let peak = 1 + series[0].v;
   const dd = series.map(p => {
-    const eq = notional + p.v;
+    const eq = 1 + p.v;
     if (eq > peak) peak = eq;
     return { d: p.d, v: peak > 0 ? eq / peak - 1 : 0 };
   });
@@ -1973,12 +1975,19 @@ function Combined({ setView }) {
     : [];
   const HistoryPicker = window.HistoryPicker;
   const BenchPicker = window.BenchPicker;
-  const risk = cmbRisk(win.series, win.notional, primary, data.rf);
-  // Shared risk panels, on the combined equity curve. The book view samples every
-  // calendar day (prediction markets trade weekends), so vol annualizes on 365.
+  // One return series for the whole page. Percent is a chained TWR on the real
+  // per-day capital base — the same construction the ibkr and polymarket views
+  // use — and the headline, benchmark table, drawdowns and risk stats all read
+  // it, so a return means one thing everywhere it is printed.
+  const pctSeries = cmbPctSeries(win.series, win.notional, benchCols);
+  const risk = cmbRisk(pctSeries, primary, data.rf);
+  // Shared risk panels, on the same series. The book view samples every calendar
+  // day (prediction markets trade weekends), so vol annualizes on 365.
   const SZ = window.SZ_RISK || {};
-  const cPerf = cmbPerfSeries(win.series, win.notional);
-  const cFullPerf = cmbPerfSeries(data.series, data.benchNotional);
+  const cPerf = cmbPerfSeries(pctSeries);
+  // Rolling lookbacks reach before the window, so they need the full history on
+  // the same construction: each day still divides by that day's own base.
+  const cFullPerf = cmbPerfSeries(cmbPctSeries(data.series, data.benchNotional, benchCols));
   const cBench = (data.benchmarks && data.benchmarks[primary] && data.benchmarks[primary].series) || null;
   const cCapture = (cPerf && cBench && SZ.pfCapture) ? SZ.pfCapture(cPerf, cBench) : null;
   const cEpisodes = (cPerf && SZ.pfDrawdownEpisodes) ? SZ.pfDrawdownEpisodes(cPerf) : [];
@@ -2000,7 +2009,6 @@ function Combined({ setView }) {
   const wLast = (win.series && win.series.length) ? win.series[win.series.length - 1] : { v: 0, ibkr: 0, pm: 0 };
   const wTotal = wLast.v || 0, wIbkr = wLast.ibkr || 0, wPm = wLast.pm || 0;
   const wBenchD = wLast[primary] != null ? +(wLast.v - wLast[primary]).toFixed(2) : null;
-  const wBenchPts = (wBenchD != null && win.notional) ? (wBenchD / win.notional) * 100 : null;
   // Only selections that actually produced a column get a line: a key the feed
   // is missing would otherwise plot as a path of NaNs.
   const drawnBench = (win.series && win.series.length)
@@ -2009,11 +2017,8 @@ function Combined({ setView }) {
   const pos = wTotal >= 0;
   const rangeSub = range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range);
   const rangeNote = data.bdExtra ? `${cmbRangeLabel(range)} · trading + rewards` : `${cmbRangeLabel(range)} trading`;
-  // Percent is a chained TWR on the real per-day capital base — the same
-  // construction the ibkr and polymarket views use, so a return means one thing
-  // across all three pages.
-  const pctSeries = cmbPctSeries(win.series, win.notional, benchCols);
   const pct = unit === 'pct' && !!pctSeries;
+  const pLast = (pctSeries && pctSeries.length) ? pctSeries[pctSeries.length - 1] : null;
   const shown = pct ? pctSeries : win.series;
   const sLast = (shown && shown.length) ? shown[shown.length - 1] : { v: 0, ibkr: 0, pm: 0 };
   const fmt = (v) => cmbFmt(v, pct ? 'pct' : 'usd');
@@ -2025,7 +2030,10 @@ function Combined({ setView }) {
   const tone = (v) => (v == null ? undefined : v >= 0 ? 'pos' : 'neg');
   const vIbkr = pct ? sLast.ibkr : wIbkr;
   const vPm = pct ? sLast.pm : wPm;
-  const vBench = pct ? (wBenchD == null ? null : sLast.v - (sLast[primary] || 0)) : wBenchD;
+  // Excess return off the TWR series under both units: in dollars it is the
+  // kicker, and it has to be the figure the percent tile and table print.
+  const twrBench = (wBenchD == null || !pLast) ? null : pLast.v - (pLast[primary] || 0);
+  const vBench = pct ? twrBench : wBenchD;
   const UnitBar = window.UnitBar;
   // Lifetime, not windowed: it labels the ledger the ticks come from, and a sum
   // that shrank when the reader picked 1M would look like money coming back.
@@ -2077,7 +2085,7 @@ function Combined({ setView }) {
           <CmbStat label={`vs ${primaryName}`}
             value={pct ? cmbPctFmt(vBench) : cmbSigned(wBenchD)}
             tone={tone(vBench)}
-            note={pct ? `${cmbSigned(wBenchD)} in dollars` : `${wBenchPts >= 0 ? '+' : ''}${wBenchPts.toFixed(1)}% on notional`}/>
+            note={pct ? `${cmbSigned(wBenchD)} in dollars` : twrBench != null ? `${cmbPctFmt(twrBench)} twr` : null}/>
         )}
       </div>
 
