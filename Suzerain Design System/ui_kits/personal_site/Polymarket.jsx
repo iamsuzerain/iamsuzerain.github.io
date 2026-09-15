@@ -449,12 +449,19 @@ function pmBuild(perWallet, pnl, breakdown) {
     v: +r.p.toFixed(2),
   })));
 
+  // The API sends price 0 on every REDEEM, so a winning redemption would print
+  // 0¢. Derive it from the payout per share instead: a winner redeems at 100¢,
+  // a loser at 0¢.
+  const pmActivityPrice = (a) => {
+    if ((a.type || '').toUpperCase() !== 'REDEEM') return a.price || 0;
+    return a.size > 0 ? Math.min(1, (a.usdcSize || 0) / a.size) : 0;
+  };
   const activity = mergedActivity.slice(0, 15).map(a => ({
     t: new Date((a.timestamp || 0) * 1000).toISOString(),
     type: (a.type || 'TRADE').toUpperCase(),
     side: (a.side || '').toUpperCase(),
     size: Math.round(a.size || 0).toLocaleString(),
-    price: a.price || 0,
+    price: pmActivityPrice(a),
     market: a.title || '',
   }));
 
