@@ -266,8 +266,8 @@ function recBooks(days) {
 // different questions: P&L is what the book earned since the history opens,
 // the TWR is that as a return, and net liquidity is how big the book is —
 // which deposits and transfers moved as much as performance did, so it is
-// labeled as a size, not an achievement. Each ladder shows every rung reached
-// and the next one, with the distance still to go from the latest close.
+// labeled as a size, not an achievement. Each ladder shows only the rungs
+// reached.
 function recShortUSD(v) {
   const a = Math.abs(v);
   if (a >= 1e6) return '$' + (a / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'm';
@@ -277,26 +277,24 @@ function recShortUSD(v) {
 
 const REC_LADDERS = [
   { key: 'pnl', label: 'pnl', rungs: [50e3, 100e3, 250e3, 500e3, 1e6, 2.5e6, 5e6],
-    fmt: (v) => '+' + recShortUSD(v), gap: (v) => recShortUSD(v) },
+    fmt: (v) => '+' + recShortUSD(v) },
   { key: 'twr', label: 'return', rungs: [0.25, 0.5, 1, 2, 3, 5],
-    fmt: (v) => '+' + Math.round(v * 100) + '%', gap: (v) => (v * 100).toFixed(1) + ' pts' },
+    fmt: (v) => '+' + Math.round(v * 100) + '%' },
   { key: 'nav', label: 'net liquidity', rungs: [750e3, 1e6, 1.5e6, 2e6, 3e6, 5e6],
-    fmt: (v) => recShortUSD(v), gap: (v) => recShortUSD(v) },
+    fmt: (v) => recShortUSD(v) },
 ];
 
 function recMilestones(days) {
-  const latest = days[days.length - 1];
   return REC_LADDERS.map(l => {
     const start = days[0][l.key];
     const hit = [];
-    let next = null;
     for (const t of l.rungs) {
       if (start != null && t <= start) continue;   // already there when the history opens
       const x = days.find(d => d[l.key] != null && d[l.key] >= t);
-      if (x) hit.push({ t, x, n: x.day - days[0].day + 1 });
-      else { next = { t, gap: t - latest[l.key] }; break; }
+      if (!x) break;
+      hit.push({ t, x, n: x.day - days[0].day + 1 });
     }
-    return { ...l, hit, next };
+    return { ...l, hit };
   });
 }
 
@@ -565,11 +563,11 @@ function RecLegend() {
 // ---------- the records ----------
 // Paired best | worst, so each row of the grid is one question with both of
 // its answers side by side.
-function RecRow({ id, label, value, tone, when, note, dim, active, onActive, onPin, pinned }) {
+function RecRow({ id, label, value, tone, when, note, active, onActive, onPin, pinned }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
     <button type="button"
-      className={`rec-row${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}${dim ? ' is-pending' : ''}`}
+      className={`rec-row${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}
       onMouseEnter={() => onActive(id)} onMouseLeave={() => onActive(null)}
       onFocus={() => onActive(id)} onBlur={() => onActive(null)}
       onClick={() => onPin(id)} aria-pressed={pinned}>
@@ -712,20 +710,14 @@ function recBetRows(bets, rec) {
   return rows;
 }
 
-// One column per ladder: every rung reached, then the next one still ahead.
+// One column per ladder, one row per rung reached.
 function recMilestoneColumns(ladders) {
   return ladders.map(l => ({
     key: l.key, label: l.label,
-    rows: [
-      ...l.hit.map(h => ({
-        id: `ms-${l.key}-${h.t}`, label: l.label, value: l.fmt(h.t),
-        when: recDate(h.x.d), note: `day ${h.n}`, set: new Set([h.x.day]),
-      })),
-      ...(l.next ? [{
-        id: `ms-${l.key}-next`, label: `${l.label} · next`, value: l.fmt(l.next.t),
-        when: 'not yet', note: `${l.gap(l.next.gap)} to go`, set: new Set(), dim: true,
-      }] : []),
-    ],
+    rows: l.hit.map(h => ({
+      id: `ms-${l.key}-${h.t}`, label: l.label, value: l.fmt(h.t),
+      when: recDate(h.x.d), note: `day ${h.n}`, set: new Set([h.x.day]),
+    })),
   }));
 }
 
