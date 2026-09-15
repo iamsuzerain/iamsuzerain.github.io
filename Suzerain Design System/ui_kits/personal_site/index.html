@@ -1772,9 +1772,17 @@
     color: inherit; font: inherit; cursor: pointer;
     transition: background 120ms ease;
   }
-  .rec-row:nth-child(odd) { border-right: 1px solid var(--border-soft); border-radius: 0; }
-  .rec-row:nth-child(even) { border-radius: 0; }
-  .rec-row:nth-last-child(-n+2) { border-bottom: none; }
+  .rec-grid > .rec-row { border-radius: 0; }
+  .rec-grid > .rec-row:nth-child(odd) { border-right: 1px solid var(--border-soft); }
+  .rec-grid > .rec-row:nth-last-child(-n+2) { border-bottom: none; }
+  /* Milestones: one column per ladder, rungs stacked in the order reached. */
+  .rec-ladders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rec-ladder { display: flex; flex-direction: column; }
+  .rec-ladder + .rec-ladder { border-left: 1px solid var(--border-soft); }
+  .rec-ladder > .rec-row { border-radius: 0; }
+  .rec-ladder > .rec-row:last-child { border-bottom: none; }
+  .rec-row.is-pending { cursor: default; }
+  .rec-row.is-pending .rec-row-value { color: var(--fg-4); }
   .rec-row:hover, .rec-row.is-active { background: rgba(167,139,250,0.06); }
   .rec-row.is-pinned { background: rgba(167,139,250,0.10); }
   .rec-row:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: -1px; }
@@ -1800,9 +1808,10 @@
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--fg-4);
   }
   @media (max-width: 640px) {
-    .rec-grid { grid-template-columns: minmax(0, 1fr); }
-    .rec-row:nth-child(odd) { border-right: none; }
-    .rec-row:nth-last-child(2) { border-bottom: 1px solid var(--border-soft); }
+    .rec-grid, .rec-ladders { grid-template-columns: minmax(0, 1fr); }
+    .rec-grid > .rec-row:nth-child(odd) { border-right: none; }
+    .rec-grid > .rec-row:nth-last-child(2) { border-bottom: 1px solid var(--border-soft); }
+    .rec-ladder + .rec-ladder { border-left: none; border-top: 1px solid var(--border-soft); }
     .rec-row { padding: 12px 4px; }
     .rec-row-value { font-size: 20px; }
     .rec-legend-scale, .rec-legend-high { margin-left: 10px !important; }

@@ -87,6 +87,11 @@ function recUSD(v) {
 // (1+v_i)/(1+v_{i-1}) − 1, which is exactly Δ(P&L)/base_{i-1} — the day's P&L on
 // the capital that earned it. `usd` and the legs are that day's dollars.
 //
+// `rs` is the S&P 500's own step off the same build (its column is the index
+// return rebased to the series start, forward-filled over weekends, so a closed
+// market steps 0). `ib` and `pmc` are each book's share of `r`, its dollars on
+// the same prior-day base, so the two always sum to the day's return.
+//
 // The series is calendar-daily until it outgrows the plot-point ceiling
 // (cmbDownsample, ~5 years out); past that a step would span several days, so
 // any gap is refused rather than silently read as one day.
@@ -103,12 +108,21 @@ function recDays(book) {
     const idx = 1 + pct[i].v;
     const high = idx > peak;
     if (high) peak = idx;
+    const ibkr = (s[i].ibkr || 0) - (s[i - 1].ibkr || 0);
+    const pm = (s[i].pm || 0) - (s[i - 1].pm || 0);
+    const base = s[i - 1].base > 0 ? s[i - 1].base : book.benchNotional;
+    const hasSpx = pct[i].spx != null && pct[i - 1].spx != null;
     out.push({
       d: s[i].d, day,
       r: idx / (1 + pct[i - 1].v) - 1,
       usd: s[i].v - s[i - 1].v,
-      ibkr: (s[i].ibkr || 0) - (s[i - 1].ibkr || 0),
-      pm: (s[i].pm || 0) - (s[i - 1].pm || 0),
+      ibkr, pm,
+      ib: base > 0 ? ibkr / base : 0,
+      pmc: base > 0 ? pm / base : 0,
+      rs: hasSpx ? (1 + pct[i].spx) / (1 + pct[i - 1].spx) - 1 : null,
+      pnl: s[i].v,          // cumulative since the series opens
+      twr: pct[i].v,
+      nav: s[i].base,       // ibkr nav + polymarket nav that day
       high,
     });
   }
@@ -123,14 +137,16 @@ function recPeriods(days, keyOf, isComplete) {
   const map = new Map();
   for (const x of days) {
     const k = keyOf(x);
-    if (!map.has(k)) map.set(k, { key: k, days: [], g: 1, usd: 0 });
+    if (!map.has(k)) map.set(k, { key: k, days: [], g: 1, gs: 1, spx: true, usd: 0 });
     const p = map.get(k);
     p.days.push(x);
     p.g *= 1 + x.r;
+    if (x.rs == null) p.spx = false; else p.gs *= 1 + x.rs;
     p.usd += x.usd;
   }
   return [...map.values()]
-    .map(p => ({ ...p, r: p.g - 1, from: p.days[0].d, to: p.days[p.days.length - 1].d }))
+    .map(p => ({ ...p, r: p.g - 1, rs: p.spx ? p.gs - 1 : null,
+      from: p.days[0].d, to: p.days[p.days.length - 1].d }))
     .filter(isComplete);
 }
 
@@ -148,14 +164,14 @@ function recBuild(book) {
   const bestWeek = extreme(weeks, (a, b) => a > b), worstWeek = extreme(weeks, (a, b) => a < b);
   const bestMonth = extreme(months, (a, b) => a > b), worstMonth = extreme(months, (a, b) => a < b);
 
-  // Runs of consecutive complete weeks on one side of zero. Ties go to the
-  // later run — the recent one is the one a reader can still place.
-  const run = (sign) => {
+  // Runs of consecutive complete weeks that pass a test. Ties go to the later
+  // run — the recent one is the one a reader can still place.
+  const run = (pass) => {
     let best = null, cur = null;
     for (let i = 0; i < weeks.length; i++) {
       const w = weeks[i];
       const adjacent = cur && w.key - cur.weeks[cur.weeks.length - 1].key === 7;
-      if (Math.sign(w.r) === sign) {
+      if (pass(w)) {
         if (!adjacent) cur = { weeks: [] };
         cur.weeks.push(w);
         if (!best || cur.weeks.length >= best.weeks.length) best = { weeks: cur.weeks.slice() };
@@ -168,6 +184,7 @@ function recBuild(book) {
     return {
       n: ws.length,
       r: ws.reduce((g, w) => g * (1 + w.r), 1) - 1,
+      rs: ws.reduce((g, w) => g * (1 + (w.rs || 0)), 1) - 1,
       usd: ws.reduce((a, w) => a + w.usd, 0),
       from: ws[0].from, to: ws[ws.length - 1].to,
       // Still running if it ends on the last complete week and the current,
@@ -176,7 +193,7 @@ function recBuild(book) {
       days: ws.flatMap(w => w.days),
     };
   };
-  const upRun = run(1), downRun = run(-1);
+  const upRun = run(w => w.r > 0), downRun = run(w => w.r < 0);
 
   // Closes at a new high of the TWR index (not NAV, which deposits would move).
   const highs = days.filter(x => x.high);
@@ -192,8 +209,186 @@ function recBuild(book) {
   if (lastDay > prevDay) consider(lastDay, days[days.length - 1].d, true);
 
   return { days, weeks, months, firstDay, lastDay,
+    spx: recVsSpx(days, months, run),
+    books: recBooks(days),
+    milestones: recMilestones(days),
+    odds: recOdds(days),
     bestDay, worstDay, bestWeek, worstWeek, bestMonth, worstMonth,
     upRun, downRun, highs, wait };
+}
+
+// ---------- against the S&P 500 ----------
+// Relative figures are simple differences of the two returns over the same
+// span, in percentage points: a day the book made 1% while the index made 0.4%
+// is +0.6 points. Weekends count, with the index at 0 — the market was shut and
+// the book wasn't, which is the honest reading of those days.
+function recVsSpx(days, months, run) {
+  const dd = days.filter(x => x.rs != null);
+  if (dd.length < 14) return null;
+  const rel = (list) => list.filter(p => p.rs != null).map(p => ({ ...p, rel: p.r - p.rs }));
+  const pick = (list, key, better) => list.reduce((a, b) => (a == null || better(b[key], a[key]) ? b : a), null);
+  const rd = rel(dd), rm = rel(months);
+  return {
+    bestDay: pick(rd, 'rel', (a, b) => a > b), worstDay: pick(rd, 'rel', (a, b) => a < b),
+    bestMonth: pick(rm, 'rel', (a, b) => a > b), worstMonth: pick(rm, 'rel', (a, b) => a < b),
+    beatRun: run(w => w.rs != null && w.r > w.rs),
+    trailRun: run(w => w.rs != null && w.r < w.rs),
+    // Only sessions the index actually moved, so a flat weekend can't be the
+    // best day on a red tape.
+    redTape: pick(dd.filter(x => x.rs < 0), 'r', (a, b) => a > b),
+    greenTape: pick(dd.filter(x => x.rs > 0), 'r', (a, b) => a < b),
+  };
+}
+
+// ---------- the two books ----------
+// Offsetting days need both books to have moved enough to matter, by the same
+// 0.05% line that keeps a calendar cell neutral: polymarket moves by cents on a
+// quiet weekend, and a +$4 day against ibkr's −$9k is not a hedge.
+function recBooks(days) {
+  const byLeg = (key, better) => days.reduce((a, b) => (a == null || better(b[key], a[key]) ? b : a), null);
+  const both = days.filter(x => Math.abs(x.ib) >= REC_FLAT && Math.abs(x.pmc) >= REC_FLAT);
+  const offset = both.filter(x => Math.sign(x.ib) !== Math.sign(x.pmc));
+  // The day one book absorbed the most of the other's move: the smaller of the
+  // two opposite legs is what actually got canceled.
+  const cushion = offset.reduce((a, b) => {
+    const cb = Math.min(Math.abs(b.ibkr), Math.abs(b.pm));
+    return (a == null || cb > a.absorbed) ? { ...b, absorbed: cb } : a;
+  }, null);
+  return {
+    ibBest: byLeg('ib', (a, b) => a > b), ibWorst: byLeg('ib', (a, b) => a < b),
+    pmBest: byLeg('pmc', (a, b) => a > b), pmWorst: byLeg('pmc', (a, b) => a < b),
+    both, offset, cushion,
+  };
+}
+
+// ---------- milestones ----------
+// The first close at or past each rung. Three ladders because they answer
+// different questions: P&L is what the book earned since the history opens,
+// the TWR is that as a return, and net liquidity is how big the book is —
+// which deposits and transfers moved as much as performance did, so it is
+// labeled as a size, not an achievement. Each ladder shows every rung reached
+// and the next one, with the distance still to go from the latest close.
+function recShortUSD(v) {
+  const a = Math.abs(v);
+  if (a >= 1e6) return '$' + (a / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'm';
+  if (a >= 1e3) return '$' + Math.round(a / 1e3) + 'k';
+  return '$' + Math.round(a);
+}
+
+const REC_LADDERS = [
+  { key: 'pnl', label: 'pnl', rungs: [50e3, 100e3, 250e3, 500e3, 1e6, 2.5e6, 5e6],
+    fmt: (v) => '+' + recShortUSD(v), gap: (v) => recShortUSD(v) },
+  { key: 'twr', label: 'return', rungs: [0.25, 0.5, 1, 2, 3, 5],
+    fmt: (v) => '+' + Math.round(v * 100) + '%', gap: (v) => (v * 100).toFixed(1) + ' pts' },
+  { key: 'nav', label: 'net liquidity', rungs: [750e3, 1e6, 1.5e6, 2e6, 3e6, 5e6],
+    fmt: (v) => recShortUSD(v), gap: (v) => recShortUSD(v) },
+];
+
+function recMilestones(days) {
+  const latest = days[days.length - 1];
+  return REC_LADDERS.map(l => {
+    const start = days[0][l.key];
+    const hit = [];
+    let next = null;
+    for (const t of l.rungs) {
+      if (start != null && t <= start) continue;   // already there when the history opens
+      const x = days.find(d => d[l.key] != null && d[l.key] >= t);
+      if (x) hit.push({ t, x, n: x.day - days[0].day + 1 });
+      else { next = { t, gap: t - latest[l.key] }; break; }
+    }
+    return { ...l, hit, next };
+  });
+}
+
+// ---------- odds and ends ----------
+function recOdds(days) {
+  const highsByMonth = new Map();
+  for (const x of days) {
+    if (!x.high) continue;
+    const ym = x.d.slice(0, 7);
+    if (!highsByMonth.has(ym)) highsByMonth.set(ym, []);
+    highsByMonth.get(ym).push(x);
+  }
+  let mostHighs = null;
+  for (const [ym, xs] of highsByMonth) if (!mostHighs || xs.length >= mostHighs.xs.length) mostHighs = { ym, xs };
+  // Mean return by weekday, monday to friday. Weekends are left out: they carry
+  // polymarket alone and would be ranked on a different book.
+  const wd = [1, 2, 3, 4, 5].map(k => {
+    const xs = days.filter(x => recDow(x.day) === k);
+    return { k, xs, mean: xs.reduce((a, x) => a + x.r, 0) / (xs.length || 1),
+      up: xs.filter(x => x.r > 0).length };
+  });
+  const best = wd.reduce((a, b) => (b.mean > a.mean ? b : a));
+  const worst = wd.reduce((a, b) => (b.mean < a.mean ? b : a));
+  return { mostHighs, best, worst };
+}
+
+// ---------- polymarket bets ----------
+// From the calibration feed's closed lots. A position can close as two lots (a
+// swing exit and a held-to-resolution remainder), so lots are summed per
+// market and outcome first: the reader's unit is the bet, not the accounting
+// split. Dated on the last lot's close; priced at its entry averaged over the
+// lots by stake.
+//
+// Best and worst then rank whole events. Polymarket lists every strike of
+// "what will WTI hit in June" as its own market, and one oil view bet across
+// several of them showed up as both the worst bet (the $75 leg) and the
+// biggest favorite loss (the $70 leg) — two rows for one trade. The feed's
+// `event` column names the event where it differs from the market's title;
+// where it is null the market is its own event.
+//
+// The underdog and favorite rows stay per market, because a price belongs to a
+// market and not to an event, and they skip any market inside the events
+// already shown as best or worst. They rank by money, not by price: ranking by
+// the longest odds let a $700 punt at 7¢ outrank Ohtani-not-MVP bought at 23¢
+// for +$7,296, and restricting to bets held to resolution dropped that one
+// entirely — it was sold at a profit before the award was decided. Sold bets
+// count: the question is what paid, and a sale is when it paid.
+const REC_UNDERDOG = 0.5;
+
+function recBets(cal) {
+  if (!cal || !Array.isArray(cal.lots) || !cal.lots.length) return null;
+  const cols = (cal.method && cal.method.lotColumns) ||
+    ['category', 'closedOn', 'via', 'volume', 'realizedPnl', 'win', 'impliedEntry', 'market', 'outcome'];
+  const at = Object.fromEntries(cols.map((c, i) => [c, i]));
+  const bets = new Map();
+  for (const l of cal.lots) {
+    const lot = {
+      d: l[at.closedOn], pnl: l[at.realizedPnl], entry: l[at.impliedEntry],
+      market: l[at.market], outcome: l[at.outcome],
+      event: (at.event != null && l[at.event]) || l[at.market],
+    };
+    if (!lot.d || lot.pnl == null) continue;
+    const k = JSON.stringify([lot.market, lot.outcome]);
+    const b = bets.get(k) || { market: lot.market, outcome: lot.outcome, event: lot.event,
+      pnl: 0, d: lot.d, stake: 0, priced: 0 };
+    b.pnl += lot.pnl;
+    if (lot.d > b.d) b.d = lot.d;
+    const vol = l[at.volume];
+    if (lot.entry != null && vol > 0) { b.stake += vol; b.priced += lot.entry * vol; }
+    bets.set(k, b);
+  }
+  const all = [...bets.values()].map(b => ({ ...b, entry: b.stake > 0 ? b.priced / b.stake : null }));
+  if (!all.length) return null;
+
+  const events = new Map();
+  for (const b of all) {
+    const e = events.get(b.event) || { event: b.event, pnl: 0, d: b.d, bets: [] };
+    e.pnl += b.pnl;
+    if (b.d > e.d) e.d = b.d;
+    e.bets.push(b);
+    events.set(b.event, e);
+  }
+  const evs = [...events.values()];
+  const best = evs.reduce((a, b) => (b.pnl > a.pnl ? b : a));
+  const worst = evs.reduce((a, b) => (b.pnl < a.pnl ? b : a));
+
+  const shown = new Set([best.event, worst.event]);
+  const rest = all.filter(b => !shown.has(b.event) && b.entry != null);
+  const pickBy = (list, better) => list.length ? list.reduce((a, b) => (better(b.pnl, a.pnl) ? b : a)) : null;
+  const underdog = pickBy(rest.filter(b => b.entry < REC_UNDERDOG && b.pnl > 0), (a, b) => a > b);
+  const favorite = pickBy(rest.filter(b => b.entry > REC_UNDERDOG && b.pnl < 0), (a, b) => a < b);
+  return { n: all.length, best, worst, underdog, favorite };
 }
 
 // ---------- the calendar ----------
@@ -370,11 +565,11 @@ function RecLegend() {
 // ---------- the records ----------
 // Paired best | worst, so each row of the grid is one question with both of
 // its answers side by side.
-function RecRow({ id, label, value, tone, when, note, active, onActive, onPin, pinned }) {
+function RecRow({ id, label, value, tone, when, note, dim, active, onActive, onPin, pinned }) {
   const cls = tone === 'pos' ? 'pos' : tone === 'neg' ? 'neg' : '';
   return (
     <button type="button"
-      className={`rec-row${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}`}
+      className={`rec-row${active ? ' is-active' : ''}${pinned ? ' is-pinned' : ''}${dim ? ' is-pending' : ''}`}
       onMouseEnter={() => onActive(id)} onMouseLeave={() => onActive(null)}
       onFocus={() => onActive(id)} onBlur={() => onActive(null)}
       onClick={() => onPin(id)} aria-pressed={pinned}>
@@ -386,15 +581,21 @@ function RecRow({ id, label, value, tone, when, note, active, onActive, onPin, p
   );
 }
 
-function recDefs(rec) {
-  const daySet = (list) => new Set(list.map(x => x.day));
-  const defs = [];
-  const period = (id, label, p, kind) => p && defs.push({
-    id, label, value: recPct(p.r), tone: p.r >= 0 ? 'pos' : 'neg',
-    when: kind === 'day' ? `${REC_DOW[recDow(p.day)]} ${recDate(p.d)}`
-      : kind === 'month' ? recMonthName(p.key) : recSpan(p.from, p.to),
+const recTone = (v) => (v == null ? undefined : v >= 0 ? 'pos' : 'neg');
+const recPts = (v) => (v == null || !isFinite(v)) ? '—'
+  : (v >= 0 ? '+' : '−') + Math.abs(v * 100).toFixed(2) + ' pts';
+const recDayWhen = (x) => `${REC_DOW[recDow(x.day)]} ${recDate(x.d)}`;
+const recWeeks = (n) => `${n} week${n === 1 ? '' : 's'}`;
+const recDaySet = (list) => new Set(list.map(x => x.day));
+const recEmpty = (id, label, when = 'none yet') => ({ id, label, value: '—', when, set: new Set() });
+
+function recRecordRows(rec) {
+  const rows = [];
+  const period = (id, label, p, kind) => p && rows.push({
+    id, label, value: recPct(p.r), tone: recTone(p.r),
+    when: kind === 'day' ? recDayWhen(p) : kind === 'month' ? recMonthName(p.key) : recSpan(p.from, p.to),
     note: recUSD(p.usd),
-    set: kind === 'day' ? new Set([p.day]) : daySet(p.days),
+    set: kind === 'day' ? new Set([p.day]) : recDaySet(p.days),
   });
   period('best-day', 'best day', rec.bestDay, 'day');
   period('worst-day', 'worst day', rec.worstDay, 'day');
@@ -402,47 +603,205 @@ function recDefs(rec) {
   period('worst-week', 'worst week', rec.worstWeek, 'week');
   period('best-month', 'best month', rec.bestMonth, 'month');
   period('worst-month', 'worst month', rec.worstMonth, 'month');
-  const runDef = (id, label, x) => defs.push(x ? {
-    id, label, value: `${x.n} week${x.n === 1 ? '' : 's'}`,
+  const runRow = (id, label, x) => rows.push(x ? {
+    id, label, value: recWeeks(x.n),
     when: `${recSpan(x.from, x.to)}${x.open ? ' · running' : ''}`,
-    note: `${recPct(x.r)} · ${recUSD(x.usd)}`, set: daySet(x.days),
-  } : { id, label, value: '—', when: 'none yet', set: new Set() });
-  runDef('up-run', 'longest run of up weeks', rec.upRun);
-  runDef('down-run', 'longest run of down weeks', rec.downRun);
+    note: `${recPct(x.r)} · ${recUSD(x.usd)}`, set: recDaySet(x.days),
+  } : recEmpty(id, label));
+  runRow('up-run', 'longest run of up weeks', rec.upRun);
+  runRow('down-run', 'longest run of down weeks', rec.downRun);
   const last = rec.highs[rec.highs.length - 1];
-  defs.push({
+  rows.push({
     id: 'highs', label: 'new highs', value: `${rec.highs.length} days`,
     when: last ? `latest ${recDate(last.d)}` : 'none yet',
-    note: `of ${rec.days.length} on record`, set: daySet(rec.highs),
+    note: `of ${rec.days.length} on record`, set: recDaySet(rec.highs),
   });
   const w = rec.wait;
   const waitDays = new Set();
   if (w) for (let d = recEpoch(w.from) + 1; d <= recEpoch(w.to); d++) waitDays.add(d);
-  defs.push(w ? {
+  rows.push(w ? {
     id: 'wait', label: 'longest wait for a new high', value: `${w.n} days`,
     when: `${recSpan(w.from, w.to)}${w.open ? ' · still waiting' : ''}`,
     note: w.open ? 'measured to the latest close' : 'high to next high', set: waitDays,
-  } : { id: 'wait', label: 'longest wait for a new high', value: '—', when: 'never below a high', set: new Set() });
-  return defs;
+  } : recEmpty('wait', 'longest wait for a new high', 'never below a high'));
+  return rows;
+}
+
+function recSpxRows(x) {
+  if (!x) return null;
+  const rows = [];
+  const dayRel = (id, label, d) => rows.push(d ? {
+    id, label, value: recPts(d.rel), tone: recTone(d.rel), when: recDayWhen(d),
+    note: `book ${recPct(d.r)} · s&p ${recPct(d.rs)}`, set: new Set([d.day]),
+  } : recEmpty(id, label));
+  const monthRel = (id, label, m) => rows.push(m ? {
+    id, label, value: recPts(m.rel), tone: recTone(m.rel), when: recMonthName(m.key),
+    note: `book ${recPct(m.r)} · s&p ${recPct(m.rs)}`, set: recDaySet(m.days),
+  } : recEmpty(id, label));
+  const runRow = (id, label, r) => rows.push(r ? {
+    id, label, value: recWeeks(r.n),
+    when: `${recSpan(r.from, r.to)}${r.open ? ' · running' : ''}`,
+    note: `book ${recPct(r.r)} · s&p ${recPct(r.rs)}`, set: recDaySet(r.days),
+  } : recEmpty(id, label));
+  const tape = (id, label, d) => rows.push(d ? {
+    id, label, value: recPct(d.r), tone: recTone(d.r), when: recDayWhen(d),
+    note: `s&p ${recPct(d.rs)}`, set: new Set([d.day]),
+  } : recEmpty(id, label));
+  dayRel('spx-best-day', 'best day vs the s&p', x.bestDay);
+  dayRel('spx-worst-day', 'worst day vs the s&p', x.worstDay);
+  monthRel('spx-best-month', 'best month vs the s&p', x.bestMonth);
+  monthRel('spx-worst-month', 'worst month vs the s&p', x.worstMonth);
+  runRow('spx-beat', 'longest run of weeks ahead', x.beatRun);
+  runRow('spx-trail', 'longest run of weeks behind', x.trailRun);
+  tape('spx-red', 'best day while the s&p fell', x.redTape);
+  tape('spx-green', 'worst day while the s&p rose', x.greenTape);
+  return rows;
+}
+
+function recBookRows(b) {
+  const rows = [];
+  const leg = (id, label, d, key, usdKey) => rows.push(d ? {
+    id, label, value: recPct(d[key]), tone: recTone(d[key]), when: recDayWhen(d),
+    note: recUSD(d[usdKey]), set: new Set([d.day]),
+  } : recEmpty(id, label));
+  leg('ib-best', 'ibkr · best day', b.ibBest, 'ib', 'ibkr');
+  leg('ib-worst', 'ibkr · worst day', b.ibWorst, 'ib', 'ibkr');
+  leg('pm-best', 'polymarket · best day', b.pmBest, 'pmc', 'pm');
+  leg('pm-worst', 'polymarket · worst day', b.pmWorst, 'pmc', 'pm');
+  const share = b.both.length ? Math.round((100 * b.offset.length) / b.both.length) : null;
+  rows.push({
+    id: 'offset', label: 'days the books offset', value: `${b.offset.length} days`,
+    when: `of ${b.both.length} days both moved 0.05%+`,
+    note: share != null ? `${share}%` : null, set: recDaySet(b.offset),
+  });
+  const c = b.cushion;
+  rows.push(c ? {
+    id: 'cushion', label: 'biggest cushion', value: `$${Math.round(c.absorbed).toLocaleString('en-US')}`,
+    when: recDayWhen(c), note: `ibkr ${recUSD(c.ibkr)} · poly ${recUSD(c.pm)}`, set: new Set([c.day]),
+  } : recEmpty('cushion', 'biggest cushion'));
+  return rows;
+}
+
+function recBetRows(bets, rec) {
+  if (!bets) return null;
+  // A bet that closed before the calendar opens has no cell to light.
+  const daySet = (iso) => {
+    const d = recEpoch(iso);
+    return d >= rec.firstDay && d <= rec.lastDay ? new Set([d]) : new Set();
+  };
+  // A decimal near either end, where rounding would print a 99.77¢ entry as a
+  // 100¢ one — a price no bet can have lost at.
+  const cents = (p) => `${(p >= 0.99 || p <= 0.01) ? (p * 100).toFixed(1) : Math.round(p * 100)}¢`;
+  const rows = [];
+  // An event row names its one bet when it holds one, and counts its markets
+  // when it holds several — a side ("bet No") means nothing across ten strikes.
+  const bet = (id, label, e) => rows.push(e ? {
+    id, label, value: recUSD(e.pnl), tone: recTone(e.pnl),
+    when: `${e.event} · ${recDate(e.d)}`,
+    note: e.bets.length === 1 ? `bet ${e.bets[0].outcome}` : `${e.bets.length} markets`,
+    set: daySet(e.d),
+  } : recEmpty(id, label));
+  const odds = (id, label, x) => rows.push(x ? {
+    id, label, value: recUSD(x.pnl), tone: recTone(x.pnl),
+    when: `${x.market} · ${recDate(x.d)}`, note: `bet ${x.outcome} at ${cents(x.entry)}`, set: daySet(x.d),
+  } : recEmpty(id, label));
+  bet('bet-best', 'best bet', bets.best);
+  bet('bet-worst', 'worst bet', bets.worst);
+  odds('bet-underdog', 'biggest underdog win', bets.underdog);
+  odds('bet-favorite', 'biggest favorite loss', bets.favorite);
+  return rows;
+}
+
+// One column per ladder: every rung reached, then the next one still ahead.
+function recMilestoneColumns(ladders) {
+  return ladders.map(l => ({
+    key: l.key, label: l.label,
+    rows: [
+      ...l.hit.map(h => ({
+        id: `ms-${l.key}-${h.t}`, label: l.label, value: l.fmt(h.t),
+        when: recDate(h.x.d), note: `day ${h.n}`, set: new Set([h.x.day]),
+      })),
+      ...(l.next ? [{
+        id: `ms-${l.key}-next`, label: `${l.label} · next`, value: l.fmt(l.next.t),
+        when: 'not yet', note: `${l.gap(l.next.gap)} to go`, set: new Set(), dim: true,
+      }] : []),
+    ],
+  }));
+}
+
+function recOddsRows(o, rec) {
+  const rows = [];
+  const m = o.mostHighs;
+  rows.push(m ? {
+    id: 'odds-highs', label: 'most new highs in a month', value: `${m.xs.length} days`,
+    when: recMonthName(m.ym), note: `of ${rec.days.filter(x => x.d.slice(0, 7) === m.ym).length}`,
+    set: recDaySet(m.xs),
+  } : recEmpty('odds-highs', 'most new highs in a month'));
+  const dry = rec.months.filter(mo => !mo.days.some(x => x.high));
+  rows.push({
+    id: 'odds-dry', label: 'months without a new high', value: `${dry.length}`,
+    when: dry.length ? `latest ${recMonthName(dry[dry.length - 1].key)}` : 'every month set one',
+    note: `of ${rec.months.length} complete`, set: recDaySet(dry.flatMap(mo => mo.days)),
+  });
+  const wd = (id, label, x) => rows.push({
+    id, label, value: recPct(x.mean), tone: recTone(x.mean),
+    when: `${REC_DOW_FULL[x.k]}days · ${x.xs.length} sessions`,
+    note: `${x.up} up`, set: recDaySet(x.xs),
+  });
+  wd('odds-wd-best', 'best weekday, on average', o.best);
+  wd('odds-wd-worst', 'worst weekday, on average', o.worst);
+  return rows;
+}
+
+const REC_DOW_FULL = ['sun', 'mon', 'tues', 'wednes', 'thurs', 'fri', 'satur'];
+
+function RecPanel({ title, meta, children }) {
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">{title}</span>
+        {meta && <span className="pf-panel-meta">{meta}</span>}
+      </div>
+      {children}
+    </div>
+  );
 }
 
 function Records() {
   const [book, setBook] = React.useState(null);
+  const [cal, setCal] = React.useState(null);
   const [err, setErr] = React.useState(null);
   const [hoverRec, setHoverRec] = React.useState(null);
   const [pinned, setPinned] = React.useState(null);
   const [hoverDay, setHoverDay] = React.useState(null);
+  const calRef = React.useRef(null);
 
   React.useEffect(() => {
     let canceled = false;
     window.szBook.load()
       .then(d => { if (!canceled) setBook(d); })
       .catch(e => { if (!canceled) setErr(String(e.message || e)); });
+    // Best-effort: without it the bets panel just doesn't draw.
+    window.szJson('data/polymarket-calibration.json')
+      .then(d => { if (!canceled) setCal(d); })
+      .catch(() => {});
     return () => { canceled = true; };
   }, []);
 
   const rec = React.useMemo(() => (book ? recBuild(book) : null), [book]);
-  const defs = React.useMemo(() => (rec ? recDefs(rec) : []), [rec]);
+  const groups = React.useMemo(() => {
+    if (!rec) return null;
+    const bets = recBets(cal);
+    return {
+      records: recRecordRows(rec),
+      spx: recSpxRows(rec.spx),
+      books: recBookRows(rec.books),
+      bets: recBetRows(bets, rec),
+      betCount: bets ? bets.n : 0,
+      milestones: recMilestoneColumns(rec.milestones),
+      odds: recOddsRows(rec.odds, rec),
+    };
+  }, [rec, cal]);
 
   if (err) return (
     <section className="sz-prose">
@@ -465,13 +824,40 @@ function Records() {
     </section>
   );
 
+  const allRows = [
+    ...groups.records, ...(groups.spx || []), ...groups.books, ...(groups.bets || []),
+    ...groups.milestones.flatMap(c => c.rows), ...groups.odds,
+  ];
   const activeId = hoverRec || pinned;
-  const active = activeId ? defs.find(x => x.id === activeId) : null;
+  const active = activeId ? allRows.find(x => x.id === activeId) : null;
   const shownDay = hoverDay != null
     ? rec.days.find(x => x.day === hoverDay)
     : rec.days[rec.days.length - 1];
   const first = rec.days[0].d, last = rec.days[rec.days.length - 1].d;
-  const togglePin = (id) => setPinned(p => (p === id ? null : id));
+  // Most of the rows sit well below the calendar, where a hover lights cells
+  // nobody can see. A tap pins the record and brings the calendar back into
+  // view if it has scrolled away.
+  const togglePin = (id) => {
+    const pinning = pinned !== id;
+    setPinned(pinning ? id : null);
+    const el = calRef.current;
+    if (pinning && el) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom < 80 || r.top > window.innerHeight - 80) {
+        const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+      }
+    }
+  };
+  const rowProps = (x) => ({
+    ...x, active: activeId === x.id, pinned: pinned === x.id,
+    onActive: setHoverRec, onPin: togglePin,
+  });
+  const grid = (rows) => (
+    <div className="rec-grid">
+      {rows.map(x => <RecRow key={x.id} {...rowProps(x)}/>)}
+    </div>
+  );
 
   return (
     <section className="pf-wrap rec-view">
@@ -488,7 +874,7 @@ function Records() {
         </div>
       </div>
 
-      <div className="pf-panel">
+      <div className="pf-panel" ref={calRef}>
         <div className="pf-panel-head">
           <span className="pf-panel-title">every day</span>
           <span className="pf-panel-meta">weeks run monday to sunday · weekends are polymarket alone</span>
@@ -498,18 +884,39 @@ function Records() {
         <RecLegend/>
       </div>
 
-      <div className="pf-panel">
-        <div className="pf-panel-head">
-          <span className="pf-panel-title">records</span>
-          <span className="pf-panel-meta">complete weeks and months only · hover or tap to find them above</span>
-        </div>
-        <div className="rec-grid">
-          {defs.map(x => (
-            <RecRow key={x.id} {...x} active={activeId === x.id} pinned={pinned === x.id}
-              onActive={setHoverRec} onPin={togglePin}/>
+      <RecPanel title="records" meta="complete weeks and months only · tap any record to find it on the calendar">
+        {grid(groups.records)}
+      </RecPanel>
+
+      {groups.spx && (
+        <RecPanel title="against the s&p 500" meta="differences in percentage points · the index counts 0 on days it was shut">
+          {grid(groups.spx)}
+        </RecPanel>
+      )}
+
+      <RecPanel title="the two books" meta="each book's share of the day's return, on the whole book's capital">
+        {grid(groups.books)}
+      </RecPanel>
+
+      {groups.bets && (
+        <RecPanel title="polymarket bets" meta={`${groups.betCount} closed bets · realized, sold or settled · best and worst by event · underdog means entered under 50¢`}>
+          {grid(groups.bets)}
+        </RecPanel>
+      )}
+
+      <RecPanel title="milestones" meta="first close past each mark · net liquidity includes deposits">
+        <div className="rec-ladders">
+          {groups.milestones.map(c => (
+            <div key={c.key} className="rec-ladder">
+              {c.rows.map(x => <RecRow key={x.id} {...rowProps(x)}/>)}
+            </div>
           ))}
         </div>
-      </div>
+      </RecPanel>
+
+      <RecPanel title="odds and ends" meta="weekday averages are a small sample, mostly noise">
+        {grid(groups.odds)}
+      </RecPanel>
     </section>
   );
 }

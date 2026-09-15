@@ -369,8 +369,13 @@ def fetch_market_events(sess, ids, closed):
     return out
 
 
-def fetch_categories(sess, condition_ids):
+def fetch_categories(sess, condition_ids, titles=None):
     """conditionId -> canonical category, via market -> event -> tags.
+
+    Pass `titles` (a dict) to also collect conditionId -> event title off the
+    same hop-2 responses, at no extra request. The event is what groups sibling
+    markets — every strike of "what will WTI hit in June" is its own market but
+    one event — so the records view can rank a trade rather than its legs.
 
     Two hops because gamma only carries tags on /events (see NOISE_TAGS above).
     Hop 1 runs closed=true then closed=false over the misses, so markets still
@@ -390,7 +395,7 @@ def fetch_categories(sess, condition_ids):
     log(f"hop 1: {n_closed} closed + {len(cond_event) - n_closed} open "
         f"= {len(cond_event)}/{len(ids)} markets -> events")
 
-    event_cat = {}
+    event_cat, event_title = {}, {}
     eids = sorted(set(cond_event.values()))
     for i in range(0, len(eids), EVENTS_CHUNK):
         chunk = eids[i:i + EVENTS_CHUNK]
@@ -405,8 +410,12 @@ def fetch_categories(sess, condition_ids):
         for ev in d:
             labels = [t.get("label") for t in (ev.get("tags") or []) if t.get("label")]
             event_cat[str(ev.get("id"))] = categorize(labels)
+            if ev.get("title"):
+                event_title[str(ev.get("id"))] = ev["title"]
 
     out = {c: event_cat[e] for c, e in cond_event.items() if e in event_cat}
+    if titles is not None:
+        titles.update({c: event_title[e] for c, e in cond_event.items() if e in event_title})
     log(f"hop 2: {len(event_cat)}/{len(eids)} events tagged -> {len(out)} "
         f"of {len(ids)} markets categorized")
     return out
@@ -866,11 +875,14 @@ def by_category(records):
 # Columns of a `lots` row, in order. Arrays rather than objects because this is
 # the one ~900-row array in the payload: repeating seven keys on every row would
 # roughly triple its bytes for data the panel reads positionally anyway.
-# `market` and `outcome` come last so the seven statistical columns keep their
-# positions; they are read only by the lot tape's tooltip, which names the
-# position under the pointer.
+# `market` and `outcome` come after the seven statistical columns so those keep
+# their positions; they are read by the lot tape's tooltip, which names the
+# position under the pointer. `event` is last of all, so every reader indexing
+# the older nine columns by position is untouched; the records view groups
+# sibling markets by it and reads it by name through `lotColumns`. It is null
+# when the event's title is the market's own, so a reader falls back to `market`.
 LOT_COLUMNS = ["category", "closedOn", "via", "volume", "realizedPnl",
-               "win", "impliedEntry", "market", "outcome"]
+               "win", "impliedEntry", "market", "outcome", "event"]
 LOTS_SENTINEL = "__LOTS_GO_HERE__"
 
 
@@ -896,7 +908,10 @@ def lots_rows(records):
              "s" if r["resolvedVia"] == "settlement" else "e",
              r["volume"], r["realizedPnl"],
              None if r.get("push") else (1 if r["win"] else 0),
-             r["impliedEntry"], r["title"], r["outcome"]]
+             r["impliedEntry"], r["title"], r["outcome"],
+             # Only where it differs: most events hold one market under the
+             # same title, and repeating it doubled the column's bytes.
+             r.get("event") if r.get("event") != r["title"] else None]
             for r in records]
     rows.sort(key=lambda x: (x[1] or "", x[0]))
     return rows
@@ -973,9 +988,12 @@ def main():
         f"{len(records) - len(calib)} records excluded from calibration "
         f"(${sum(r['realizedPnl'] for r in records if r['hedge']):,.0f} P&L retained elsewhere)")
 
-    cats = fetch_categories(sess, conds)
+    titles = {}
+    cats = fetch_categories(sess, conds, titles)
     for r in records:
         r["category"] = cats.get(r["conditionId"], "other")
+        r["event"] = titles.get(r["conditionId"])
+    log(f"events: {sum(1 for r in records if r['event'])}/{len(records)} records titled")
     uncat = sum(1 for r in records if r["category"] == "other")
     log(f"uncategorized records: {uncat}/{len(records)}")
 
