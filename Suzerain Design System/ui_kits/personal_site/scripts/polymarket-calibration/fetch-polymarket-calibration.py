@@ -1054,6 +1054,12 @@ def main():
         # The same open book split by market type, so the panel can show what is
         # still riding in a category next to what that category has booked.
         "openByCategory": open_cats,
+        # The same taxonomy per live market, so the open-positions table can
+        # filter by market type. The page fetches positions live from data-api,
+        # so this is a lookup keyed on conditionId, not a copy of the book: a
+        # market opened since this ran simply reads as unclassified there.
+        "openCategories": {c: cats.get(c, "other")
+                           for c in sorted({p.get("conditionId") for p in live} - {None})},
         # Companion scope note to openBook: what the CLOSED-lot figures above
         # still don't cover. `hedged` is money that was real but wasn't a
         # forecast (kept in byCategory, dropped from the diagram); `conversions`

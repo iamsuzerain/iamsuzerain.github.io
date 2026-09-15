@@ -26,8 +26,11 @@ const PM_CACHE_KEY = 'pm-cache-v11'; // v11: caches the live halves, not the dai
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
+// 500, not 100: the second wallet alone held 95 open markets on 2026-09-14,
+// and anything past the cap dropped out of the table — and so out of search —
+// without a word.
 const pmPositionsUrl = (w) =>
-  `https://data-api.polymarket.com/positions?user=${w}&limit=100&sortBy=CURRENT&sortDirection=DESC`;
+  `https://data-api.polymarket.com/positions?user=${w}&limit=500&sortBy=CURRENT&sortDirection=DESC`;
 const pmPnlUrl = (w) =>
   `https://user-pnl-api.polymarket.com/user-pnl?user_address=${w}&interval=all&fidelity=1d`;
 const pmActivityUrl = (w) =>
@@ -182,6 +185,7 @@ function pmMergePositions(lists) {
         merged.set(key, {
           title: p.title,
           slug: p.slug,
+          conditionId: p.conditionId,
           outcome: p.outcome,
           size,
           avgWeighted: (p.avgPrice || 0) * size,
@@ -204,6 +208,7 @@ function pmMergePositions(lists) {
     .map(m => ({
       title: m.title,
       slug: m.slug,
+      conditionId: m.conditionId,
       outcome: m.outcome,
       size: m.size,
       avgPrice: m.size ? m.avgWeighted / m.size : 0,
@@ -392,6 +397,7 @@ function pmBuild(perWallet, pnl, breakdown) {
   const positions = mergedPositionsRaw.map(p => ({
     market: p.title,
     slug: p.slug,
+    conditionId: p.conditionId || null,
     side: (p.outcome || '').toUpperCase(),
     shares: Math.round(p.size),
     avgPrice: +(p.avgPrice || 0).toFixed(4),
@@ -752,40 +758,184 @@ function SidePill({ side }) {
   return <span className={`pm-side pm-side-${side.toLowerCase()}`}>{side}</span>;
 }
 
-function PmPositions({ rows }) {
+// ---------- open positions: search, market type, sort ----------
+// A hundred-odd markets in one value-sorted list made finding a given election,
+// or lining up the losers, a scroll-and-squint job. Three controls, all local to
+// this panel: a title search, a market-type filter, and sortable value and
+// unrealized columns.
+//
+// Market type is the calibration feed's taxonomy (openCategories, conditionId ->
+// category), the same one the attribution panel groups by. That feed is a daily
+// file and the positions are live, so a market opened since it ran has no
+// entry — it stays under "all" and gathers under "unclassified" rather than
+// being guessed into a bucket. With no map at all the filter is simply absent.
+const PM_POS_NARROW = '(max-width: 640px)';
+const PM_POS_UNCLASSIFIED = '__none';
+
+// Read on mount plus a resize listener rather than a ResizeObserver or a
+// matchMedia change handler, which is how the rest of the site measures.
+function usePmNarrow() {
+  const q = () => !!(window.matchMedia && window.matchMedia(PM_POS_NARROW).matches);
+  const [narrow, setNarrow] = usePmState(q);
+  usePmEffect(() => {
+    const on = () => setNarrow(q());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return narrow;
+}
+
+const pmPosKey = (p) => (p.conditionId || p.slug || p.market) + '|' + p.side;
+const pmCents = (v) => (v * 100).toFixed(0) + '¢';
+
+function PmSortTh({ col, label, sort, onSort }) {
+  const on = sort.key === col;
   return (
-    <div className="pf-table-wrap">
-      <table className="pf-table pm-pos-table">
-        <thead>
-          <tr>
-            <th>market</th>
-            <th>side</th>
-            <th className="pf-num">shares</th>
-            <th className="pf-num">avg</th>
-            <th className="pf-num">now</th>
-            <th className="pf-num">value</th>
-            <th className="pf-num">unrealized</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p, i) => {
-            const up = p.unrealized >= 0;
-            return (
-              <tr key={i}>
-                <td className="pm-market" title={p.market}>{p.market}</td>
-                <td><SidePill side={p.side}/></td>
-                <td className="pf-num">{p.shares.toLocaleString()}</td>
-                <td className="pf-num pm-price">{(p.avgPrice * 100).toFixed(0)}¢</td>
-                <td className="pf-num pm-price">{(p.curPrice * 100).toFixed(0)}¢</td>
-                <td className="pf-num">{pmUSD(p.value)}</td>
-                <td className={`pf-num ${up ? 'pos' : 'neg'}`}>
-                  {up ? '+' : ''}{pmUSD(p.unrealized)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <th className="pf-num" aria-sort={on ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className={`pm-sort${on ? ' active' : ''}`} onClick={() => onSort(col)}>
+        {label}<span className="pm-sort-caret" aria-hidden="true">{on && sort.dir === 'asc' ? '▴' : '▾'}</span>
+      </button>
+    </th>
+  );
+}
+
+function PmPositionsPanel({ rows, categories }) {
+  const [query, setQuery] = usePmState('');
+  const [cat, setCat] = usePmState('all');
+  const [sort, setSort] = usePmState({ key: 'value', dir: 'desc' });
+  const [open, setOpen] = usePmState(() => new Set());
+  const narrow = usePmNarrow();
+
+  const catOf = (p) => (categories && p.conditionId && categories[p.conditionId]) || PM_POS_UNCLASSIFIED;
+
+  // Only the types actually held, most positions first, so the strip never
+  // offers a bucket that would filter the table down to nothing.
+  const catOptions = usePmMemo(() => {
+    if (!categories) return [];
+    const n = {};
+    for (const p of rows) { const c = catOf(p); n[c] = (n[c] || 0) + 1; }
+    const keys = Object.keys(n).filter(c => c !== PM_POS_UNCLASSIFIED)
+      .sort((a, b) => n[b] - n[a] || (a < b ? -1 : 1));
+    if (!keys.length) return [];
+    return [['all', 'all'], ...keys.map(c => [c, c]),
+      ...(n[PM_POS_UNCLASSIFIED] ? [[PM_POS_UNCLASSIFIED, 'unclassified']] : [])];
+  }, [rows, categories]);
+  // A picked type that the live book no longer holds falls back to all, rather
+  // than leaving an empty table under a button that is no longer drawn.
+  const activeCat = catOptions.some(([k]) => k === cat) ? cat : 'all';
+
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = usePmMemo(() => {
+    const sign = sort.dir === 'asc' ? 1 : -1;
+    return rows
+      .filter(p => activeCat === 'all' || catOf(p) === activeCat)
+      .filter(p => {
+        const hay = (p.market || '').toLowerCase();
+        return terms.every(t => hay.includes(t));
+      })
+      // value breaks ties, so a column of equal marks still reads largest first
+      .sort((a, b) => sign * (a[sort.key] - b[sort.key]) || b.value - a.value);
+  }, [rows, activeCat, query, sort, categories]);
+
+  const onSort = (key) => setSort(s => s.key === key
+    ? { key, dir: s.dir === 'desc' ? 'asc' : 'desc' }
+    : { key, dir: 'desc' });
+  const toggle = (k) => setOpen(prev => {
+    const next = new Set(prev);
+    next.has(k) ? next.delete(k) : next.add(k);
+    return next;
+  });
+
+  const filtered = shown.length !== rows.length;
+  const cols = narrow ? 4 : 7;
+
+  return (
+    <div className="pf-panel">
+      <div className="pf-panel-head">
+        <span className="pf-panel-title">open positions</span>
+        <span className="pf-panel-meta">
+          {filtered ? `${shown.length} of ${rows.length} markets` : `${rows.length} markets`}
+        </span>
+      </div>
+
+      <div className="pm-pos-tools">
+        <input type="search" className="pm-pos-search" value={query}
+          placeholder="search markets" aria-label="search open positions"
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Escape') setQuery(''); }}/>
+        {catOptions.length > 0 && (
+          <div className="pf-range pm-pos-cats" role="group" aria-label="market type">
+            <SzToggle options={catOptions} value={activeCat} onChange={setCat}/>
+          </div>
+        )}
+      </div>
+
+      <div className={`pf-table-wrap${narrow ? ' pm-pos-fit' : ''}`}>
+        <table className={`pf-table pm-pos-table${narrow ? ' pm-pos-narrow' : ''}`}>
+          <thead>
+            <tr>
+              <th>market</th>
+              <th>side</th>
+              {!narrow && <th className="pf-num">shares</th>}
+              {!narrow && <th className="pf-num">avg</th>}
+              {!narrow && <th className="pf-num">now</th>}
+              <PmSortTh col="value" label="value" sort={sort} onSort={onSort}/>
+              <PmSortTh col="unrealized" label={narrow ? 'p&l' : 'unrealized'} sort={sort} onSort={onSort}/>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map(p => {
+              const up = p.unrealized >= 0;
+              const k = pmPosKey(p);
+              const expanded = narrow && open.has(k);
+              const pnl = <td className={`pf-num ${up ? 'pos' : 'neg'}`}>{up ? '+' : ''}{pmUSD(p.unrealized)}</td>;
+              if (!narrow) return (
+                <tr key={k}>
+                  <td className="pm-market" title={p.market}>{p.market}</td>
+                  <td><SidePill side={p.side}/></td>
+                  <td className="pf-num">{p.shares.toLocaleString()}</td>
+                  <td className="pf-num pm-price">{pmCents(p.avgPrice)}</td>
+                  <td className="pf-num pm-price">{pmCents(p.curPrice)}</td>
+                  <td className="pf-num">{pmUSD(p.value)}</td>
+                  {pnl}
+                </tr>
+              );
+              // Phones get the four columns that answer "what, which way, how
+              // big, how's it doing"; shares and the two prices sit one tap down.
+              return (
+                <React.Fragment key={k}>
+                  <tr className={`pm-pos-row${expanded ? ' open' : ''}`}>
+                    <td className="pm-market">
+                      <button type="button" className="pm-pos-expand"
+                        aria-expanded={expanded} onClick={() => toggle(k)}>
+                        <span className="pm-pos-caret" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+                        <span className="pm-pos-title">{p.market}</span>
+                      </button>
+                    </td>
+                    <td><SidePill side={p.side}/></td>
+                    <td className="pf-num">{pmUSD(p.value)}</td>
+                    {pnl}
+                  </tr>
+                  {expanded && (
+                    <tr className="pm-pos-detail">
+                      <td colSpan={cols}>
+                        <div className="pm-pos-facts">
+                          <span><i>shares</i> {p.shares.toLocaleString()}</span>
+                          <span><i>avg</i> {pmCents(p.avgPrice)}</span>
+                          <span><i>now</i> {pmCents(p.curPrice)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            {!shown.length && (
+              <tr><td colSpan={cols} className="pm-pos-empty">no open market matches</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -2155,13 +2305,7 @@ function Polymarket() {
 
       {cal && <PmLotTapePanel cal={cal}/>}
 
-      <div className="pf-panel">
-        <div className="pf-panel-head">
-          <span className="pf-panel-title">open positions</span>
-          <span className="pf-panel-meta">{positions.length} markets · sorted by value</span>
-        </div>
-        <PmPositions rows={positions}/>
-      </div>
+      <PmPositionsPanel rows={positions} categories={cal && cal.openCategories}/>
 
       {activity && activity.length > 0 && (
         <div className="pf-panel">

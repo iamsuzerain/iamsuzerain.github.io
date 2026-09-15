@@ -1132,6 +1132,92 @@
   .pm-pos-table { table-layout: fixed; width: 100%; }
   .pm-pos-table th:first-child, .pm-pos-table td:first-child { width: 38%; }
 
+  /* open positions: search + market type, above the table they narrow */
+  .pm-pos-tools {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    margin-bottom: 12px;
+  }
+  .pm-pos-search {
+    flex: 0 1 220px; min-width: 0;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+    color: var(--fg-1); background: transparent;
+    border: 1px solid var(--border-soft); border-radius: var(--r-1);
+    padding: 4px 8px;
+    transition: border-color .15s;
+  }
+  .pm-pos-search::placeholder { color: var(--fg-4); }
+  .pm-pos-search:hover { border-color: rgba(167,139,250,0.35); }
+  .pm-pos-search:focus { outline: none; border-color: rgba(167,139,250,0.55); }
+  .pm-pos-cats { justify-content: flex-start; }
+
+  /* Sortable headers keep the header type; the button only adds the hit area.
+     The caret stays drawn on the idle column, fainter, so it reads as sortable
+     before anyone clicks it. */
+  .pm-sort {
+    font: inherit; letter-spacing: inherit; text-transform: inherit;
+    color: inherit; background: transparent; border: 0; padding: 0;
+    cursor: pointer; display: inline-flex; align-items: baseline; gap: 4px;
+  }
+  .pm-sort:hover, .pm-sort.active { color: var(--fg-2); }
+  .pm-sort-caret { font-size: 8px; opacity: 0.35; }
+  .pm-sort.active .pm-sort-caret { opacity: 0.9; color: var(--violet-300); }
+  .pm-sort:focus-visible { outline: 1px solid var(--violet-300); outline-offset: 2px; }
+
+  .pm-pos-empty {
+    text-align: center; color: var(--fg-4);
+    font-size: 11px; letter-spacing: 0.08em; padding: 18px 10px;
+  }
+
+  /* Phone layout: market, side, value, p&l. The title wraps to three lines
+     instead of truncating at a third of the width, and the whole cell is the
+     button that opens shares and prices underneath. */
+  .pm-pos-narrow th:first-child, .pm-pos-narrow td:first-child { width: auto; }
+  /* Sized to "+$69,709" and a YES pill at 11px mono, with the inner padding
+     trimmed, so the title keeps as much of a 375px phone as it can. */
+  .pm-pos-narrow th:not(:first-child), .pm-pos-narrow td:not(:first-child) {
+    padding-left: 4px; padding-right: 4px;
+  }
+  .pm-pos-narrow th:nth-child(2) { width: 32px; }
+  .pm-pos-narrow th:nth-child(3), .pm-pos-narrow th:nth-child(4) { width: 58px; }
+  .pm-pos-narrow tr > :last-child { padding-right: 0; }
+  .pm-pos-narrow tr > :first-child { padding-left: 0; }
+  .pm-pos-narrow td.pm-market { max-width: none; white-space: normal; }
+  .pm-pos-narrow .pm-side { min-width: 0; padding: 2px 5px; letter-spacing: 0.08em; }
+  .pm-pos-expand {
+    display: flex; align-items: flex-start; gap: 6px; width: 100%;
+    font: inherit; color: inherit; text-align: left;
+    background: transparent; border: 0; padding: 0; cursor: pointer;
+  }
+  .pm-pos-caret { flex: none; width: 9px; font-size: 9px; line-height: 17px; color: var(--fg-4); }
+  .pm-pos-title {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    overflow: hidden; line-height: 1.35;
+  }
+  .pm-pos-row.open .pm-pos-title { display: block; }
+  .pm-pos-row.open td { border-bottom-color: transparent; }
+  .pm-pos-narrow .pm-pos-detail td { padding-top: 0; padding-left: 15px; }
+  .pm-pos-facts {
+    display: flex; flex-wrap: wrap; gap: 4px 16px;
+    color: var(--fg-1); font-variant-numeric: tabular-nums;
+  }
+  .pm-pos-detail i {
+    font-style: normal; color: var(--fg-4);
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; margin-right: 4px;
+  }
+  .pm-pos-detail:hover td { background: transparent; }
+  @media (max-width: 640px) {
+    .pm-pos-search { flex: 1 1 100%; }
+  }
+  /* The four-column phone table fits its panel, so the sideways-scroll fade
+     the other tables wear would only dim the p&l column. */
+  @media (max-width: 760px) {
+    .pf-table-wrap.pm-pos-fit { -webkit-mask-image: none; mask-image: none; }
+  }
+  @media (max-width: 760px) and (pointer: coarse) {
+    .pm-pos-search { min-height: 32px; font-size: 16px; }   /* 16px: no iOS focus zoom */
+    .pm-pos-expand { min-height: 32px; }
+  }
+
   .pm-feed {
     list-style: none; padding: 0; margin: 0;
     font-family: var(--font-mono); font-size: 12px;
