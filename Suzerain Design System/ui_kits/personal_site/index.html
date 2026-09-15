@@ -539,6 +539,14 @@
     border-bottom: 1px solid rgba(167,139,250,0.4);
   }
   .sz-log-body a:hover { border-bottom-color: var(--violet-300); }
+  /* A 110px date column plus the card's padding left a 375px phone's notes a
+     129px measure — five words a line, so a two-sentence note stood 300px tall.
+     The date goes over the entry instead and the text takes the whole width. */
+  @media (max-width: 760px) {
+    .sz-log, .sz-prose { padding: 24px 18px; }
+    .sz-log-entry { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 20px 0; }
+    .sz-log-date { padding-top: 0; }
+  }
   /* The last entry above this keeps its border — the rule reads as the bottom
      of the log rather than a divider between two entries. */
   .sz-log-more {
@@ -1035,6 +1043,17 @@
        left a 375px phone's tables 293px to draw in. */
     .sz-stage { padding: 16px 12px 72px; }
     .pf-panel { padding: 16px 14px; }
+    /* Headings scale with the phone rather than wrapping: a 44px single word
+       like "ENDORSEMENTS." is 332px, wider than any card on a 375px screen.
+       9.6vw is 36px there, and the floor keeps a 320px phone at 30px. Past
+       458px it is 44px again. break-word is the floor under the floor. */
+    .sz-h2 { font-size: clamp(30px, 9.6vw, 44px); overflow-wrap: break-word; }
+    /* Page header on the data views: the desktop padding and kicker gap were
+       the better part of a phone's first screen before any number. */
+    .pf-head { padding: 14px 14px 16px; gap: 12px; margin-bottom: 12px; }
+    .pf-head .sz-kicker { margin-bottom: 12px; }
+    .pf-head .sz-h2 { margin-bottom: 6px; }
+    .pf-currency { margin-left: 8px; font-size: 11px; }
     /* Wide content can scroll sideways; the fade says so. Only on narrow
        screens, where these actually overflow — on desktop it would dim a
        column edge for no reason. */
@@ -1050,6 +1069,17 @@
     .pf-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .pf-stat { min-width: 0; }
     .pf-stat-value { font-size: 22px; }
+    /* Book's three tiles in two columns stranded the third on a row of its own
+       and cost 250px ahead of the chart. As rows — name and note left, figure
+       right — the three take about 180px. */
+    .cmb-view > .pf-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 16px; }
+    .cmb-view > .pf-stats .pf-stat {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 12px; row-gap: 3px; align-items: center;
+      padding: 10px 14px;
+    }
+    .cmb-view > .pf-stats .pf-stat-value { grid-column: 2; grid-row: 1 / span 2; }
+    .cmb-view > .pf-stats .pf-stat-kicker { grid-column: 1; }
     .cmb-risk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 18px; }
     .cmb-risk-grid .pf-stat { padding: 2px 16px; }
     .cmb-risk-grid .pf-stat:nth-child(odd) { padding-left: 0; border-left: none; }
@@ -1710,6 +1740,7 @@
   }
   @media (max-width: 720px) {
     .pol-overlay { position: static; width: auto; max-width: none; margin-top: 16px; }
+    .pol-head { padding: 22px 18px 20px; }
   }
 
   /* ---- calendar + past sympathies ---- */
