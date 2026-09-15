@@ -877,7 +877,17 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
       </div>
     )}
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={plot.length} className="pf-navchart pm-chart-svg">
+      <SzChartSvg frame={F} hover={hv} n={plot.length} className="pf-navchart pm-chart-svg"
+        label={`whole book · ${pct ? 'cumulative return' : 'profit and loss in dollars'}, ibkr and polymarket combined`}
+        summary={szChartSummary(
+          `Deposit-adjusted ${pct ? 'cumulative return' : 'profit and loss'} for the whole book, `
+            + 'with the ibkr and polymarket halves drawn underneath it'
+            + (benches.length ? `, against ${benches.map(b => cmbBenchLabel(b.key)).join(' and ')}` : ''),
+          plot[0].d, plot[plot.length - 1].d, plot.length)}
+        readout={hp
+          ? `${cmbFullDate(hp.d)}, total ${fmt(hp.v)}, ibkr ${fmt(hp.ibkr)}, polymarket ${fmt(hp.pm)}`
+            + benches.map(b => hp[b.key] != null ? `, ${cmbBenchLabel(b.key)} ${fmt(hp[b.key])}` : '').join('')
+          : ''}>
         <SzChartDefs ramp="nav" id="cmb-nav"/>
 
         <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
@@ -1244,7 +1254,12 @@ function CmbDrawdownStrip({ series, markers, cur, onPick }) {
       <SzStripHead label="underwater · drawdown from peak"
         meta={`max ${pct(maxDD)} · now ${pct(curDD)}`}/>
       <div className="pm-chart-wrap">
-        <SzChartSvg frame={F} hover={hv} n={dd.length}>
+        <SzChartSvg frame={F} hover={hv} n={dd.length}
+          label="whole book · drawdown from peak"
+          summary={szChartSummary(
+            'How far the whole book sat below its own running peak',
+            dd[0].d, dd[dd.length - 1].d, dd.length)}
+          readout={hovered ? `${cmbFullDate(hovered.d)}, ${pct(hovered.v)} from peak` : ''}>
           <SzChartDefs ramp="dd" id="cmb-dd"/>
           <SzRule frame={F} y={y(0)}/>
           <path d={area} fill="url(#cmb-dd-fill)"/>
@@ -1300,7 +1315,14 @@ function CmbCorrStrip({ roll }) {
         label={`ibkr ↔ polymarket · rolling ${CMB_CORR_ROLL}-session correlation`}
         meta={`band ±${dom.toFixed(2)} · now ${fmt(roll[roll.length - 1].v)}`}/>
       <div className="pm-chart-wrap">
-        <SzChartSvg frame={F} hover={hv} n={roll.length}>
+        <SzChartSvg frame={F} hover={hv} n={roll.length}
+          label={`rolling ${CMB_CORR_ROLL}-session correlation between the ibkr and polymarket books`}
+          summary={szChartSummary(
+            `How closely the two books moved together over a rolling ${CMB_CORR_ROLL}-session window. `
+              + `Drawn on a fixed band of plus or minus ${dom.toFixed(2)}, so a line sitting on zero `
+              + 'reads as the flat series it is rather than being zoomed into a mountain range',
+            roll[0].d, roll[roll.length - 1].d, roll.length)}
+          readout={hovered ? `${cmbFullDate(hovered.d)}, ${fmt(hovered.v)}` : ''}>
           {/* The 'corr' ramp runs left→right — see SZ_GRADIENTS. This series
               lives inside ±0.2 of a ±0.5 band, so a value-keyed vertical ramp
               compressed the whole pink→violet range into ~13px and read as one
@@ -1457,7 +1479,13 @@ function CmbAlphaStrip({ series, markers, cur, onPick, unit, benchKey = 'spx' })
       <SzStripHead label={`alpha vs ${cmbBenchLabel(benchKey)} · cumulative`}
         meta={`now ${fmt(last)}`}/>
       <div className="pm-chart-wrap">
-        <SzChartSvg frame={F} hover={hv} n={alpha.length}>
+        <SzChartSvg frame={F} hover={hv} n={alpha.length}
+          label={`whole book · cumulative alpha vs ${cmbBenchLabel(benchKey)}`}
+          summary={szChartSummary(
+            `The whole book's cumulative return minus ${cmbBenchLabel(benchKey)}'s, in `
+              + `${pct ? 'percentage points' : 'dollars'} on the same capital`,
+            alpha[0].d, alpha[alpha.length - 1].d, alpha.length)}
+          readout={hovered ? `${cmbFullDate(hovered.d)}, ${fmt(hovered.v)}` : ''}>
           <SzChartDefs ramp="alpha" id="cmb-alpha"/>
           <SzRule frame={F} y={zeroY}/>
           <path d={area} fill="url(#cmb-alpha-fill)"/>
@@ -1570,7 +1598,18 @@ function CmbCapitalChart({ series, transfers }) {
 
   return (
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={pts.length} className="pf-navchart pm-chart-svg">
+      <SzChartSvg frame={F} hover={hv} n={pts.length} className="pf-navchart pm-chart-svg"
+        label="capital by venue · ibkr and polymarket, stacked"
+        summary={szChartSummary(
+          'Where the capital sat, as two stacked bands: the ibkr level with the polymarket '
+            + 'level on top of it, so the outer contour is the total. Transfers between the '
+            + 'two show as steps',
+          pts[0].d, pts[last].d, pts.length)}
+        readout={hp
+          ? `${cmbFullDate(hp.d)}, ibkr ${cmbUSD(hp.ibkrLevel)}, polymarket ${cmbUSD(hp.pmLevel)}, `
+            + `total ${cmbUSD(hpTotal)}`
+            + (hpXfer ? `, moved ${cmbUSDk(hpXfer.amount)} to polymarket` : '')
+          : ''}>
         {/* Venue colors, matching the bar below — violet is IBKR and pink is
             Polymarket here, not gain and loss. Flat fills for the same reason
             the bar drops its wash: this is a composition, so the reading comes
@@ -2112,7 +2151,8 @@ function Combined({ setView }) {
             benchNotional={data.benchNotional} ddNotional={win.notional} unit={pct ? 'pct' : 'usd'}/>
           {SZ.RollingStrip && cPerf && (
             <SZ.RollingStrip fullSeries={cFullPerf || cPerf} perfSeries={cPerf}
-              benchSeries={cBench} benchName={primaryName} periods={365}/>
+              benchSeries={cBench} benchName={primaryName} periods={365}
+              book="the whole book"/>
           )}
         </div>
       )}

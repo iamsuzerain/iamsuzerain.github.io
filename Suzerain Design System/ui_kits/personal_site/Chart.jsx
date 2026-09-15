@@ -109,32 +109,134 @@ function szTicks(series, count) {
 // rather than the length being passed to the hook, because several charts only
 // know their point count after an early return that has to sit *below* the
 // hooks — so the hook cannot depend on it.
+//
+// Two readings, not one. `hover` is transient — it follows a pointer and dies
+// when that pointer leaves — while `pin` is a column the reader asked to keep;
+// the chart shows whichever is live, hover first. The split is what makes these
+// charts readable on a phone. Touch has no hover state at all, so lifting a
+// finger used to take the entire readout with it, and the only way to read a
+// value was to keep a fingertip parked on top of the point you were trying to
+// look at — the one place it was guaranteed to be hidden. Now a tap leaves the
+// column pinned and a second tap lets it go, which also means two panels can
+// hold their readings side by side while you compare them, instead of one
+// figure at a time under a finger.
+//
+// It settles the mouse case too: track the cursor, fall back to the pin on the
+// way out. A pinned column is a deliberate act, so nothing incidental clears it
+// — not the pointer leaving, not focus moving on to the next chart.
+//
+// Keyboard is the other half of the same reading. The svg takes focus (see
+// SzChartSvg) and the arrow keys walk the series a column at a time, which is
+// the only route through these charts that needs no pointing device at all.
+// Stepping sets `hover`, not `pin`, so tabbing onward leaves nothing behind;
+// enter is how a keyboard reader pins deliberately, the way a tap does.
+
+// A vertical drag that begins on a chart is the page scrolling past it, not a
+// reading: `touch-action: pan-y` hands that gesture to the browser, and the
+// lift at the end of it must not pin whichever column the finger happened to
+// start on. 12px is above the wobble in a stationary tap and far below any
+// scroll worth the name.
+const SZ_TAP_SLOP = 12;
+
 function useChartHover(f) {
   const ref = React.useRef(null);
   const [hover, setHover] = React.useState(null);
-  const clear = () => setHover(null);
-  const move = (n) => (e) => {
+  const [pin, setPin] = React.useState(null);
+  // Whether the live column was last moved by a key. Only then does the readout
+  // reach the live region: a pointer scrubbing a 400-column series would
+  // otherwise queue 400 announcements at a reader who can already see the
+  // tooltip that prompted them.
+  const [kb, setKb] = React.useState(false);
+  const touchFrom = React.useRef(null);
+
+  const i = hover != null ? hover : pin;
+  const clear = () => { setHover(null); setPin(null); setKb(false); };
+
+  const indexAt = (e, n) => {
     const svg = ref.current;
-    if (!svg) return;
+    if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
-    const px = ((clientX - rect.left) / rect.width) * f.W;
+    const pt = e.touches && e.touches.length ? e.touches[0] : e;
+    const px = ((pt.clientX - rect.left) / rect.width) * f.W;
     const t = (px - f.PAD_L) / (f.W - f.PAD_L - f.PAD_R);
-    setHover(Math.max(0, Math.min(n - 1, Math.round(t * (n - 1)))));
+    return Math.max(0, Math.min(n - 1, Math.round(t * (n - 1))));
   };
+
+  // Pinning toggles, so the gesture that pins a column is also the one that
+  // releases it. A separate dismiss control would have to live somewhere, and
+  // the phone layout — the layout this is for — has nowhere to put one.
+  const togglePin = (at) => setPin(p => (p === at ? null : at));
+
   return {
-    i: hover,
+    i,
+    kb,
     set: setHover,
     clear,
     bind: (n) => {
-      const onMove = move(n);
+      const track = (e) => { setKb(false); setHover(indexAt(e, n)); };
+      const step = (to) => { setKb(true); setHover(Math.max(0, Math.min(n - 1, to))); };
+      const from = i != null ? i : n - 1;
       return {
         ref,
-        onMouseMove: onMove, onMouseLeave: clear,
-        onTouchStart: onMove, onTouchMove: onMove, onTouchEnd: clear,
+        tabIndex: 0,
+        onMouseMove: track,
+        // Only the transient reading goes; the pinned column is the reader's.
+        onMouseLeave: () => setHover(null),
+        onClick: (e) => togglePin(indexAt(e, n)),
+        onTouchStart: (e) => {
+          const t = e.touches[0];
+          touchFrom.current = t ? { x: t.clientX, y: t.clientY } : null;
+          track(e);
+        },
+        onTouchMove: track,
+        onTouchEnd: (e) => {
+          const t = e.changedTouches && e.changedTouches[0];
+          const scrolling = t && touchFrom.current
+            && Math.abs(t.clientY - touchFrom.current.y) > SZ_TAP_SLOP;
+          touchFrom.current = null;
+          if (!scrolling && hover != null) {
+            togglePin(hover);
+            // Suppresses the compatibility click the browser fires after a tap,
+            // which would otherwise reach onClick and toggle the pin straight
+            // back off — a tap that did nothing at all.
+            e.preventDefault();
+          }
+          setHover(null);
+        },
+        // Tabbing in with nothing showing lands on the newest point, so the
+        // chart answers before the first arrow key is pressed. For a reader who
+        // cannot see the curve, where it ended up is the reading the page is
+        // about; an empty crosshair waiting to be driven is not.
+        onFocus: () => { if (i == null) { setKb(true); setHover(n - 1); } },
+        onBlur: () => setHover(null),
+        onKeyDown: (e) => {
+          const k = e.key;
+          if (k === 'ArrowLeft') step(from - 1);
+          else if (k === 'ArrowRight') step(from + 1);
+          else if (k === 'Home') step(0);
+          else if (k === 'End') step(n - 1);
+          else if (k === 'Enter' || k === ' ') { if (i != null) togglePin(i); }
+          else if (k === 'Escape') clear();
+          // Up and down are left alone on purpose: this axis is horizontal, and
+          // a focused chart that swallowed them would trap the page's scroll on
+          // the element a reader is least able to get back out of.
+          else return;
+          e.preventDefault();
+        },
       };
     },
   };
+}
+
+// The spoken description a chart carries: what it is, how much of it there is,
+// and — since none of it is discoverable by looking — which keys move through
+// it. One function so those key names cannot drift from chart to chart, which
+// is the failure the rest of this file exists to prevent.
+function szChartSummary(lead, first, last, n, noun = 'daily points') {
+  const span = first && last ? ` from ${first} to ${last}` : '';
+  return `${lead}. ${n} ${noun}${span}. `
+    + 'Left and right arrow keys step through the series, home and end jump to '
+    + 'either end, enter pins the reading, escape clears it.';
 }
 
 // ---------- svg frame ----------
@@ -142,16 +244,35 @@ function useChartHover(f) {
 // and the element is fluid, so the chart stretches to its column rather than
 // letterboxing. Every x/y coordinate below is in viewBox units as a result, and
 // every HTML overlay converts back with (coord / W) * 100%.
-function SzChartSvg({ frame, hover, n, className = 'pf-navchart', children }) {
+//
+// `label` names the chart and `summary` describes it. Both are required in
+// practice, because `bind` puts the svg in the tab order and a focusable
+// graphic with no name is worse than an unreachable one: it stops a reader on
+// something that announces nothing. The marks inside stay hidden behind
+// role="img" rather than being labeled one by one — a spline's control points
+// are not a reading — and the reading itself arrives through `readout`.
+//
+// `readout` is the value at the live column, as a sentence. It is spoken only
+// while that column is being driven from the keyboard (hover.kb); see the hook.
+function SzChartSvg({ frame, hover, n, className = 'pf-navchart', label, summary, readout, children }) {
+  const uid = React.useId();
+  const descId = summary ? `${uid}-desc` : undefined;
   return (
-    <svg
-      {...hover.bind(n)}
-      viewBox={`0 0 ${frame.W} ${frame.H}`}
-      className={className}
-      preserveAspectRatio="none"
-    >
-      {children}
-    </svg>
+    <React.Fragment>
+      <svg
+        {...hover.bind(n)}
+        viewBox={`0 0 ${frame.W} ${frame.H}`}
+        className={className}
+        preserveAspectRatio="none"
+        role={label ? 'img' : undefined}
+        aria-label={label}
+        aria-describedby={descId}
+      >
+        {children}
+      </svg>
+      {summary && <p id={descId} className="sz-a11y">{summary}</p>}
+      <p className="sz-a11y" aria-live="polite">{hover.kb && readout ? readout : ''}</p>
+    </React.Fragment>
   );
 }
 
@@ -391,6 +512,7 @@ window.szDomain = szDomain;
 window.szAreaPath = szAreaPath;
 window.szTicks = szTicks;
 window.useChartHover = useChartHover;
+window.szChartSummary = szChartSummary;
 window.SzChartSvg = SzChartSvg;
 window.SzChartDefs = SzChartDefs;
 window.SZ_GRADIENTS = SZ_GRADIENTS;

@@ -748,7 +748,16 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
   return (
     <React.Fragment>
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={perf.length}>
+      <SzChartSvg frame={F} hover={hv} n={perf.length}
+        label={`ibkr book · ${usd ? 'profit and loss in dollars' : 'cumulative return'}`}
+        summary={szChartSummary(
+          `Deposit-adjusted ${usd ? 'profit and loss in dollars' : 'cumulative return'} for the ibkr book`
+            + (overlays.length ? `, drawn against ${overlays.map(o => o.label).join(' and ')}` : ''),
+          perf[0].d, perf[perf.length - 1].d, perf.length)}
+        readout={hovered
+          ? `${hovered.d}, ${fmtV(hovered.v)}`
+            + overlays.map(o => `, ${o.label} ${fmtV(ovVals(o)[hv.i])}`).join('')
+          : ''}>
         <SzChartDefs ramp="nav" id="pf-nav"/>
         {gridLines.map((v, i) => (
           <line key={i}
@@ -946,7 +955,12 @@ function DrawdownStrip({ perfSeries }) {
 
   return (
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={dd.length}>
+      <SzChartSvg frame={F} hover={hv} n={dd.length}
+        label="ibkr book · drawdown from peak"
+        summary={szChartSummary(
+          'How far the ibkr book sat below its own running peak',
+          dd[0].d, dd[dd.length - 1].d, dd.length)}
+        readout={hovered ? `${hovered.d}, ${fmtPctBare(hovered.v)} from peak` : ''}>
         <SzChartDefs ramp="dd" id="pf-dd"/>
         <SzRule frame={F} y={y(0)}/>
         <path d={area} fill="url(#pf-dd-fill)"/>
@@ -974,7 +988,7 @@ function DrawdownStrip({ perfSeries }) {
 //
 // `id` is not decoration: SzChartDefs emits document-global gradient ids, so
 // two strips sharing one would leave the second referencing the first's defs.
-function AlphaStrip({ alpha, unit, id = 'pf-alpha' }) {
+function AlphaStrip({ alpha, unit, id = 'pf-alpha', against = 'the benchmark' }) {
   const F = PF_STRIP_FRAME;
   const hv = useChartHover(F);
   if (!alpha || alpha.length < 2) return null;
@@ -991,7 +1005,14 @@ function AlphaStrip({ alpha, unit, id = 'pf-alpha' }) {
 
   return (
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={alpha.length}>
+      <SzChartSvg frame={F} hover={hv} n={alpha.length}
+        label={`ibkr book · cumulative alpha vs ${against}`}
+        summary={szChartSummary(
+          `Cumulative return minus ${against}'s, in ${usd ? 'dollars' : 'percentage points'}`,
+          alpha[0].d, alpha[alpha.length - 1].d, alpha.length)}
+        readout={hovered
+          ? `${hovered.d}, ${hovered.v >= 0 ? '+' : ''}${usd ? fmtUSD(hovered.v) : fmtPctBare(hovered.v)}`
+          : ''}>
         <SzChartDefs ramp="alpha" id={id}/>
         <SzRule frame={F} y={zeroY}/>
         <path d={area} fill={`url(#${id}-fill)`}/>
@@ -1117,7 +1138,8 @@ function ReturnDistribution({ perfSeries }) {
 }
 
 // ---------- Rolling risk strip ----------
-function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', periods = 252 }) {
+function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', periods = 252,
+  book = 'the ibkr book' }) {
   const F = PF_STRIP_FRAME;
   const [metric, setMetric] = usePortState('beta');
   const hv = useChartHover(F);
@@ -1158,7 +1180,14 @@ function RollingStrip({ fullSeries, perfSeries, benchSeries, benchName = 'spx', 
         </div>
       </SzStripHead>
       <div className="pm-chart-wrap">
-        <SzChartSvg frame={F} hover={hv} n={series.length}>
+        <SzChartSvg frame={F} hover={hv} n={series.length}
+          label={`rolling ${spec.label}${spec.bench ? ` vs ${benchName}` : ''} for ${book}, ${win}-session window`}
+          summary={szChartSummary(
+            `Rolling ${win}-session ${spec.label}${spec.bench ? ` against ${benchName}` : ''} for ${book}`
+              + (firstIdx > 0 ? `, with no value before ${series[firstIdx].d}, where the window finishes filling` : ''),
+            series[0].d, series[series.length - 1].d, series.length)}
+          readout={hovered ? `${hovered.d}, ${spec.fmt(hovered.v)}`
+            : hv.i != null && series[hv.i] ? `${series[hv.i].d}, window not filled yet` : ''}>
           {/* The 'roll' ramp runs horizontally — see SZ_GRADIENTS. Concretely:
               this axis is anchored at spec.zero, not at the data, so a metric
               sitting far from its anchor gets squeezed into a sliver of the
@@ -1707,7 +1736,8 @@ function Portfolio() {
                 {(usd && alphaD) ? fmtUSD(alphaShownNow) : fmtPctBare(alphaShownNow)}
               </span>
             </div>
-            <AlphaStrip alpha={alphaShown} unit={(usd && alphaD) ? 'usd' : 'pct'}/>
+            <AlphaStrip alpha={alphaShown} unit={(usd && alphaD) ? 'usd' : 'pct'}
+              against={primaryName}/>
           </>
         )}
         <RollingStrip fullSeries={ext.perf} perfSeries={win.perf} benchSeries={primarySeries}

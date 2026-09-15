@@ -732,7 +732,12 @@ function PmSpark({ series, unit }) {
 
   return (
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={series.length} className="pf-navchart pm-chart-svg">
+      <SzChartSvg frame={F} hover={hv} n={series.length} className="pf-navchart pm-chart-svg"
+        label={`polymarket book · ${pct ? 'cumulative return' : 'profit and loss in dollars'}`}
+        summary={szChartSummary(
+          `Realized and unrealized ${pct ? 'return' : 'profit and loss'} on the polymarket book`,
+          series[0].d, series[series.length - 1].d, series.length)}
+        readout={hovered ? `${fmtDate(hovered.d)}, ${fmt(hovered.v)}` : ''}>
         <SzChartDefs ramp="nav" id="pm"/>
 
         <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
@@ -1742,7 +1747,19 @@ function PmLotTape({ lots }) {
 
   return (
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={n} className="pf-navchart pm-chart-svg">
+      <SzChartSvg frame={F} hover={hv} n={n} className="pf-navchart pm-chart-svg"
+        label="polymarket book · running realized profit and loss, position by position"
+        summary={szChartSummary(
+          'Realized profit and loss on the polymarket book, accumulated one closed position '
+            + 'at a time. The axis counts positions rather than days, so the spacing between '
+            + 'dates is how busy each stretch was',
+          first, last, lots.length, 'closed positions')}
+        readout={lot
+          ? `${fmtDate(lot.closedOn)}, ${lot.market || lot.category}`
+            + `${lot.market && lot.outcome ? `, ${lot.outcome}` : ''}, `
+            + `${lot.push ? 'push' : lot.resolvedVia === 'exit' ? 'sold' : lot.win ? 'won' : 'lost'} `
+            + `${signed(lot.realizedPnl)}, running ${signed(run[hi])}`
+          : ''}>
         <SzChartDefs ramp="nav" id="pm-tape"/>
         <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.1)"/>
         <path d={area} fill="url(#pm-tape-fill)"/>
@@ -1914,7 +1931,16 @@ function PmRewardsChart({ rows }) {
   return (
     <React.Fragment>
     <div className="pm-chart-wrap">
-      <SzChartSvg frame={F} hover={hv} n={n}>
+      <SzChartSvg frame={F} hover={hv} n={n}
+        label="polymarket · rewards earned since tracking began"
+        summary={szChartSummary(
+          'Liquidity and rebate rewards on polymarket, each line rebased to zero on the first '
+            + 'tracked day because the source reports lifetime totals',
+          rows[0].d, rows[n - 1].d, n)}
+        readout={hv.i != null && rows[hv.i]
+          ? `${rows[hv.i].d}, `
+            + ttLines.map(l => `${l.label} +${pmUSD(l.series[hv.i].v)}`).join(', ')
+          : ''}>
         <SzChartDefs ramp="rewards" id="pm-rewards"/>
         <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.08)"/>
         {/* Crosshair below the curves and its dots above them, so the hairline
