@@ -32,6 +32,7 @@ const ROUTE_TITLES = {
   book: 'book',
   ibkr: 'ibkr',
   polymarket: 'polymarket',
+  records: 'records',
   politics: 'politics',
   thoughts: 'thoughts',
   about: 'about',
@@ -74,13 +75,14 @@ function App() {
     ibkr: <Portfolio/>,
     polymarket: <Polymarket/>,
     book: <Combined setView={setView}/>,
+    records: <Records/>,
     politics: <Politics scope={route.param}/>,
     about: <About/>,
     thoughts: <Writing slug={route.param}/>,
   };
   const view = views[route.view] ? route.view : 'hero';
   // Data-heavy views fog the city so tables stay readable.
-  const dim = view === 'ibkr' || view === 'polymarket' || view === 'book' || view === 'politics';
+  const dim = view === 'ibkr' || view === 'polymarket' || view === 'book' || view === 'records' || view === 'politics';
   // Every route is a shareable URL, so every route needs a name. Without this the
   // tab strip, the history menu and every bookmark read "suzerain" and none of
   // them can tell a post from the ibkr charts.

@@ -84,6 +84,7 @@ function Nav({ view }) {
     { id: 'book', label: 'book' },
     { id: 'ibkr', label: 'ibkr' },
     { id: 'polymarket', label: 'polymarket' },
+    { id: 'records', label: 'records' },
     { id: 'politics', label: 'politics' },
     { id: 'thoughts', label: 'thoughts' },
     { id: 'about', label: 'about' },

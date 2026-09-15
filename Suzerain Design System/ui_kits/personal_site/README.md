@@ -12,13 +12,14 @@ These are the components loaded by `index.html` (via `<script type="text/babel">
 - `About.jsx` — prose page, max-width reading column
 - `Portfolio.jsx` — IBKR portfolio view (chart + holdings); the `ibkr` route
 - `Polymarket.jsx` — Polymarket P&L view
-- `Combined.jsx` — combined IBKR + Polymarket book; the `book` route
+- `Combined.jsx` — combined IBKR + Polymarket book; the `book` route. Also owns the book build, shared as `window.szBook`
+- `Records.jsx` — `records` view: lifetime best/worst days, weeks and months, runs and new highs, over a calendar of every day; reads `window.szBook`
 - `Writing.jsx` — `thoughts` view: the full stream + markdown reader
 - `App.jsx` — root: hash router + view switcher; loads `content.json` and mounts the tree
 
 ## Views
 
-No routing library — `App` parses `window.location.hash` (`#/view`, or `#/thoughts/<slug>` for a post) into a `{ view, param }` and re-parses on `hashchange`, so views and posts have shareable URLs. Landing is the log (`Hero`); the nav switches between `book`, `ibkr`, `polymarket`, `politics`, `thoughts`, and `about`.
+No routing library — `App` parses `window.location.hash` (`#/view`, or `#/thoughts/<slug>` for a post) into a `{ view, param }` and re-parses on `hashchange`, so views and posts have shareable URLs. Landing is the log (`Hero`); the nav switches between `book`, `ibkr`, `polymarket`, `records`, `politics`, `thoughts`, and `about`.
 
 The route key is the word in the nav, not the component's name — `book` mounts `Combined.jsx` and `ibkr` mounts `Portfolio.jsx`. Those two were once routed under their component names; `ROUTE_ALIASES` in `App.jsx` still maps `combined` and `portfolio` onto them so URLs shared before the rename keep working. `book` was labeled `overview` until 2026-09-10, and that key is aliased the same way.
 

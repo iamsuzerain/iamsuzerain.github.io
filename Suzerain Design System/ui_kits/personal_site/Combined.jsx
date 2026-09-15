@@ -1810,6 +1810,114 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
   );
 }
 
+// The whole book, built once per page load. The records view reads the same
+// build the book view draws, rather than a second loader that would sooner or
+// later disagree with this one about a transfer or a seam. A failed build is
+// forgotten so the next mount retries instead of replaying the error.
+let cmbBookPromise = null;
+function cmbLoadBookOnce() {
+  if (!cmbBookPromise) {
+    cmbBookPromise = cmbLoadBook().catch(e => { cmbBookPromise = null; throw e; });
+  }
+  return cmbBookPromise;
+}
+
+async function cmbLoadBook() {
+  // Every feed below is independent, so they all go out on the same tick.
+  // This used to be a sequential await-chain: ten round trips end to end,
+  // which on a slow link is most of the time spent on "merging feeds".
+  // Only the two genuine fallbacks (live pnl, clob rewards) stay lazy —
+  // they fire only when their primary comes back empty.
+  const pPromise    = window.szJson('data/portfolio.json');
+  const pnlSnapP    = cmbGetJson('data/polymarket-pnl.json');
+  const contentP    = cmbGetJson('data/content.json');
+  const benchP      = cmbGetJson('data/benchmarks.json');
+  const rfP         = cmbGetJson('data/riskfree.json');
+  const pmNavP      = cmbGetJson('data/polymarket-nav-history.json');
+  const navHistP    = cmbGetJson('data/nav-history.json');
+  const breakdownP  = cmbGetJson('data/polymarket-breakdown.json');
+  const bdHistP     = cmbGetJson('data/polymarket-breakdown-history.json');
+
+  const portfolio = await pPromise;
+
+  // Polymarket: the daily snapshot, and the live API per wallet (summed) only
+  // when that is missing. It used to be the other way round, and the live
+  // call was nearly all of the wait on "merging feeds": user-pnl-api computes
+  // the series cold, 2-8s a wallet on a first call, while every file above
+  // lands in one same-origin round trip. None of what it added over the
+  // snapshot survived the build, either — cmbPmPoints hands the rows to
+  // szPmBookExtend, which drops every point past SZ_PM_BOOK_SEAM and walks
+  // the tail off the breakdown history, so the only rows this page reads
+  // are settled ones the snapshot already holds. Checked 2026-09-11: the
+  // same series from either source, `corr` equal to 15 places (the snapshot
+  // rounds to 3dp, the live sum carries float noise).
+  let pmRows = [];
+  const snap = await pnlSnapP;
+  if (snap) pmRows = snap.rows || [];
+  if (!pmRows.length) {
+    // All-or-nothing: `null` for a wallet whose call failed, and one null
+    // discards the lot. Summing a failed wallet as zero silently drops its
+    // entire book out of the polymarket curve — the two wallets currently
+    // sit at roughly -$34k and +$34k, so either one going missing moves the
+    // combined line by tens of thousands of dollars and nothing on the page
+    // says the feed was short. The budget is sized for the cold path, as on
+    // the polymarket view: a cold call has been measured at 7.8s.
+    const pmLists = await Promise.all(
+      CMB_WALLETS.map(w =>
+        fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(25000) })
+          .then(r => r.ok ? r.json() : null)
+          .then(j => Array.isArray(j) ? j : null)
+          .catch(() => null)
+      )
+    );
+    if (!pmLists.some(l => l == null)) pmRows = cmbSumPnlSeries(pmLists);
+  }
+
+  // Dated log entries → chart annotations; pmTransfers is the manually
+  // maintained ledger of IBKR→Polymarket moves (used for the benchmark notional).
+  const content = await contentP;
+  const log = (content && content.home && content.home.log) || [];
+  const pmTransfers = (content && content.pmTransfers) || [];
+
+  // Fed funds, for the Sharpe on the risk panel. Best-effort like the rest:
+  // missing, the tile falls back to rf 0 and its note says so. Awaited ahead
+  // of the benchmarks now because it is also one of them — both requests
+  // went out on the same tick above, so the order costs nothing.
+  const rfj = await rfP;
+  const rfRows = (rfj && rfj.series && rfj.series.length) ? rfj.series : null;
+
+  // Benchmark overlay is best-effort; the chart renders fine without it.
+  // szWithCash folds the rate series in as a drawable line, so this page's
+  // picker and the ibkr page's offer the same list.
+  const bj = await benchP;
+  const benchmarks = window.szWithCash((bj && bj.benchmarks) || null, rfRows);
+
+  // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
+  // before the Flex window so the MAX range keeps charting aged-out markers.
+  // Daily Polymarket NAV back to the first transfer — recorded where it
+  // exists, reconstructed before that. Lets the capital base value the
+  // Polymarket side at what it is worth rather than what was sent to it
+  // (see pmCapitalAt).
+  // Its rows ride the same ~08:45 UTC betmoar scrape, so they get the same
+  // date restatement as the breakdown history. nav-history.json below is IBKR
+  // and already on close-of-day — it is left alone.
+  const navJson = await pmNavP;
+  const pmNavHistory = navJson
+    ? { ...navJson, rows: window.szPmDateSnapshotRows(navJson.rows) }
+    : null;
+
+  const pnlHistory = await navHistP;
+
+  const breakdown = await breakdownP;
+  const bd = await cmbBdExtra(breakdown, await bdHistP);  // { total, rows } — lifetime net + dated history
+
+  const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
+  built.log = log;
+  built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
+  built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
+  return built;
+}
+
 function Combined({ setView }) {
   const [data, setData] = useCmbState(null);
   const [err, setErr] = useCmbState(null);
@@ -1828,102 +1936,7 @@ function Combined({ setView }) {
 
   useCmbEffect(() => {
     let canceled = false;
-    async function load() {
-      // Every feed below is independent, so they all go out on the same tick.
-      // This used to be a sequential await-chain: ten round trips end to end,
-      // which on a slow link is most of the time spent on "merging feeds".
-      // Only the two genuine fallbacks (live pnl, clob rewards) stay lazy —
-      // they fire only when their primary comes back empty.
-      const pPromise    = window.szJson('data/portfolio.json');
-      const pnlSnapP    = cmbGetJson('data/polymarket-pnl.json');
-      const contentP    = cmbGetJson('data/content.json');
-      const benchP      = cmbGetJson('data/benchmarks.json');
-      const rfP         = cmbGetJson('data/riskfree.json');
-      const pmNavP      = cmbGetJson('data/polymarket-nav-history.json');
-      const navHistP    = cmbGetJson('data/nav-history.json');
-      const breakdownP  = cmbGetJson('data/polymarket-breakdown.json');
-      const bdHistP     = cmbGetJson('data/polymarket-breakdown-history.json');
-
-      const portfolio = await pPromise;
-
-      // Polymarket: the daily snapshot, and the live API per wallet (summed) only
-      // when that is missing. It used to be the other way round, and the live
-      // call was nearly all of the wait on "merging feeds": user-pnl-api computes
-      // the series cold, 2-8s a wallet on a first call, while every file above
-      // lands in one same-origin round trip. None of what it added over the
-      // snapshot survived the build, either — cmbPmPoints hands the rows to
-      // szPmBookExtend, which drops every point past SZ_PM_BOOK_SEAM and walks
-      // the tail off the breakdown history, so the only rows this page reads
-      // are settled ones the snapshot already holds. Checked 2026-09-11: the
-      // same series from either source, `corr` equal to 15 places (the snapshot
-      // rounds to 3dp, the live sum carries float noise).
-      let pmRows = [];
-      const snap = await pnlSnapP;
-      if (snap) pmRows = snap.rows || [];
-      if (!pmRows.length) {
-        // All-or-nothing: `null` for a wallet whose call failed, and one null
-        // discards the lot. Summing a failed wallet as zero silently drops its
-        // entire book out of the polymarket curve — the two wallets currently
-        // sit at roughly -$34k and +$34k, so either one going missing moves the
-        // combined line by tens of thousands of dollars and nothing on the page
-        // says the feed was short. The budget is sized for the cold path, as on
-        // the polymarket view: a cold call has been measured at 7.8s.
-        const pmLists = await Promise.all(
-          CMB_WALLETS.map(w =>
-            fetch(cmbPnlUrl(w), { signal: AbortSignal.timeout(25000) })
-              .then(r => r.ok ? r.json() : null)
-              .then(j => Array.isArray(j) ? j : null)
-              .catch(() => null)
-          )
-        );
-        if (!pmLists.some(l => l == null)) pmRows = cmbSumPnlSeries(pmLists);
-      }
-
-      // Dated log entries → chart annotations; pmTransfers is the manually
-      // maintained ledger of IBKR→Polymarket moves (used for the benchmark notional).
-      const content = await contentP;
-      const log = (content && content.home && content.home.log) || [];
-      const pmTransfers = (content && content.pmTransfers) || [];
-
-      // Fed funds, for the Sharpe on the risk panel. Best-effort like the rest:
-      // missing, the tile falls back to rf 0 and its note says so. Awaited ahead
-      // of the benchmarks now because it is also one of them — both requests
-      // went out on the same tick above, so the order costs nothing.
-      const rfj = await rfP;
-      const rfRows = (rfj && rfj.series && rfj.series.length) ? rfj.series : null;
-
-      // Benchmark overlay is best-effort; the chart renders fine without it.
-      // szWithCash folds the rate series in as a drawable line, so this page's
-      // picker and the ibkr page's offer the same list.
-      const bj = await benchP;
-      const benchmarks = window.szWithCash((bj && bj.benchmarks) || null, rfRows);
-
-      // Accumulated multi-year P&L history (best-effort). Extends the IBKR curve
-      // before the Flex window so the MAX range keeps charting aged-out markers.
-      // Daily Polymarket NAV back to the first transfer — recorded where it
-      // exists, reconstructed before that. Lets the capital base value the
-      // Polymarket side at what it is worth rather than what was sent to it
-      // (see pmCapitalAt).
-      // Its rows ride the same ~08:45 UTC betmoar scrape, so they get the same
-      // date restatement as the breakdown history. nav-history.json below is IBKR
-      // and already on close-of-day — it is left alone.
-      const navJson = await pmNavP;
-      const pmNavHistory = navJson
-        ? { ...navJson, rows: window.szPmDateSnapshotRows(navJson.rows) }
-        : null;
-
-      const pnlHistory = await navHistP;
-
-      const breakdown = await breakdownP;
-      const bd = await cmbBdExtra(breakdown, await bdHistP);  // { total, rows } — lifetime net + dated history
-
-      const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
-      built.log = log;
-      built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
-      built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
-      return built;
-    }
-    load()
+    cmbLoadBookOnce()
       .then(d => { if (!canceled) setData(d); })
       .catch(e => { if (!canceled) setErr(String(e.message || e)); });
     return () => { canceled = true; };
@@ -2223,3 +2236,5 @@ function Combined({ setView }) {
 }
 
 window.Combined = Combined;
+// For Records.jsx: the shared build and the chained-TWR construction over it.
+window.szBook = { load: cmbLoadBookOnce, pctSeries: cmbPctSeries };

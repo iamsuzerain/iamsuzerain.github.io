@@ -1721,6 +1721,93 @@
   }
   .pol-strip-name { color: var(--fg-1); }
 
+  /* ========== Records ========== */
+  /* The calendar scales with the panel down to ~0.72 of its drawn pitch, then
+     scrolls sideways (Records.jsx sets the floor as min-width and lands the
+     scroll on the recent end). */
+  .rec-cal-scroll {
+    overflow-x: auto; overflow-y: hidden; padding-bottom: 8px;
+    scrollbar-width: thin; scrollbar-color: rgba(167,139,250,0.3) transparent;
+  }
+  .rec-cal { width: 100%; height: auto; display: block; touch-action: pan-x; }
+  .rec-cal-label {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
+    fill: var(--fg-4);
+  }
+  .rec-cal-year {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em;
+    fill: var(--fg-2);
+  }
+  .rec-readout {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+    min-height: 20px; margin-top: 12px;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;
+    color: var(--fg-2); font-variant-numeric: tabular-nums;
+  }
+  .rec-readout .pos { color: var(--pos); }
+  .rec-readout .neg { color: var(--neg); }
+  .rec-readout-date { color: var(--fg-1); }
+  .rec-readout-legs { color: var(--fg-4); font-size: 11px; }
+  .rec-readout-high { color: var(--fg-1); font-size: 11px; }
+  .rec-legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 1px;
+    margin-top: 10px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+    color: var(--fg-4); text-transform: uppercase;
+  }
+  .rec-legend > span:first-child { margin-right: 5px; }
+  .rec-legend svg + span { margin-left: 5px; }
+  .rec-legend-scale { margin-left: 16px !important; text-transform: none; letter-spacing: 0.04em; }
+  .rec-legend-high { margin-left: 16px; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Best | worst pairs: one question per row, both answers beside each other. */
+  .rec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rec-row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "label label" "value note" "when when";
+    align-items: baseline; gap: 2px 12px;
+    padding: 14px 16px; text-align: left;
+    background: transparent; border: none; border-radius: var(--r-1);
+    border-bottom: 1px solid var(--border-soft);
+    color: inherit; font: inherit; cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .rec-row:nth-child(odd) { border-right: 1px solid var(--border-soft); border-radius: 0; }
+  .rec-row:nth-child(even) { border-radius: 0; }
+  .rec-row:nth-last-child(-n+2) { border-bottom: none; }
+  .rec-row:hover, .rec-row.is-active { background: rgba(167,139,250,0.06); }
+  .rec-row.is-pinned { background: rgba(167,139,250,0.10); }
+  .rec-row:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: -1px; }
+  .rec-row-label {
+    grid-area: label;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--fg-3);
+  }
+  .rec-row-value {
+    grid-area: value;
+    font-family: var(--font-display); font-size: 24px; line-height: 1.2;
+    color: var(--fg-1); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  }
+  .rec-row-value.pos { color: var(--pos); }
+  .rec-row-value.neg { color: var(--neg); }
+  .rec-row-note {
+    grid-area: note;
+    font-family: var(--font-mono); font-size: 11px; color: var(--fg-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .rec-row-when {
+    grid-area: when;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--fg-4);
+  }
+  @media (max-width: 640px) {
+    .rec-grid { grid-template-columns: minmax(0, 1fr); }
+    .rec-row:nth-child(odd) { border-right: none; }
+    .rec-row:nth-last-child(2) { border-bottom: 1px solid var(--border-soft); }
+    .rec-row { padding: 12px 4px; }
+    .rec-row-value { font-size: 20px; }
+    .rec-legend-scale, .rec-legend-high { margin-left: 10px !important; }
+  }
+
   .pol-unmatched {
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
     color: var(--warn); margin-top: 14px;
@@ -1762,6 +1849,7 @@
 <script type="text/babel" src="Portfolio.jsx"></script>
 <script type="text/babel" src="Polymarket.jsx"></script>
 <script type="text/babel" src="Combined.jsx"></script>
+<script type="text/babel" src="Records.jsx"></script>
 <script type="text/babel" src="Politics.jsx"></script>
 <script type="text/babel" src="Writing.jsx"></script>
 <script type="text/babel" src="App.jsx"></script>
