@@ -680,6 +680,9 @@
   .pf-head-right {
     display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
   }
+  @media (max-width: 480px) {
+    .pf-updated-fetch { display: none; }
+  }
   /* The same switch sitting inside a panel head's range strip, where it governs
      that one panel — polymarket's cumulative-pnl chart, the only one still
      scoped that narrowly. The rule separates it from the range buttons so it
@@ -891,6 +894,13 @@
     margin-left: 6px; padding: 1px 4px; border-radius: var(--r-1);
     font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--fg-3); border: 1px solid var(--border);
+  }
+  /* A rate future's size is rate risk at a stated shock, not market value. The
+     arithmetic is in the hover; a faint solid underline says there is one. */
+  .pf-risk-val {
+    cursor: help;
+    text-decoration: underline solid rgba(229,225,241,0.25);
+    text-underline-offset: 3px;
   }
 
   /* attribution-by-market-type (polymarket) + by-instrument-type (portfolio):

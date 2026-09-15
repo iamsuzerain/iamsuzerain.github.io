@@ -120,6 +120,8 @@ async function pmFetchBreakdown() {
         // snapshot; used as portfolio value so it matches the book view's
         // capital-deployment bar exactly.
         nav:       bd.balances ? bd.balances.nav : null,
+        // The scrape's UTC date, so figures read off it can say which day.
+        asOf:      /^\d{4}-\d\d-\d\d/.test(bd.generatedAt || '') ? bd.generatedAt.slice(0, 10) : null,
         source:    'betmoar',
       };
     }
@@ -1808,6 +1810,14 @@ function PmRewardsChart({ rows }) {
 // only blanked when there is no series at all; a snapshot-backed one is real and
 // says where it came from, so a later refinement by the live call doesn't read
 // as the page having lied.
+// Snapshot dates are plain YYYY-MM-DD in UTC; read them that way so no
+// timezone moves the day.
+function pmDayLabel(d) {
+  return new Date(`${d}T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    .toLowerCase();
+}
+
 function pmPnlKicker(base, hasPnl, stale, pending) {
   if (!hasPnl) return pending ? 'loading pnl series' : 'pnl series unavailable';
   if (!stale) return base;
@@ -1939,7 +1949,7 @@ function Polymarket() {
   );
   if (!data) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ polymarket · live</div>
+      <div className="sz-kicker">◆ polymarket</div>
       <h2 className="sz-h2">fetching positions<Cursor /></h2>
     </section>
   );
@@ -1965,7 +1975,12 @@ function Polymarket() {
   // Show the second wallet in the header pill (matches the profile/betmoar links below).
   const displayWallet = (profile.wallets && profile.wallets[1]) || profile.wallet;
   const updated = new Date(data.generatedAt);
-  const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const updatedStr = updated.toISOString().replace('T', ' ').slice(5, 16) + ' UTC';
+  // The page mixes two clocks: positions, trades and (usually) the p&l series
+  // are fetched live from data-api, while portfolio value and the rewards
+  // breakdown are the daily betmoar scrape. Each figure says which it is.
+  const snapValue = !!(breakdown && breakdown.nav != null);
+  const snapDay = breakdown && breakdown.asOf ? pmDayLabel(breakdown.asOf) : null;
 
   // Authoritative lifetime P&L = last point of user-pnl series (trading only).
   // Null, not a fallback, when there is no series: the only other figures to
@@ -2037,9 +2052,14 @@ function Polymarket() {
     <section className="pf-wrap pm-view">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ polymarket · live from data-api</div>
+          <div className="sz-kicker">◆ polymarket · live positions + daily snapshots</div>
           <h2 className="sz-h2 pm-headline">
-            {pmUSD(summary.totalValue)}<span className="pf-currency">portfolio value</span>
+            {pmUSD(summary.totalValue)}
+            <span className="pf-currency">
+              {snapValue
+                ? `portfolio value · ${snapDay ? `${snapDay} snapshot` : 'daily snapshot'}`
+                : 'open positions · live'}
+            </span>
           </h2>
           <div className="pf-sub">
             <span>@{profile.handle}</span>
@@ -2049,7 +2069,7 @@ function Polymarket() {
         </div>
         <div className="pf-updated">
           <span className="pf-dot"/>
-          <span>fetched {updatedStr}</span>
+          <span>positions fetched {updatedStr}</span>
         </div>
       </div>
 
@@ -2164,7 +2184,13 @@ function Polymarket() {
       )}
 
       <div className="pf-footer pm-footer-deep">
-        <span>live · data-api.polymarket.com</span>
+        <span>positions & trades live · data-api.polymarket.com</span>
+        {breakdown && breakdown.source === 'betmoar' && (
+          <>
+            <span className="sz-sep">·</span>
+            <span>value & profit by source · betmoar{snapDay ? ` snapshot ${snapDay}` : ' daily snapshot'}</span>
+          </>
+        )}
         <span className="sz-sep">·</span>
         <a href={`https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRIMARY}`} target="_blank" rel="noreferrer">
           wallet ↗ polymarket

@@ -822,7 +822,11 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
 // the set sums to 1, so the ring is always exactly one revolution. A bucket that
 // is net short still occupies its share of the ring — it carries that exposure —
 // and is called out in the legend rather than being drawn as if it were a long.
-function AllocDonut({ data }) {
+//
+// `risk` is the futures sizing basis ({ bp, dv01, face }), when the book holds a
+// rate future: that slice is rate risk at a stated shock, not market value, so
+// its legend row's hover carries the arithmetic, as the positions table's does.
+function AllocDonut({ data, risk }) {
   const R = 64, r = 40, cx = 80, cy = 80;
   const C = 2 * Math.PI * ((R + r) / 2);
   let acc = 0;
@@ -879,7 +883,10 @@ function AllocDonut({ data }) {
       </svg>
       <ul className="pf-legend">
         {data.map((seg, i) => (
-          <li key={i} title={seg.net != null ? `net ${fmtUSD(seg.net)} · gross ${fmtUSD(seg.gross)}` : undefined}>
+          <li key={i} title={[
+            seg.net != null ? `net ${fmtUSD(seg.net)} · gross ${fmtUSD(seg.gross)}` : null,
+            risk && seg.label === 'futures' ? pfRiskTitle(risk) : null,
+          ].filter(Boolean).join('\n') || undefined}>
             <span className="pf-legend-dot" style={{ background: seg.color }}/>
             <span className="pf-legend-label">
               {seg.label}
@@ -1307,6 +1314,30 @@ function TypeBadge({ assetClass, subCategory }) {
   return <span className="pf-type-badge" data-type={label}>{label}</span>;
 }
 
+// The sizing arithmetic for a futures leg, spelled out for the hover. Face is
+// named only to say it is not what the row is sized by.
+// Shared by the positions cell and the allocation legend, so both hovers say the
+// same thing.
+function pfRiskTitle({ bp, dv01, face: notional }) {
+  const perBp = dv01 != null ? `${fmtUSD(Math.abs(dv01))}/bp × ${bp}bp` : `${bp}bp move`;
+  const face = notional != null ? ` · controls ${pfBillions(notional)} notional, not counted` : '';
+  return `rate risk, not market value: ${perBp}${face}`;
+}
+
+// Notional runs to billions; full digits there are unreadable at a glance.
+function pfBillions(v) {
+  const a = Math.abs(v);
+  return a >= 1e9 ? `$${(a / 1e9).toFixed(2)}B` : a >= 1e6 ? `$${(a / 1e6).toFixed(1)}M` : fmtUSD(a);
+}
+
+// Statement dates are plain YYYY-MM-DD; read them as UTC so no timezone moves
+// the day.
+function pfDayLabel(d) {
+  return new Date(`${d}T00:00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    .toLowerCase();
+}
+
 function PositionsTable({ rows }) {
   return (
     <div className="pf-table-wrap">
@@ -1330,7 +1361,17 @@ function PositionsTable({ rows }) {
                 <td className="pf-sym">{p.symbol}</td>
                 <td className="pf-name">{p.name}</td>
                 <td className="pf-num">{p.qty}</td>
-                <td className="pf-num">{fmtUSD(p.mktValue)}</td>
+                {/* A rate future has no market value to put here — fetch-ibkr.py
+                    writes what a shockBp move is worth to the leg instead. Same
+                    column, different quantity, so hovering the figure says which. */}
+                <td className="pf-num">
+                  {p.shockBp
+                    ? <span className="pf-risk-val"
+                        title={pfRiskTitle({ bp: p.shockBp, dv01: p.dv01, face: p.face })}>
+                        {fmtUSD(p.mktValue)}
+                      </span>
+                    : fmtUSD(p.mktValue)}
+                </td>
                 <td className={`pf-num ${up ? 'pos' : 'neg'}`}>
                   {retPct != null ? fmtPct(retPct) : '—'}
                 </td>
@@ -1485,8 +1526,19 @@ function Portfolio() {
 
   const d = data;
   const updated = new Date(d.generatedAt);
-  const updatedStr = updated.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-  const risk = d.risk;                       // still the source for concentration
+  const updatedStr = updated.toISOString().replace('T', ' ').slice(5, 16) + ' UTC';
+  // What the numbers describe is the statement's last day, not when the cron
+  // fetched it — a run early on the 15th carries the book through the 14th.
+  const navLast = d.navSeries && d.navSeries.length ? d.navSeries[d.navSeries.length - 1].d : null;
+  // Futures sizing basis for the allocation note. Summed across legs; a leg
+  // with no spec has no shockBp and is sized by contract value, so it is left out.
+  const futLegs = (d.positions || []).filter(p => p.shockBp);
+  const futRisk = futLegs.length ? {
+    bp: futLegs[0].shockBp,
+    dv01: futLegs.every(p => p.dv01 != null) ? futLegs.reduce((a, p) => a + Math.abs(p.dv01), 0) : null,
+    face: futLegs.every(p => p.face != null) ? futLegs.reduce((a, p) => a + Math.abs(p.face), 0) : null,
+  } : null;
+  const risk = d.risk;                      // still the source for concentration
   const conc = risk && risk.concentration;   // position-based, not windowed
 
   // Range selector windows the chart, its strips, AND the risk tiles. MAX draws
@@ -1555,7 +1607,14 @@ function Portfolio() {
         <div className="pf-head-right">
           <div className="pf-updated">
             <span className="pf-dot"/>
-            <span>auto-updated {updatedStr}</span>
+            <span>
+              {navLast && <>through {pfDayLabel(navLast)}</>}
+              {/* The fetch time is the secondary fact, so on a phone it is the
+                  half that goes when the pill would run off the screen. */}
+              <span className={navLast ? 'pf-updated-fetch' : undefined}>
+                {navLast && <> <span className="sz-sep">·</span> </>}fetched {updatedStr}
+              </span>
+            </span>
           </div>
           {/* Renders nothing here: the switch itself is drawn in the nav, which
               stays put while the analytics stack below runs past the fold. No
@@ -1697,7 +1756,7 @@ function Portfolio() {
             <span className="pf-panel-title">allocation</span>
             <span className="pf-panel-meta">share of gross exposure</span>
           </div>
-          <AllocDonut data={d.allocation}/>
+          <AllocDonut data={d.allocation} risk={futRisk}/>
         </div>
         <div className="pf-panel pf-panel-pos">
           <div className="pf-panel-head">
