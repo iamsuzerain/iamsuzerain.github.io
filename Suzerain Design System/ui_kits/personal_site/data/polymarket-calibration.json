@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T11:51:23Z",
+  "generatedAt": "2026-09-16T11:44:20Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,12 +58,12 @@
       "calibrationError": 0.0288
     },
     "exit": {
-      "n": 266,
-      "wins": 180,
+      "n": 267,
+      "wins": 181,
       "pushes": 8,
-      "hitRate": 0.6977,
-      "volume": 1073349.38,
-      "realizedPnl": -17556.29,
+      "hitRate": 0.6988,
+      "volume": 1073544.68,
+      "realizedPnl": -17554.79,
       "roi": -0.0164
     }
   },
@@ -404,17 +404,17 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 62,
-        "wins": 50,
+        "n": 63,
+        "wins": 51,
         "pushes": 0,
-        "winRate": 0.8065,
-        "avgImplied": 0.9677,
-        "volume": 319516.62,
-        "realizedPnl": -17310.57,
-        "grossPnl": 27026.65,
-        "winRateByVolume": 0.7361,
-        "wilsonLo": 0.6915,
-        "wilsonHi": 0.8857
+        "winRate": 0.8095,
+        "avgImplied": 0.9678,
+        "volume": 319711.92,
+        "realizedPnl": -17309.07,
+        "grossPnl": 27028.15,
+        "winRateByVolume": 0.7363,
+        "wilsonLo": 0.6959,
+        "wilsonHi": 0.8875
       },
       {
         "lo": 0.99,
@@ -564,13 +564,13 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 234,
-        "volume": 1849883.3,
-        "realizedPnl": 51960.15,
+        "n": 235,
+        "volume": 1850078.6,
+        "realizedPnl": 51961.65,
         "roi": 0.0281,
-        "hitRate": 0.8652,
-        "avgImplied": 0.8775,
-        "edge": -0.0123,
+        "hitRate": 0.8658,
+        "avgImplied": 0.878,
+        "edge": -0.0122,
         "top1Share": 0.225
       },
       "settlement": {
@@ -584,26 +584,26 @@
         "top1Share": 0.3787
       },
       "exit": {
-        "n": 94,
-        "volume": 603127.62,
-        "realizedPnl": -2223.78,
+        "n": 95,
+        "volume": 603322.92,
+        "realizedPnl": -2222.28,
         "roi": -0.0037,
-        "hitRate": 0.7111,
-        "avgImplied": 0.7879,
-        "edge": -0.0768,
+        "hitRate": 0.7143,
+        "avgImplied": 0.7899,
+        "edge": -0.0756,
         "top1Share": 0.2193
       }
     },
     "macro": {
       "combined": {
         "n": 24,
-        "volume": 236674.86,
-        "realizedPnl": 322.01,
-        "roi": 0.0014,
+        "volume": 236724.93,
+        "realizedPnl": 271.93,
+        "roi": 0.0011,
         "hitRate": 0.75,
         "avgImplied": 0.8063,
         "edge": -0.0563,
-        "top1Share": 0.2071
+        "top1Share": 0.2057
       },
       "settlement": {
         "n": 11,
@@ -617,13 +617,13 @@
       },
       "exit": {
         "n": 13,
-        "volume": 173098.47,
-        "realizedPnl": -1068.96,
-        "roi": -0.0062,
+        "volume": 173148.54,
+        "realizedPnl": -1119.04,
+        "roi": -0.0065,
         "hitRate": 0.6154,
         "avgImplied": 0.7076,
-        "edge": -0.0922,
-        "top1Share": 0.3754
+        "edge": -0.0923,
+        "top1Share": 0.3684
       }
     },
     "other": {
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 107,
-    "cost": 236591.28,
-    "mark": 320826.88,
-    "unrealized": 84235.6
+    "n": 106,
+    "cost": 237912.79,
+    "mark": 322103.47,
+    "unrealized": 84190.67
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 2601.61,
-      "mark": 2579.03,
-      "unrealized": -22.59
+      "mark": 2589.31,
+      "unrealized": -12.31
     },
     "geopolitics": {
-      "n": 28,
-      "cost": 56541.43,
-      "mark": 63280.59,
-      "unrealized": 6739.16
+      "n": 29,
+      "cost": 57765.18,
+      "mark": 65029.97,
+      "unrealized": 7264.79
     },
     "macro": {
       "n": 4,
-      "cost": 101793.49,
-      "mark": 177250.85,
-      "unrealized": 75457.36
+      "cost": 102487.53,
+      "mark": 176732.95,
+      "unrealized": 74245.42
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 300.6,
-      "unrealized": -37.8
+      "mark": 297.0,
+      "unrealized": -41.4
     },
     "politics": {
-      "n": 63,
-      "cost": 70133.5,
-      "mark": 71946.03,
-      "unrealized": 1812.53
+      "n": 61,
+      "cost": 69537.22,
+      "mark": 71941.27,
+      "unrealized": 2404.05
     },
     "sports": {
       "n": 8,
       "cost": 3399.36,
-      "mark": 3704.13,
-      "unrealized": 304.77
+      "mark": 3749.19,
+      "unrealized": 349.83
     },
     "tech": {
       "n": 1,
       "cost": 1783.49,
-      "mark": 1765.66,
-      "unrealized": -17.83
+      "mark": 1763.78,
+      "unrealized": -19.71
     }
   },
   "openCategories": {
@@ -838,7 +838,6 @@
     "0x53bbdde2bff0255be814d3779de1e2b3cb55383defda7af65a76a171cfd3e64b": "sports",
     "0x57599a84bf50c94b958adb020aa2a25bf02e26453e500d3b739d86e6b783774c": "politics",
     "0x5ad7756609da59ffb359e37a16cc0b89285f4b823623e22e2900f054a77ed8ed": "politics",
-    "0x5d763463cd2a9bd939d49bbb5b4bbaf5fc2cd9ecee5966e6fcce0b6de57179fc": "politics",
     "0x5dacb3919e3eb6372770cba85c42e0f980ddf18b1a767751de700ee272269233": "politics",
     "0x5e95ab3b85ce3e98f7cc841671ddb18807c0819487134925b639402b499f360f": "politics",
     "0x5f0c572a4cf1facef94b8c03b0ce2db5911447a885a02d5cd01382f9794ede77": "sports",
@@ -852,7 +851,6 @@
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
     "0x70f1a7d2cd490b640676d5e31470bcbe16fef40087de1af8b6f6e44e299b5784": "geopolitics",
     "0x7586a96520578acaaaa4ea84a2582f197f84255da1f3392a7aa300386c187b37": "geopolitics",
-    "0x77051d8ddec1e312de90cdf2ce026ce1c4df4c1c264cfa1525e55995b542fb0c": "politics",
     "0x771873c365f87bffd990644e4b688aebc1be7f18396d2eab64b996ff66e88669": "politics",
     "0x812d9ea644c58f1e889643bbd9184e9c5fdacbba55d1f9fef2eb2d55ce5dc1c2": "politics",
     "0x81a537b379a35e4e17c286d3b37394e94bd74c1779bbe9a13670eb991b201a3a": "geopolitics",
@@ -905,11 +903,11 @@
     "hedged": {
       "markets": 15,
       "records": 36,
-      "realizedPnl": -5692.22
+      "realizedPnl": -5742.3
     },
     "conversions": {
-      "rows": 51,
-      "usd": 92606.0
+      "rows": 52,
+      "usd": 92651.32
     },
     "minLotUsd": 1.0
   },
@@ -1690,7 +1688,7 @@
     ["geopolitics","2026-07-30","e",94.5,2.1,1,0.45,"US x Iran Effective Ceasefire by August 14?","Yes","US x Iran Effective Ceasefire by...? (2 week pause)"],
     ["geopolitics","2026-07-30","s",1352.42,73.07,1,0.9487,"US announces halt in Iran offensive operations by July 31?","Yes","US announces halt in Iran offensive operations by...?"],
     ["geopolitics","2026-07-30","s",7350.86,72.68,1,0.9902,"Israel x Iran ceasefire continues through July 27?","Yes","Israel x Iran ceasefire continues through...?"],
-    ["macro","2026-07-30","e",880.59,-26.11,0,0.4925,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","No","Fed Decision in September?"],
+    ["macro","2026-07-30","e",880.59,-26.18,0,0.4925,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","No","Fed Decision in September?"],
     ["politics","2026-07-30","e",690.0,-682.0,0,0.69,"Will Donald Trump publicly insult Vladimir Putin by July 31, 2026?","Yes","Who will Trump publicly insult by July 31?"],
     ["sports","2026-07-30","e",31.65,-29.13,0,0.0619,"Will the New York Mets win the 2026 World Series?","Yes","MLB World Series Champion 2026"],
     ["commodities","2026-07-31","e",940.94,-234.43,0,0.9409,"Will WTI Crude Oil (WTI) hit (HIGH) $95 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
@@ -1857,7 +1855,6 @@
     ["geopolitics","2026-09-08","e",2713.52,-871.95,0,0.8482,"Israel closes its airspace by September 30?","Yes","Israel closes its airspace by...?"],
     ["geopolitics","2026-09-09","e",3467.81,31.65,1,0.986,"Russia Elections: Yabloko Clears Duma Threshold?","No",null],
     ["geopolitics","2026-09-09","e",2437.4,71.78,1,0.9296,"Will any presidential candidate win outright in the first round of the Brazil election?","No",null],
-    ["macro","2026-09-09","e",24758.33,-316.91,0,0.5673,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"],
     ["geopolitics","2026-09-10","e",4792.23,-213.23,0,0.874,"Will Magdalena Andersson be the next Prime Minister of Sweden?","Yes","Next Prime Minister of Sweden"],
     ["geopolitics","2026-09-10","s",1487.48,16.19,1,0.9892,"Nothing Ever Happens: August","Nothing",null],
     ["politics","2026-09-10","e",2589.49,59.2,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
@@ -1875,13 +1872,15 @@
     ["sports","2026-09-13","s",1714.57,53.03,1,0.97,"Louisiana vs. USC","USC",null],
     ["geopolitics","2026-09-14","e",275.35,47.48,1,0.8103,"Israel and Lebanon normalize relations before 2027?","No",null],
     ["geopolitics","2026-09-14","e",506.67,40.0,1,0.76,"Iran-Oman Hormuz Agreement by September 30?","No","Iran-Oman Hormuz Management Agreement by...?"],
-    ["macro","2026-09-14","e",84.46,-33.04,0,0.0066,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
-    ["macro","2026-09-14","e",27890.11,-693.92,0,0.5398,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
     ["politics","2026-09-14","s",3574.04,39.75,1,0.989,"Will the Sweden Democrats (SD) win the most seats in the 2026 Swedish parliamentary election?","No","Sweden Parliamentary Election Winner"],
     ["politics","2026-09-14","s",2416.43,26.88,1,0.989,"Will the Swedish Social Democratic Party (S) win the most seats in the 2026 Swedish parliamentary election?","Yes","Sweden Parliamentary Election Winner"],
     ["sports","2026-09-14","s",2571.29,75.55,1,0.9715,"Cowboys vs. Giants","Giants",null],
+    ["geopolitics","2026-09-15","e",195.3,1.5,1,0.9765,"Will Renan Santos win the 2026 Brazilian presidential election?","No","Brazil Presidential Election"],
+    ["macro","2026-09-15","e",24800.97,-359.55,0,0.5682,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"],
     ["sports","2026-09-15","s",41.18,-41.18,0,0.0619,"Will the New York Mets win the 2026 World Series?","Yes","MLB World Series Champion 2026"],
     ["sports","2026-09-15","s",4.65,0.35,1,0.93,"Broncos vs. Chiefs: O/U 24.5","Over","Broncos vs. Chiefs"],
-    ["sports","2026-09-15","s",49.45,-49.45,0,0.43,"Spread: Broncos (-1.5)","Broncos","Broncos vs. Chiefs"]
+    ["sports","2026-09-15","s",49.45,-49.45,0,0.43,"Spread: Broncos (-1.5)","Broncos","Broncos vs. Chiefs"],
+    ["macro","2026-09-16","e",86.24,-34.83,0,0.0067,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
+    ["macro","2026-09-16","e",27895.76,-699.5,0,0.5399,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"]
   ]
 }
