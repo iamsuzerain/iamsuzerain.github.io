@@ -162,14 +162,31 @@ def positions_agreement(pairs, source):
     book both times. The scrape caught a low read, NAV published ~$8k light, and
     nothing in the pipeline said so — the gap was found by eye, days later.
 
-    Tolerance is 2%: both reads are taken seconds apart against the same book,
-    so ordinary price drift between them is small, while the failure this
-    watches for moved one wallet by 38%.
+    Tolerance is absolute, not proportional, because the failure is. Fourteen
+    readings in the Actions logs between 2026-09-12 and 2026-09-16 say the
+    healthy state is agreement *to the dollar* — thirteen of them differ by
+    exactly $0, which is what you would expect if betmoar's /value is derived
+    from the same snapshot as /positions whenever it is fresh.
+
+    The fourteenth is the 2026-09-13 incident, and it is why this is not a
+    percentage:
+
+        w0   polymarket  10,782   betmoar   6,704   gap $4,078   37.8%
+        w1   polymarket 291,541   betmoar 287,382   gap $4,159    1.45%
+
+    Both legs are the same ~$4k mistake; they read as wildly different
+    percentages only because the wallets are different sizes. A 2% rule — the
+    first thing written here, sized off the 38% — catches w0 and waves w1
+    through, which is half of the ~$8k that went out that day.
+
+    $250 is a floor for genuine drift between two calls a second apart, not a
+    measurement of anything. Every healthy reading so far has been $0.
 
     A disagreement is reported, not fatal. /positions is the better source and
     is already the one used; the run should still publish. What matters is that
     the day it starts disagreeing is a day somebody hears about.
     """
+    TOL = 250.0
     flags, bad = [], 0
     for i, (pm, bm) in enumerate(pairs):
         if pm is None:
@@ -178,11 +195,13 @@ def positions_agreement(pairs, source):
         if not bm:
             flags.append(f"w{i} PM?BM")      # betmoar reported nothing to compare
             continue
-        pct = (pm - bm) / abs(bm) * 100
-        if abs(pct) <= 2.0:
+        gap = pm - bm
+        if abs(gap) <= TOL:
             flags.append(f"w{i} PM==BM")
         else:
-            flags.append(f"w{i} PM!=BM({pct:+.0f}%)")
+            # The gap in dollars, which is the thing that went wrong, and the
+            # percentage after it, which is the thing that made it look small.
+            flags.append(f"w{i} PM!=BM({gap:+,.0f} / {gap / abs(bm) * 100:+.1f}%)")
             bad += 1
 
     if source == "betmoar":
