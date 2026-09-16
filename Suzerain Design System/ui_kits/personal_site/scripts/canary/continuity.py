@@ -173,7 +173,11 @@ def check_file(path: Path) -> tuple[str, bool]:
     try:
         cur = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as e:
-        return f"continuity {name}: unreadable ({type(e).__name__}) -> FATAL", True
+        # The path as given, not just its basename: when the argument itself is
+        # wrong rather than the file, the basename hides the reason. A stray `\n`
+        # in the betmoar workflow's argument list once reached bash as the word
+        # `n`, and this line reported it as a missing file called `n`.
+        return f"continuity {path}: unreadable ({type(e).__name__}) -> FATAL", True
 
     prev = head_version(path)
     flags: list[str] = []

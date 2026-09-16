@@ -140,7 +140,7 @@ jobs:
       - name: continuity canary
         run: |
           cd "Suzerain Design System/ui_kits/personal_site"
-          python3 scripts/canary/continuity.py data/polymarket-breakdown.json data/polymarket-breakdown-history.json \n            data/polymarket-nav-history.json
+          python3 scripts/canary/continuity.py data/polymarket-breakdown.json data/polymarket-breakdown-history.json data/polymarket-nav-history.json
 
       - name: commit + push if changed
         run: |
