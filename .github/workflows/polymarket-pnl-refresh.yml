@@ -44,6 +44,18 @@ jobs:
           mv /tmp/pm-nav-history.json \
             "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
 
+      # Compares what was just written against the copy in HEAD — a free second
+      # reading of every day but today, since the data is a daily snapshot in
+      # git. Reports rewritten history, dropped rows and a changed source; fails
+      # the job only on dates that are duplicated or out of order, which no
+      # reading of the data makes correct and which every chart walks assuming.
+      # Failing here skips the commit below, so a broken file is not published.
+      # Add --warn-only if that ever needs to be downgraded to a report.
+      - name: continuity canary
+        run: |
+          cd "Suzerain Design System/ui_kits/personal_site"
+          python3 scripts/canary/continuity.py data/polymarket-pnl.json data/polymarket-nav-history.json
+
       - name: commit + push if changed
         run: |
           git config user.name  "polymarket-pnl-bot"

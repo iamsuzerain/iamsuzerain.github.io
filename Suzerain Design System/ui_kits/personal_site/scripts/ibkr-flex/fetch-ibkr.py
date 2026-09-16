@@ -481,6 +481,27 @@ def _pairing_report(rows: list[dict], cash_flows: dict[str, float]) -> list[str]
     return L
 
 
+def cin_deposits(root: ET.Element) -> float | None:
+    """ChangeInNAV's window deposits/withdrawals, or None if absent.
+
+    IBKR puts this attribute on <ChangeInNAV> itself for the site's query, and
+    on a nested <ChangeInNAVByPeriod> when the query is configured by period.
+    Reading only the outer element returns None on the second shape, which would
+    silently retire both the flow canary and the coverage guard — they would go
+    on printing "no ChangeInNAV to check against" as though the statement had
+    never carried one.
+    """
+    cin = root.find(".//ChangeInNAV")
+    if cin is None:
+        return None
+    if cin.get("depositsWithdrawals") is not None:
+        return to_float(cin.get("depositsWithdrawals"))
+    for period in cin.iter():
+        if period is not cin and period.get("depositsWithdrawals") is not None:
+            return to_float(period.get("depositsWithdrawals"))
+    return None
+
+
 def flow_totals(root: ET.Element, nav_series: list[dict],
                 cash_flows: dict[str, float]) -> tuple[float, float, float | None]:
     """Window totals for the three deposit/withdrawal sources: (CT, ES, CIN).
@@ -496,9 +517,7 @@ def flow_totals(root: ET.Element, nav_series: list[dict],
     in_window = {p["d"] for p in nav_series}
     ct_sum = sum(v for d, v in cash_flows.items() if d in in_window and d > day0)
     es_sum = sum(p.get("cf", 0.0) for p in nav_series if p["d"] > day0)
-    cin = root.find(".//ChangeInNAV")
-    cin_dw = to_float(cin.get("depositsWithdrawals") or "0") if cin is not None else None
-    return ct_sum, es_sum, cin_dw
+    return ct_sum, es_sum, cin_deposits(root)
 
 
 def flow_agreement(root: ET.Element, nav_series: list[dict],
@@ -560,6 +579,67 @@ def flow_agreement(root: ET.Element, nav_series: list[dict],
                         flag(es_cin, "ES", "CIN"),
                         flag(ct_cin, "CT", "CIN")])
             + f" -> {verdict}")
+
+
+def flow_coverage(root: ET.Element, nav_series: list[dict],
+                  cash_flows: dict[str, float]) -> str | None:
+    """Refuse to publish a TWR that silently carries no flow adjustment.
+
+    Returns None when the statement is safe to transform, or the reason it is
+    not. This is a guard rather than a canary: the other checks here report and
+    let the run continue, because a stated disagreement is better than a missing
+    day. This one stops the run, because the failure it catches is a six-figure
+    error that publishes as a clean number nobody can see is wrong.
+
+    THE LANDMINE
+
+    build_perf_series and build_pnl_series both open with
+
+        use_cash_flows = bool(cash_flows)
+
+    and fall back to `nav_series[i]["cf"]` — EquitySummaryByReportDateInBase's
+    depositsWithdrawals — when cash_flows is empty. On this site's Flex query
+    that column reads 0.00 on every row (see the README), so the fallback is
+    dead: it does not supply the flows, it supplies zero. Chaining HPRs with
+    CF=0 treats every deposit as investment performance. Put $100k into a $700k
+    book on a flat day and the curve prints +14% for the day, forever, with no
+    error and no warning.
+
+    WHEN EMPTY FLOWS ARE FINE
+
+    A window with genuinely no transfers produces an empty dict too, and that is
+    an ordinary week. The two cases separate on whether the CashTransaction
+    section is present at all: rows present but none of them deposits means
+    nothing moved; no rows whatsoever means the section is disabled in the Flex
+    query, or its name changed under us again (both have happened — see the
+    2026-08-24 correction against the real query builder), and the flows are not
+    absent but missing.
+
+    The second test needs no such inference. ChangeInNAV reports the window's
+    deposits independently; if it says money moved and build_cash_flows found
+    none, that is a flat contradiction between two sources in the same file, and
+    it holds whether or not the section looks present.
+    """
+    if cash_flows:
+        return None
+
+    es_present = any(abs(p.get("cf", 0.0)) >= 0.005 for p in nav_series)
+    if es_present:
+        return None   # the fallback has real data to fall back onto
+
+    cin_dw = cin_deposits(root)
+    if cin_dw is not None and abs(cin_dw) >= 0.005:
+        return ("flow-coverage: build_cash_flows found no flows, but ChangeInNAV "
+                "reports deposits/withdrawals in this window. Publishing would "
+                "chain a TWR with no flow adjustment. Run --reconcile-flows.")
+
+    if next(root.iter("CashTransaction"), None) is None:
+        return ("flow-coverage: no CashTransaction rows in the statement and no "
+                "EquitySummary depositsWithdrawals to fall back on. Enable the "
+                "Cash Transactions section in the Flex query - without it every "
+                "deposit reads as performance.")
+
+    return None       # section present, nothing moved: an ordinary quiet window
 
 
 def reconcile_flows(root: ET.Element, nav_series: list[dict],
@@ -1375,6 +1455,13 @@ def main() -> int:
         # in a world-readable Actions log, and why a boolean watching a constant
         # is worth having.
         print(flow_agreement(root, nav_series, cash_flows), file=sys.stderr)
+
+        # The one check here that stops the run rather than reporting. A
+        # statement with no usable flows publishes a TWR that reads deposits as
+        # performance, and it publishes it as a clean number — see flow_coverage.
+        blocked = flow_coverage(root, nav_series, cash_flows)
+        if blocked:
+            raise SystemExit(blocked)
 
         # The full report is opt-in and deliberately NOT wired into the workflow:
         # it prints per-date cash movements, precisely the metadata the archive

@@ -179,6 +179,45 @@ event worth catching now is the day it opens again.
 No workflow change was needed: `run:` steps already send stderr to the log, and
 stdout is redirected into `portfolio.json`.
 
+### The coverage guard (stops the run)
+
+The canary above reports. `flow_coverage` refuses.
+
+Section 4 notes that the ES fallback in `build_perf_series` / `build_pnl_series`
+is dead — if `cash_flows` ever came back empty they would chain a TWR with no
+flow adjustment at all, a six-figure error reported without complaint. That is
+now checked before anything is written:
+
+```
+flow-coverage: build_cash_flows found no flows, but ChangeInNAV reports
+deposits/withdrawals in this window. Publishing would chain a TWR with no flow
+adjustment. Run --reconcile-flows.
+```
+
+It fires on two conditions, both of which need no guesswork:
+
+- **ChangeInNAV disagrees.** CIN reports the window's deposits independently. If
+  it says money moved and `build_cash_flows` found none, two sources in the same
+  file contradict each other.
+- **The CashTransaction section is absent entirely.** Not "present with no
+  deposit rows" — that is an ordinary week with no transfers, and it publishes.
+  No `CashTransaction` nodes at all means the section is disabled in the Flex
+  query or its name moved again (see the 2026-08-24 correction), so the flows
+  are not absent but missing.
+
+A statement that is merely quiet still publishes, as does one where ES is
+genuinely populated and the fallback has something real to fall back onto.
+
+Measured on a synthetic statement: a $100k deposit into a $700k book on a flat
+day chains to **+14.3%** for the day with no flows, and **0.0%** with them.
+
+`cin_deposits()` backs both this and the canary. IBKR puts
+`depositsWithdrawals` on `<ChangeInNAV>` for this query and on a nested
+`<ChangeInNAVByPeriod>` when the query is configured by period; reading only the
+outer element would return None on the second shape and quietly retire both
+checks, which would go on printing "no ChangeInNAV to check against" as though
+the statement had never carried one.
+
 ---
 
 ## 5 — What the Flex API actually returns

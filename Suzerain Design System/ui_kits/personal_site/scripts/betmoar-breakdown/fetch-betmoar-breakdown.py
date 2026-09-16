@@ -149,6 +149,51 @@ def fetch_positions_value(wallet):
             return total
         offset += limit
 
+def positions_agreement(pairs, source):
+    """One line saying whether the two position-value sources still agree.
+
+    Modeled on `flow_agreement` in fetch-ibkr.py: a per-wallet equality flag and
+    a verdict, no dollar amounts, safe for a world-readable Actions log.
+
+    The constant it watches is that Polymarket /positions and betmoar's
+    portfolioValue describe the same book. They did until 2026-09-13, when
+    betmoar's figure (which tracks data-api /value) swung one wallet between
+    $10.8k and $6.7k in twenty minutes while /positions returned an identical
+    book both times. The scrape caught a low read, NAV published ~$8k light, and
+    nothing in the pipeline said so — the gap was found by eye, days later.
+
+    Tolerance is 2%: both reads are taken seconds apart against the same book,
+    so ordinary price drift between them is small, while the failure this
+    watches for moved one wallet by 38%.
+
+    A disagreement is reported, not fatal. /positions is the better source and
+    is already the one used; the run should still publish. What matters is that
+    the day it starts disagreeing is a day somebody hears about.
+    """
+    flags, bad = [], 0
+    for i, (pm, bm) in enumerate(pairs):
+        if pm is None:
+            flags.append(f"w{i} PM?BM")      # /positions failed; nothing compared
+            continue
+        if not bm:
+            flags.append(f"w{i} PM?BM")      # betmoar reported nothing to compare
+            continue
+        pct = (pm - bm) / abs(bm) * 100
+        if abs(pct) <= 2.0:
+            flags.append(f"w{i} PM==BM")
+        else:
+            flags.append(f"w{i} PM!=BM({pct:+.0f}%)")
+            bad += 1
+
+    if source == "betmoar":
+        verdict = "FELL BACK to betmoar portfolioValue - positions may be missing"
+    elif bad:
+        verdict = f"{bad} of {len(pairs)} wallets disagree - betmoar /value drifting"
+    else:
+        verdict = "agree (source: polymarket)"
+    return "positions-sources: " + " ".join(flags) + f" -> {verdict}"
+
+
 def main():
     try:
         action_hash = discover_action_hash()
@@ -178,17 +223,26 @@ def main():
     # run — losing the day's breakdown is worse than a possibly stale position
     # value — but says so, and the source is recorded in the output.
     positions_source = "polymarket"
+    pairs = []
     for w, s in zip(WALLETS, per_wallet):
+        betmoar_value = s.get("portfolioValue") or 0
         try:
             live = fetch_positions_value(w)
             print(f"positions {w}: polymarket {live:,.0f} vs betmoar "
-                  f"{s.get('portfolioValue') or 0:,.0f}", file=sys.stderr)
+                  f"{betmoar_value:,.0f}", file=sys.stderr)
             s["portfolioValue"] = live
+            pairs.append((live, betmoar_value))
         except Exception as e:
             positions_source = "betmoar"
+            pairs.append((None, betmoar_value))
             print(f"WARNING: polymarket /positions failed for {w} ({e}); using "
                   f"betmoar portfolioValue, which can miss recent positions",
                   file=sys.stderr)
+
+    # Always on, including in CI. The comparison above prints the two figures
+    # and leaves a human to notice; this states the verdict. See
+    # positions_agreement for the constant it watches and why it is safe to log.
+    print(positions_agreement(pairs, positions_source), file=sys.stderr)
 
     def dollars(val):
         return round(val) if val else 0
