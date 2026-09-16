@@ -157,9 +157,21 @@ def rows_equal(a: dict, b: dict) -> bool:
 
 
 def check_order(rows: list, key: str) -> list[str]:
-    """Dates strictly increasing and unique. Fatal — see the docstring."""
+    """Dates strictly increasing and unique. Fatal — see the docstring.
+
+    A row missing the key, or carrying one of a type the rest are not, is
+    reported rather than sorted. Sorting a list that mixes None or an int in
+    among the date strings raises TypeError, and a traceback names the line it
+    died on instead of the file and the reason.
+    """
     out = []
-    dates = [r.get(key) for r in rows if isinstance(r, dict)]
+    missing = sum(1 for r in rows if not isinstance(r, dict) or r.get(key) is None)
+    if missing:
+        out.append(f"{missing} row(s) with no '{key}'")
+    dates = [r[key] for r in rows if isinstance(r, dict) and r.get(key) is not None]
+    if len({type(d) for d in dates}) > 1:
+        out.append(f"'{key}' is not one type across the rows")
+        return out
     if len(set(dates)) != len(dates):
         out.append(f"{len(dates) - len(set(dates))} duplicate date(s)")
     if dates != sorted(dates):
@@ -171,8 +183,13 @@ def check_file(path: Path) -> tuple[str, bool]:
     """Returns (one line for the log, is-fatal)."""
     name = path.name
     try:
-        cur = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as e:
+        # Explicitly UTF-8, because the other side of every comparison below is
+        # `json.loads(bytes)`, which detects UTF-8 regardless of platform. Left
+        # to the locale this reads cp1252 on Windows, and the two decoders then
+        # disagree on any non-ASCII string in a row — a past that never changed
+        # reports as CHANGED locally while CI, being UTF-8, says it is fine.
+        cur = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
         # The path as given, not just its basename: when the argument itself is
         # wrong rather than the file, the basename hides the reason. A stray `\n`
         # in the betmoar workflow's argument list once reached bash as the word
@@ -200,7 +217,14 @@ def check_file(path: Path) -> tuple[str, bool]:
         if not isinstance(rows, list) or not rows:
             return f"continuity {name}: {arr} empty or missing -> FATAL", True
 
+        # Stop here rather than fall through. Everything below keys rows by `d`
+        # and takes max() over those keys, which needs them present, unique and
+        # of one type — the very things this just found wanting. Comparing a
+        # malformed file against HEAD tells you nothing anyway: the answer is
+        # already "do not publish this".
         fatal += check_order(rows, key)
+        if fatal:
+            return f"continuity {name}: {'; '.join(fatal)} -> FATAL", True
 
         if prev is None:
             flag("no HEAD copy")
@@ -253,12 +277,30 @@ def check_file(path: Path) -> tuple[str, bool]:
     return f"continuity {name}: {' '.join(flags)} -> {verdict}", bool(fatal)
 
 
+def in_git_repo() -> bool:
+    try:
+        subprocess.run(["git", "rev-parse", "--git-dir"],
+                       capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, OSError):
+        return False
+
+
 def main(argv: list[str]) -> int:
     warn_only = "--warn-only" in argv
     paths = [Path(a) for a in argv if not a.startswith("--")]
     if not paths:
         print("usage: continuity.py [--warn-only] <data file> ...", file=sys.stderr)
         return 2
+
+    # Checked once, up front, because without git there is nothing to compare
+    # against and every file would report "no HEAD copy -> ok". A canary whose
+    # comparison has quietly gone away reads exactly like a clean run, which is
+    # the failure this whole script exists to make impossible.
+    if not in_git_repo():
+        print("continuity: not a git repository, nothing to compare against "
+              "-> FATAL", file=sys.stderr)
+        return 1 if not warn_only else 0
     bad = False
     for p in paths:
         line, is_fatal = check_file(p)
