@@ -486,8 +486,14 @@ function szPmBookExtend(series, bdRows, transfers, seam) {
   // The walk measures deltas, so it needs the seam day itself as its base. Without
   // that row the first step would be attributed to the wrong pair of days.
   if (rows.length < 2 || rows[0].d !== cut) return pts;
-  const moved = (from, to) => (transfers || []).reduce(
-    (a, t) => a + ((t && t.date > from && t.date <= to) ? (t.amount || 0) : 0), 0);
+  // The ledger is dated on the raw scrape clock (the first scrape that sees the
+  // money), but `rows` arrive restated a day earlier. Compare on the rows' clock,
+  // or the nav step and its transfer land one pair apart and the flow reads as a
+  // day of trading loss, given back the next.
+  const moved = (from, to) => (transfers || []).reduce((a, t) => {
+    const d = t && t.date && szFromEpochDay(szPmSnapshotDay(t.date));
+    return a + ((d && d > from && d <= to) ? (t.amount || 0) : 0);
+  }, 0);
   const out = pts.slice();
   // Anchor on the scrape's own reading of the seam day, not the feed's close of
   // it. Those are the same day by label and six hours apart in fact: the feed
