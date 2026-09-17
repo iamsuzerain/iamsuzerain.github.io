@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T11:44:20Z",
+  "generatedAt": "2026-09-17T00:36:53Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,16 +45,16 @@
   },
   "headline": {
     "settlement": {
-      "n": 667,
-      "wins": 615,
+      "n": 668,
+      "wins": 616,
       "pushes": 0,
-      "hitRate": 0.922,
-      "volume": 3649952.34,
-      "realizedPnl": 16970.16,
+      "hitRate": 0.9222,
+      "volume": 3673604.47,
+      "realizedPnl": 17045.87,
       "roi": 0.0046,
       "brier": 0.0408,
-      "avgImplied": 0.902,
-      "edge": 0.0201,
+      "avgImplied": 0.9021,
+      "edge": 0.02,
       "calibrationError": 0.0288
     },
     "exit": {
@@ -62,8 +62,8 @@
       "wins": 181,
       "pushes": 8,
       "hitRate": 0.6988,
-      "volume": 1073544.68,
-      "realizedPnl": -17554.79,
+      "volume": 1073666.44,
+      "realizedPnl": -17624.69,
       "roi": -0.0164
     }
   },
@@ -237,17 +237,17 @@
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 185,
-        "wins": 184,
+        "n": 186,
+        "wins": 185,
         "pushes": 0,
         "winRate": 0.9946,
         "avgImplied": 0.9949,
-        "volume": 1191510.13,
-        "realizedPnl": 5562.33,
-        "grossPnl": 5844.91,
+        "volume": 1215162.26,
+        "realizedPnl": 5638.04,
+        "grossPnl": 5920.62,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.97,
-        "wilsonHi": 0.999
+        "wilsonLo": 0.9702,
+        "wilsonHi": 0.9991
       }
     ],
     "exit": [
@@ -378,11 +378,11 @@
         "wins": 30,
         "pushes": 2,
         "winRate": 0.5769,
-        "avgImplied": 0.8496,
-        "volume": 149002.95,
-        "realizedPnl": -12063.8,
-        "grossPnl": 23649.74,
-        "winRateByVolume": 0.646,
+        "avgImplied": 0.85,
+        "volume": 149124.71,
+        "realizedPnl": -12133.7,
+        "grossPnl": 23734.9,
+        "winRateByVolume": 0.6457,
         "wilsonLo": 0.4419,
         "wilsonHi": 0.7013
       },
@@ -565,13 +565,13 @@
     "geopolitics": {
       "combined": {
         "n": 235,
-        "volume": 1850078.6,
-        "realizedPnl": 51961.65,
-        "roi": 0.0281,
+        "volume": 1850200.36,
+        "realizedPnl": 51891.75,
+        "roi": 0.028,
         "hitRate": 0.8658,
-        "avgImplied": 0.878,
-        "edge": -0.0122,
-        "top1Share": 0.225
+        "avgImplied": 0.8781,
+        "edge": -0.0123,
+        "top1Share": 0.2248
       },
       "settlement": {
         "n": 140,
@@ -585,35 +585,35 @@
       },
       "exit": {
         "n": 95,
-        "volume": 603322.92,
-        "realizedPnl": -2222.28,
-        "roi": -0.0037,
+        "volume": 603444.68,
+        "realizedPnl": -2292.18,
+        "roi": -0.0038,
         "hitRate": 0.7143,
-        "avgImplied": 0.7899,
-        "edge": -0.0756,
-        "top1Share": 0.2193
+        "avgImplied": 0.7902,
+        "edge": -0.0759,
+        "top1Share": 0.2189
       }
     },
     "macro": {
       "combined": {
-        "n": 24,
-        "volume": 236724.93,
-        "realizedPnl": 271.93,
-        "roi": 0.0011,
-        "hitRate": 0.75,
-        "avgImplied": 0.8063,
-        "edge": -0.0563,
-        "top1Share": 0.2057
+        "n": 30,
+        "volume": 411587.27,
+        "realizedPnl": 58277.49,
+        "roi": 0.1416,
+        "hitRate": 0.7667,
+        "avgImplied": 0.7815,
+        "edge": -0.0148,
+        "top1Share": 0.8584
       },
       "settlement": {
-        "n": 11,
-        "volume": 63576.39,
-        "realizedPnl": 1390.97,
-        "roi": 0.0219,
-        "hitRate": 0.9091,
-        "avgImplied": 0.9229,
-        "edge": -0.0138,
-        "top1Share": 0.4303
+        "n": 17,
+        "volume": 238438.73,
+        "realizedPnl": 59396.53,
+        "roi": 0.2491,
+        "hitRate": 0.8824,
+        "avgImplied": 0.8379,
+        "edge": 0.0444,
+        "top1Share": 0.8837
       },
       "exit": {
         "n": 13,
@@ -746,53 +746,47 @@
     }
   },
   "openBook": {
-    "n": 106,
-    "cost": 237912.79,
-    "mark": 322103.47,
-    "unrealized": 84190.67
+    "n": 109,
+    "cost": 145451.93,
+    "mark": 155719.15,
+    "unrealized": 10267.22
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 2601.61,
-      "mark": 2589.31,
-      "unrealized": -12.31
+      "mark": 2533.76,
+      "unrealized": -67.86
     },
     "geopolitics": {
       "n": 29,
-      "cost": 57765.18,
-      "mark": 65029.97,
-      "unrealized": 7264.79
-    },
-    "macro": {
-      "n": 4,
-      "cost": 102487.53,
-      "mark": 176732.95,
-      "unrealized": 74245.42
+      "cost": 61144.89,
+      "mark": 68208.08,
+      "unrealized": 7063.19
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 297.0,
-      "unrealized": -41.4
+      "mark": 307.8,
+      "unrealized": -30.6
     },
     "politics": {
-      "n": 61,
-      "cost": 69537.22,
-      "mark": 71941.27,
-      "unrealized": 2404.05
+      "n": 68,
+      "cost": 76184.17,
+      "mark": 79238.86,
+      "unrealized": 3054.68
     },
     "sports": {
       "n": 8,
       "cost": 3399.36,
-      "mark": 3749.19,
-      "unrealized": 349.83
+      "mark": 3665.94,
+      "unrealized": 266.58
     },
     "tech": {
       "n": 1,
       "cost": 1783.49,
-      "mark": 1763.78,
-      "unrealized": -19.71
+      "mark": 1764.72,
+      "unrealized": -18.77
     }
   },
   "openCategories": {
@@ -812,7 +806,6 @@
     "0x21017b31d4a1d3985f2121f1d452d857d54ac45c975507c6ace3ae6041f9a62f": "politics",
     "0x2582aadb90aaf4b0f51b36a49d146558bacd0e53c2c13d13704e194b3194c324": "commodities",
     "0x2ceb07772252792c439a2cef76f9661da5c96475d939e2f7c5e99e0708186d4c": "politics",
-    "0x2e4b58fc18dbffd74d5275d89fb076943f21992763c45dcadd81391b83bde13c": "macro",
     "0x2fb2b4f6d030ed03404e844400cf763a5dfc70275a3d6bd03770287cd7bced56": "politics",
     "0x30174f3f46398e37c96a07b45916e01eab9a8a854ecb624ac73a91a8490fd074": "geopolitics",
     "0x3452bb28983bc33b37ddfd98da2138dfd89782faec65a2607ed5aa86a17c9199": "politics",
@@ -824,10 +817,14 @@
     "0x3df7be753c8b6ebbddf31d6d63535c4b31c836cb25b1a73085508a271bc103db": "sports",
     "0x3fb5cd695a1a69d9bdcdc56473fe939b1f5f746fd93d95678c2aacfd02ecc8f1": "politics",
     "0x3fd189cac9280dfc49a07115581e8d4c9e0b7e1c1e8580a44e9ff3d74e39cf2d": "politics",
+    "0x4460b4d5604834b9579c7b001b19a3faa8441acb6b94b0c35067cf1aaa22d682": "politics",
     "0x44b642636473fb07f0c2319a1d25729a36134969076ffdbb8979cbfdda612b14": "politics",
+    "0x44f7e3582eba72648fb5e03cb1dacc0ace21da93285999c7e14642cf91e279bf": "politics",
     "0x46477994c02fdd4f7be7eacc58d343457d80333d92e5c4ad9a3117274d0e5639": "geopolitics",
     "0x46c862237fc39f6357ce2efa748274e4539c1ffe60cd6a89e3fe689373fa27a8": "politics",
+    "0x484b9d64f4b8c3b00a8f455bfac9b84d889236ec419edc636c0e50ad33b2c3dd": "politics",
     "0x48d47eede033257e77d676631e6f805d5e1848c0567589030a3a76a862fa1e47": "sports",
+    "0x4a4dcf9804e61757825c9c888cb17845e716a6492d064beb6d378b54d3deafa2": "politics",
     "0x4b6d354831374f40d664728aa1cf4093e58f782c25ba82b782d0e08c06270486": "politics",
     "0x4cd035dcfb450c9a6bc9aa13f3aa94fabc01e47499d05d28ef653ef42939c364": "politics",
     "0x4dc5c13eb9646b10da7d5f079f77ef2480ec5466861ce1cfbc910fabed3d7d0d": "politics",
@@ -852,9 +849,9 @@
     "0x70f1a7d2cd490b640676d5e31470bcbe16fef40087de1af8b6f6e44e299b5784": "geopolitics",
     "0x7586a96520578acaaaa4ea84a2582f197f84255da1f3392a7aa300386c187b37": "geopolitics",
     "0x771873c365f87bffd990644e4b688aebc1be7f18396d2eab64b996ff66e88669": "politics",
+    "0x78cd764ab3cdfa56aed4b35f5c9b0f19b011c429ea896a8211dd11d9b9820716": "politics",
     "0x812d9ea644c58f1e889643bbd9184e9c5fdacbba55d1f9fef2eb2d55ce5dc1c2": "politics",
     "0x81a537b379a35e4e17c286d3b37394e94bd74c1779bbe9a13670eb991b201a3a": "geopolitics",
-    "0x876506d8b2bd7a0d3fa4fe18c024eee6e1dd81ee24c26795dadd6cfe4a7b5d0d": "macro",
     "0x883c09380a078565f29485a9d3671fff48853a87de9a5bf48bc204f7161250c9": "politics",
     "0x8d65ff57f443011c4c10e7aa50aa54b3a3b5e2b940cb3ca97c0357bbcaee0b36": "politics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
@@ -862,7 +859,7 @@
     "0x94521176f57d2ce81dde01e0b7699ca4279423042d37ed53908f0c8bfefe7e14": "politics",
     "0x951088c48f392379dc9b8a3becaad7a939b5fd3124ec98dd167d859350f049fc": "geopolitics",
     "0x989fefef6c04abba7fd12811f2ef00f74dd2be48e8ab4fc1f4c4b6682fe95cd0": "politics",
-    "0xa3b36b2d6104d34af4e6c6215fc818e43352e78a748fbfb0b85e3a35f71dec9a": "macro",
+    "0x9c76ad6476f3d09545596d3c2b916a4e24814e8200dfb763e07baf30a5b8e184": "politics",
     "0xa59bb6bb91e5c1e4d533864520fbd3bb75d6d0ebb813b4cd8a8b88479bfa8966": "geopolitics",
     "0xa5cef1a89dcf98ac03e6e67b00ababfa64125389540cbe160b438fc8f48fee82": "politics",
     "0xa81e63ff4a59e8611215a7cc37c86e4ac6164924b86a1f4aab73379a073f88fb": "politics",
@@ -875,6 +872,7 @@
     "0xbca3d70ec52a5a441ccc365a3b1b48b9cd0f08dfff4bc5871e2cd92d0d92caa1": "geopolitics",
     "0xbd72208a4ceea9fde59f3a42d2f4c5c78bd7cc05c4fada7fe60f877d2fee6dc9": "politics",
     "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
+    "0xc528b5c384832a754585eeb005f96efd2842db3db1ebfd574bc3c8235a6dbae0": "politics",
     "0xc5eae79d1ffe716572353962eb926b1e3964c500a4880a7a94f58408218ee76b": "politics",
     "0xcd953913ecd5bf5387092bf447fe13190871b2bc9436c85b0918b4767c3fa58a": "politics",
     "0xcf74254eb635dae1db5d96da6582146510fcbbd7e2645b482756ae04ad566237": "politics",
@@ -902,8 +900,8 @@
   "excluded": {
     "hedged": {
       "markets": 15,
-      "records": 36,
-      "realizedPnl": -5742.3
+      "records": 41,
+      "realizedPnl": 52187.55
     },
     "conversions": {
       "rows": 52,
@@ -1852,7 +1850,6 @@
     ["macro","2026-09-06","e",46770.21,-388.86,0,0.5096,"Will there be no change in Fed interest rates after the September 2026 meeting?","Yes","Fed Decision in September?"],
     ["geopolitics","2026-09-07","s",17.96,0.82,1,0.9564,"Sachsen-Anhalt Parliamentary Election: Linke Over/Under 12%?","Under",null],
     ["geopolitics","2026-09-07","s",37.57,0.33,1,0.9914,"Will AfD win the most seats in the 2026 Sachsen-Anhalt parliamentary elections?","Yes","Sachsen-Anhalt Parliamentary Election Winner"],
-    ["geopolitics","2026-09-08","e",2713.52,-871.95,0,0.8482,"Israel closes its airspace by September 30?","Yes","Israel closes its airspace by...?"],
     ["geopolitics","2026-09-09","e",3467.81,31.65,1,0.986,"Russia Elections: Yabloko Clears Duma Threshold?","No",null],
     ["geopolitics","2026-09-09","e",2437.4,71.78,1,0.9296,"Will any presidential candidate win outright in the first round of the Brazil election?","No",null],
     ["geopolitics","2026-09-10","e",4792.23,-213.23,0,0.874,"Will Magdalena Andersson be the next Prime Minister of Sweden?","Yes","Next Prime Minister of Sweden"],
@@ -1870,7 +1867,6 @@
     ["sports","2026-09-13","s",680.44,26.27,1,0.9628,"Louisiana Tech vs. LSU","LSU",null],
     ["sports","2026-09-13","s",97.6,-97.6,0,0.3491,"Buccaneers vs. Bengals","Buccaneers",null],
     ["sports","2026-09-13","s",1714.57,53.03,1,0.97,"Louisiana vs. USC","USC",null],
-    ["geopolitics","2026-09-14","e",275.35,47.48,1,0.8103,"Israel and Lebanon normalize relations before 2027?","No",null],
     ["geopolitics","2026-09-14","e",506.67,40.0,1,0.76,"Iran-Oman Hormuz Agreement by September 30?","No","Iran-Oman Hormuz Management Agreement by...?"],
     ["politics","2026-09-14","s",3574.04,39.75,1,0.989,"Will the Sweden Democrats (SD) win the most seats in the 2026 Swedish parliamentary election?","No","Sweden Parliamentary Election Winner"],
     ["politics","2026-09-14","s",2416.43,26.88,1,0.989,"Will the Swedish Social Democratic Party (S) win the most seats in the 2026 Swedish parliamentary election?","Yes","Sweden Parliamentary Election Winner"],
@@ -1880,7 +1876,15 @@
     ["sports","2026-09-15","s",41.18,-41.18,0,0.0619,"Will the New York Mets win the 2026 World Series?","Yes","MLB World Series Champion 2026"],
     ["sports","2026-09-15","s",4.65,0.35,1,0.93,"Broncos vs. Chiefs: O/U 24.5","Over","Broncos vs. Chiefs"],
     ["sports","2026-09-15","s",49.45,-49.45,0,0.43,"Spread: Broncos (-1.5)","Broncos","Broncos vs. Chiefs"],
+    ["geopolitics","2026-09-16","e",2791.05,-949.48,0,0.8724,"Israel closes its airspace by September 30?","Yes","Israel closes its airspace by...?"],
+    ["geopolitics","2026-09-16","e",319.58,55.11,1,0.8103,"Israel and Lebanon normalize relations before 2027?","No",null],
     ["macro","2026-09-16","e",86.24,-34.83,0,0.0067,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
-    ["macro","2026-09-16","e",27895.76,-699.5,0,0.5399,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"]
+    ["macro","2026-09-16","s",2434.09,-2434.09,0,0.0067,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
+    ["macro","2026-09-16","e",27895.76,-699.5,0,0.5399,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
+    ["macro","2026-09-16","s",66752.75,56889.69,1,0.5399,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
+    ["macro","2026-09-16","s",3458.37,2627.76,1,0.5682,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"],
+    ["macro","2026-09-16","s",50763.89,675.62,1,0.9869,"Will the Fed decrease interest rates by 25 bps after the September 2026 meeting?","No","Fed Decision in September?"],
+    ["macro","2026-09-16","s",27801.11,170.87,1,0.9939,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","No","Fed Decision in September?"],
+    ["macro","2026-09-16","s",23652.13,75.71,1,0.9968,"Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?","No","Fed Decision in September?"]
   ]
 }
