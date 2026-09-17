@@ -21,7 +21,8 @@ Pipeline:
      shares & proceeds sold. MERGE rows are folded in here as a synthetic paired
      SELL (see apply_merges) — the trade feed carries no SELL for merged shares,
      so without this they masquerade as still-held and resurface as a phantom
-     settlement pair. CONVERSION rows cannot be attributed at all (see main).
+     settlement pair. CONVERSION rows carry no legs, so they are booked from
+     their on-chain receipts as synthetic trades (see apply_conversions).
   3. Resolve each traded market via gamma-api (batched condition_ids,
      closed=true) -> winning outcomeIndex from outcomePrices (["1","0"]).
   4. Emit records, splitting a position into up to two lots so the two views
@@ -45,7 +46,7 @@ Env:
   PM_WALLET - comma-separated wallet addresses (defaults to hardcoded list)
 """
 import ast, json, math, os, sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from curl_cffi import requests
 
@@ -59,6 +60,18 @@ ACTIVITY_URL = "https://data-api.polymarket.com/activity"
 POSITIONS_URL = "https://data-api.polymarket.com/positions"
 GAMMA_URL = "https://gamma-api.polymarket.com/markets"
 EVENTS_URL = "https://gamma-api.polymarket.com/events"
+PRICES_URL = "https://clob.polymarket.com/prices-history"
+# Public Polygon RPCs, tried in order, for conversion receipts (see apply_conversions).
+POLYGON_RPCS = [
+    "https://polygon-bor-rpc.publicnode.com",
+    "https://polygon.drpc.org",
+    "https://1rpc.io/matic",
+]
+CTF = "0x4d97dcd97ec945f40cf65f87097ace5ea0476045"   # Polymarket's ERC-1155 outcome tokens
+TRANSFER_SINGLE = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
+TRANSFER_BATCH = "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb"
+PRICE_WINDOW = 3600   # seconds either side of a conversion to look for a market price
+CASH_TOL_USD = 25.0   # per-event gap between lots and cash worth logging
 PAGE = 500          # activity page size
 OFFSET_CEIL = 5000  # /activity rejects offset past ~5500; slide the window before then
 GAMMA_CHUNK = 25    # condition_ids per gamma request (URL-length safe)
@@ -66,6 +79,7 @@ EVENTS_CHUNK = 20   # event ids per gamma /events request
 EPS = 1e-6          # share dust threshold
 SHARE_TOL = 1.0     # sold-over-bought below this is float dust, not off-feed shares
 MIN_LOT_USD = 1.0   # a lot that cost under a dollar is residue, not a forecast
+HEDGE_MIN_RATIO = 0.25  # smaller leg's shares vs larger's before overlapping legs count as a hedge
 # Selling at 0.998+ into a market that later resolved is a redemption wearing a
 # trade's clothes: the outcome was already decided, you just took the last cent
 # rather than waiting. Such lots are booked as settlements (scored on gamma's
@@ -169,18 +183,25 @@ def fetch_activity(sess, wallet):
     first) until we near the ceiling, then move `end` to the oldest event seen
     and restart offset — sliding the window backward to the account's first
     trade. We deliberately keep /activity (not /trades) because /trades is
-    taker-only and drops maker fills, which would corrupt entry prices. Overlap
-    at each window edge is removed by a per-event dedup key."""
-    seen, rows = set(), []
-    end = None
+    taker-only and drops maker fills, which would corrupt entry prices.
+
+    Overlap between windows is removed by multiplicity, not by set membership.
+    One transaction can carry several fills that are identical in every field
+    the feed returns — three 58.07-share buys at 0.87 in one hash on the
+    September Fed 25bp-hike market — and a plain `seen` set kept one of each,
+    silently dropping 16,422 shares ($10.9k) from that position alone. Pages
+    inside one window are disjoint (the first window is pinned to `end=now` so
+    fresh activity can't shift them), so the only overlap is the boundary
+    timestamp shared with the previous window, which the new window returns in
+    full. Keeping each key's larger count across windows is therefore exact."""
+    rows, have = [], Counter()
+    end = int(datetime.now(timezone.utc).timestamp())
+    first = True
     while True:
-        window_oldest = None
-        advanced = False
+        window, window_oldest = [], None
         off = 0
         while True:
-            params = {"user": wallet, "limit": PAGE, "offset": off}
-            if end is not None:
-                params["end"] = end
+            params = {"user": wallet, "limit": PAGE, "offset": off, "end": end}
             r = sess.get(ACTIVITY_URL, params=params, timeout=30)
             if r.status_code != 200:
                 break
@@ -190,23 +211,26 @@ def fetch_activity(sess, wallet):
             for a in page:
                 if not isinstance(a, dict):
                     continue
-                key = (a.get("transactionHash"), a.get("asset"),
-                       a.get("timestamp"), a.get("type"), a.get("size"))
-                if key in seen:
-                    continue
-                seen.add(key)
-                rows.append(a)
-                advanced = True
+                window.append(a)
                 ts = a.get("timestamp")
                 if ts is not None and (window_oldest is None or ts < window_oldest):
                     window_oldest = ts
             off += PAGE
             if len(page) < PAGE or off >= OFFSET_CEIL:
                 break
+        counts, added = Counter(), 0
+        for a in window:
+            key = (a.get("transactionHash"), a.get("asset"),
+                   a.get("timestamp"), a.get("type"), a.get("size"))
+            counts[key] += 1
+            if counts[key] > have[key]:
+                have[key] += 1
+                rows.append(a)
+                added += 1
         # Stop when a window yields nothing new or can't reach further back.
-        if not advanced or window_oldest is None or (end is not None and window_oldest >= end):
+        if not added or window_oldest is None or (not first and window_oldest >= end):
             break
-        end = window_oldest
+        end, first = window_oldest, False
     return rows
 
 
@@ -269,8 +293,9 @@ def apply_merges(pos, all_rows):
     agrees. Total P&L is identical under either split — only the win/loss
     verdict, and therefore the hit rate, moves.
 
-    Entry prices come from TRADE rows alone, so this must run AFTER
-    aggregate_positions and never feed its own synthetic sells back into them.
+    Entry prices come from buys alone (trades, plus shares a conversion
+    delivered), so this must run AFTER aggregate_positions and apply_conversions
+    and never feed its own synthetic sells back into them.
     """
     legs = defaultdict(list)
     for (cond, oi) in pos:
@@ -301,6 +326,215 @@ def apply_merges(pos, all_rows):
             p["sellUsd"] += usd * (e / denom)
         applied += 1
     return applied, skipped
+
+
+def fetch_receipt(sess, tx):
+    """Polygon transaction receipt from the first public RPC that answers."""
+    for url in POLYGON_RPCS:
+        try:
+            r = sess.post(url, json={"jsonrpc": "2.0", "id": 1,
+                                     "method": "eth_getTransactionReceipt",
+                                     "params": [tx]}, timeout=30)
+            res = r.json().get("result")
+            if res and isinstance(res.get("logs"), list):
+                return res
+        except Exception:
+            continue
+    return None
+
+
+def ctf_moves(receipt, wallet):
+    """(token id, shares, +1 received / -1 sent) for every outcome-token transfer
+    touching `wallet` in one receipt."""
+    wallet = wallet.lower()[2:]
+    out = []
+    for lg in receipt.get("logs") or []:
+        topics = lg.get("topics") or []
+        if (lg.get("address") or "").lower() != CTF or len(topics) < 4:
+            continue
+        frm, to = topics[2][-40:].lower(), topics[3][-40:].lower()
+        if wallet not in (frm, to) or frm == to:
+            continue
+        sign = 1 if to == wallet else -1
+        data = lg.get("data") or "0x"
+        w = [int(data[2 + i:66 + i], 16) for i in range(0, len(data) - 2, 64)]
+        if topics[0] == TRANSFER_SINGLE and len(w) >= 2:
+            out.append((str(w[0]), w[1] / 1e6, sign))
+        elif topics[0] == TRANSFER_BATCH and len(w) >= 4:
+            n = w[2]
+            ids, vals = w[3:3 + n], w[4 + n:4 + 2 * n]
+            out += [(str(i), v / 1e6, sign) for i, v in zip(ids, vals)]
+    return out
+
+
+def fetch_event_tokens(sess, slugs):
+    """token id -> (conditionId, outcomeIndex, title, outcome) for every market in
+    the given events, including siblings the book never traded (a conversion mints
+    into all of them)."""
+    tokens = {}
+    for slug in slugs:
+        try:
+            d = sess.get(EVENTS_URL, params={"slug": slug}, timeout=30).json()
+        except Exception as e:
+            log(f"event tokens failed for {slug}:", e)
+            continue
+        for ev in d if isinstance(d, list) else []:
+            for m in ev.get("markets") or []:
+                try:
+                    ids = json.loads(m.get("clobTokenIds") or "[]")
+                    outs = json.loads(m.get("outcomes") or "[]")
+                except Exception:
+                    continue
+                for oi, (t, o) in enumerate(zip(ids, outs)):
+                    tokens[str(t)] = (m.get("conditionId"), oi, m.get("question") or "", o)
+    return tokens
+
+
+def price_at(sess, token, ts, fills):
+    """Market price of one outcome token at `ts`: the CLOB's own history if it has
+    a point within PRICE_WINDOW, else this book's nearest fill on the token within
+    the same window. None when neither exists."""
+    try:
+        h = sess.get(PRICES_URL, params={"market": token, "startTs": ts - PRICE_WINDOW,
+                                         "endTs": ts + PRICE_WINDOW, "fidelity": 1},
+                     timeout=30).json().get("history") or []
+        if h:
+            return float(min(h, key=lambda p: abs(p["t"] - ts))["p"])
+    except Exception:
+        pass
+    near = [(abs(t - ts), px) for t, px in fills.get(token, []) if abs(t - ts) <= PRICE_WINDOW]
+    return min(near)[1] if near else None
+
+
+def apply_conversions(sess, pos, all_rows):
+    """Book each negRisk CONVERSION as synthetic trades on the legs it actually moved.
+
+    A conversion hands in N NO shares on k markets of an event and gets back
+    (k-1)*N USDC plus N YES shares on every other market in it. The activity feed
+    records only the event and the USDC — outcomeIndex 999, no legs — so for
+    a long time the shares were invisible. On the September 2026 Fed decision
+    that was 46k YES shares on the 25bp hike: the lot read 55c and +$62k where
+    the position really cost 50c and the event's cash says +$88.8k.
+
+    The legs are not guessable from share balances (several NO legs routinely
+    hold enough to be the source), but the transaction receipt is exact: the
+    outcome-token contract logs every token leaving and entering the wallet.
+    Those become a synthetic SELL on each NO leg handed in and a synthetic BUY on
+    each YES leg received.
+
+    Pricing: each received YES leg is bought at its market price at the time,
+    so its basis is what those shares were worth. The NO legs' proceeds are then
+    set to the USDC received plus that YES value, split across them by their own
+    prices. That makes every conversion cash-exact by construction — prices only
+    decide which leg the money lands on, never how much there is.
+
+    A conversion whose receipt or token map can't be read is left out and logged;
+    the sold-over-bought clamp in build_records still covers its shares.
+    """
+    conv = [a for a in all_rows if a.get("type") == "CONVERSION"]
+    if not conv:
+        return 0, 0
+    tokens = fetch_event_tokens(sess, sorted({a.get("eventSlug") for a in conv} - {None}))
+    fills = defaultdict(list)
+    for a in all_rows:
+        if a.get("type") == "TRADE" and a.get("asset") and a.get("price"):
+            fills[str(a["asset"])].append((a.get("timestamp") or 0, float(a["price"])))
+
+    # A receipt holds every conversion in its transaction, so book it once with
+    # the USDC of all the rows that share it.
+    by_tx = {}
+    for a in conv:
+        tx = a.get("transactionHash")
+        if tx in by_tx:
+            by_tx[tx] = {**by_tx[tx], "usdcSize": float(by_tx[tx].get("usdcSize") or 0)
+                         + float(a.get("usdcSize") or 0)}
+        else:
+            by_tx[tx] = a
+
+    applied = skipped = unpriced = 0
+    for a in by_tx.values():
+        ts, usd = int(a.get("timestamp") or 0), float(a.get("usdcSize") or 0)
+        label = (a.get("title") or "?")[:45]
+        rc = fetch_receipt(sess, a.get("transactionHash"))
+        moves = ctf_moves(rc, a.get("proxyWallet") or "") if rc else []
+        legs = [(tokens.get(t), t, sh, sign) for t, sh, sign in moves]
+        if not legs or any(leg is None for leg, *_ in legs):
+            log(f"conversion not attributable ({'no receipt' if not rc else 'unmapped tokens'}): "
+                f"${usd:,.0f} {label}")
+            skipped += 1
+            continue
+        px = {t: price_at(sess, t, ts, fills) for _, t, _, _ in legs}
+        unpriced += sum(1 for t in px.values() if t is None)
+        got = [(leg, t, sh) for leg, t, sh, sign in legs if sign > 0]
+        gave = [(leg, t, sh) for leg, t, sh, sign in legs if sign < 0]
+        yes_value = sum(sh * (px[t] or 0) for _, t, sh in got)
+        weight = sum(sh * (px[t] or 0) for _, t, sh in gave)
+        for leg, t, sh in got:
+            p = pos[(leg[0], leg[1])]
+            p["buyShares"] += sh
+            p["buyUsd"] += sh * (px[t] or 0)
+        for leg, t, sh in gave:
+            p = pos[(leg[0], leg[1])]
+            share = (sh * (px[t] or 0) / weight) if weight > 0 else sh / sum(s for *_, s in gave)
+            p["sellShares"] += sh
+            p["sellUsd"] += (usd + yes_value) * share
+        for leg, _, _ in got + gave:
+            p = pos[(leg[0], leg[1])]
+            p["title"] = p["title"] or leg[2]
+            p["outcome"] = p["outcome"] or leg[3]
+            p["outcomeIndex"] = leg[1]
+            p["firstTs"] = ts if p["firstTs"] is None else min(p["firstTs"], ts)
+            p["lastTs"] = ts if p["lastTs"] is None else max(p["lastTs"], ts)
+        applied += 1
+    if unpriced:
+        # Siblings nobody has traded (a 30-candidate election's long shots) have
+        # no price history; their YES arrives at 0, which is what it was worth.
+        log(f"conversions: {unpriced} legs had no market price and were booked at 0")
+    return applied, skipped
+
+
+def check_event_cash(records, all_rows, positions, live_conds):
+    """Tripwire: each finished event's lots must add up to the cash it moved.
+
+    Cash is the one figure nothing here reconstructs — USDC out on buys, in on
+    sells, redemptions, merges and conversions — so it cannot share a bug with
+    the lot logic. Polymarket's own P&L can't serve: it has mis-marked
+    conversions before (+$16k wrong way on Bev Craig, +$20k on 2026-08-26).
+    Events with a position still live are skipped; a resolved winner not yet
+    redeemed counts at its redeemable value. Gaps are logged, never fatal.
+    """
+    event_of, cash = {}, defaultdict(float)
+    for a in all_rows:
+        ev, cond = a.get("eventSlug"), a.get("conditionId")
+        if not ev:
+            continue
+        if cond:
+            event_of.setdefault(cond, ev)
+        usd, kind = float(a.get("usdcSize") or 0), a.get("type")
+        if kind == "TRADE":
+            cash[ev] += usd if (a.get("side") or "").upper() == "SELL" else -usd
+        elif kind in ("REDEEM", "MERGE", "CONVERSION"):
+            cash[ev] += usd
+        elif kind == "SPLIT":
+            cash[ev] -= usd
+    live = {event_of.get(c) for c in live_conds}
+    for p in positions:
+        if p.get("redeemable"):
+            cash[p.get("eventSlug") or event_of.get(p.get("conditionId"))] += float(p.get("currentValue") or 0)
+    lots = defaultdict(float)
+    for r in records:
+        ev = event_of.get(r["conditionId"])
+        if ev:
+            lots[ev] += r["realizedPnl"]
+    checked = [ev for ev in lots if ev not in live]
+    gaps = sorted(((lots[ev] - cash[ev], ev) for ev in checked
+                   if abs(lots[ev] - cash[ev]) > CASH_TOL_USD), key=lambda g: -abs(g[0]))
+    log(f"cash check: {len(checked)} closed events, {len(gaps)} off by more than "
+        f"${CASH_TOL_USD:,.0f} (net ${sum(g for g, _ in gaps):+,.0f})")
+    for g, ev in gaps[:10]:
+        log(f"  lots {lots[ev]:+,.0f} vs cash {cash[ev]:+,.0f} ({g:+,.0f}) {ev[:60]}")
+    return {"events": len(checked), "offBy": len(gaps),
+            "netGap": round(sum(g for g, _ in gaps), 2)}
 
 
 def fetch_resolutions(sess, condition_ids):
@@ -485,7 +719,7 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
     }
     log(f"open book: {ob['n']}/{len(rows)} positions live "
         f"({len(rows) - ob['n']} already resolved), unrealized {ob['unrealized']:,.0f}")
-    return ob, live
+    return ob, live, rows
 
 
 def open_by_category(live, cats):
@@ -550,12 +784,12 @@ def build_records(pos, winners, closed_on):
         if not (0 < entry < 1):
             continue
         sold, proceeds = p["sellShares"], p["sellUsd"]
-        # Shares can leave the wallet on a leg that never recorded a BUY: a
-        # negRisk CONVERSION delivers NO shares into every sibling market of an
-        # event, but the feed books it once, on the parent, with outcomeIndex 999
-        # and no side. Twelve positions here have a running share balance that
-        # goes negative (worst: -22,222 on WTI LOW $60 May) — they sold stock the
-        # trade feed never shows them buying.
+        # Shares can leave the wallet on a leg that never recorded a BUY. Twelve
+        # positions once had a running share balance that went negative (worst:
+        # -22,222 on WTI LOW $60 May) — they sold stock the trade feed never shows
+        # them buying. Conversions were the known source and apply_conversions
+        # now books them; this clamp stays for whatever else arrives off-feed
+        # (and for a conversion whose receipt couldn't be read).
         #
         # `held` already floors at 0, so the settlement lot is safe. The exit lot
         # is not: it would book `proceeds - entry*sold` over shares that were
@@ -706,17 +940,26 @@ def hedged_conditions(pos):
     the reliability diagram, hit rate, Brier and calibration error. They stay in
     byCategory and in every P&L figure, because the money was real; it just was
     not a forecast. At -$63 of P&L the attribution loses nothing by keeping them.
+
+    Overlap alone is not enough, though: the smaller leg has to be big enough to
+    lock a real spread. Only matched shares pair off to a guaranteed $1, so the
+    test is shares on the smaller leg against the larger (HEDGE_MIN_RATIO). By
+    timing alone, the September Fed 25bp-hike market was a "hedge" — 1,788 NO
+    shares held for a day against 192k YES — and its $106k, 50-cent directional
+    call vanished from the diagram.
     """
     legs = defaultdict(list)
     for (cond, oi), p in pos.items():
         if p["firstTs"] is not None:
-            legs[cond].append((p["firstTs"], p["lastTs"]))
+            legs[cond].append((p["firstTs"], p["lastTs"], p["buyShares"]))
     out = set()
     for cond, spans in legs.items():
         if len(spans) != 2:
             continue
-        (a0, a1), (b0, b1) = spans
-        if not (a1 <= b0 or b1 <= a0):   # windows touch -> held concurrently
+        (a0, a1, sa), (b0, b1, sb) = spans
+        if a1 <= b0 or b1 <= a0:          # sequential -> a flip, not a hedge
+            continue
+        if min(sa, sb) >= HEDGE_MIN_RATIO * max(sa, sb):
             out.add(cond)
     return out
 
@@ -952,20 +1195,16 @@ def main():
     pos = aggregate_positions(all_rows)
     log(f"{len(pos)} distinct market-outcome positions")
 
+    # Conversions before merges, so a merge of converted shares is split by an
+    # entry price that includes them.
+    conv = [a for a in all_rows if a.get("type") == "CONVERSION"]
+    applied, conv_skipped = apply_conversions(sess, pos, all_rows)
+    log(f"conversions: {len(conv)} rows, "
+        f"${sum(float(a.get('usdcSize') or 0) for a in conv):,.0f} — "
+        f"{applied} transactions booked from receipts, {conv_skipped} unattributable")
+
     applied, skipped = apply_merges(pos, all_rows)
     log(f"merges: {applied} booked as paired sells, {skipped} unattributable")
-
-    # Conversions are the one hole this pipeline cannot close. A negRisk
-    # CONVERSION burns NO shares in one outcome and returns USDC plus NO shares
-    # in every sibling — but the feed records it on the parent event only, with
-    # outcomeIndex 999, so there is nothing to attribute to a leg. The clamp in
-    # build_records stops the delivered shares from inflating an exit lot when
-    # they are later sold; it cannot recover the conversion's own P&L. Log the
-    # exposure so the gap is visible rather than silent.
-    conv = [a for a in all_rows if a.get("type") == "CONVERSION"]
-    if conv:
-        log(f"conversions: {len(conv)} rows, "
-            f"${sum(float(a.get('usdcSize') or 0) for a in conv):,.0f} unattributed")
 
     conds = {cond for (cond, _) in pos.keys()}
     winners, closed_on = fetch_resolutions(sess, conds)
@@ -997,7 +1236,7 @@ def main():
     uncat = sum(1 for r in records if r["category"] == "other")
     log(f"uncategorized records: {uncat}/{len(records)}")
 
-    open_book, live = fetch_open_book(
+    open_book, live, positions = fetch_open_book(
         sess, winners.keys(),
         {r["conditionId"] for r in records if r["resolvedVia"] == "settlement"})
 
@@ -1011,6 +1250,9 @@ def main():
         cats.update(fetch_categories(sess, missing))
         log(f"open book: categorized {len(missing)} live markets not seen in trades")
     open_cats = open_by_category(live, cats)
+
+    cash_check = check_event_cash(records, all_rows, positions,
+                                  {p.get("conditionId") for p in live})
 
     lots = lots_rows(records)
     check_lots(records, lots)
@@ -1028,7 +1270,9 @@ def main():
             "exit": ("swing trades — closed while the outcome was still live; "
                      "win = sold above avg entry (profit)"),
             "merge": "MERGE booked as a paired exit on both legs, $1 split pro-rata by entry",
-            "conversion": "negRisk CONVERSION unattributable (event-level, outcomeIndex 999)",
+            "conversion": ("negRisk CONVERSION booked from its on-chain receipt: a SELL on each "
+                           "NO leg handed in, a BUY at market price on each YES leg received, "
+                           "cash-exact per conversion"),
             "minLotUsd": MIN_LOT_USD,
             "hedges": "concurrently two-sided markets excluded from calibration, kept in P&L",
             "bucketEdges": BUCKET_EDGES,
@@ -1063,8 +1307,8 @@ def main():
         # Companion scope note to openBook: what the CLOSED-lot figures above
         # still don't cover. `hedged` is money that was real but wasn't a
         # forecast (kept in byCategory, dropped from the diagram); `conversions`
-        # is the one hole the pipeline genuinely cannot close, since the feed
-        # books negRisk conversions at event level with no leg to attribute to.
+        # counts any whose receipt couldn't be attributed; `cashCheck` is how
+        # many finished events' lots disagree with the cash they moved.
         "excluded": {
             "hedged": {
                 "markets": len(hedges),
@@ -1074,7 +1318,9 @@ def main():
             "conversions": {
                 "rows": len(conv),
                 "usd": round(sum(float(a.get("usdcSize") or 0) for a in conv), 2),
+                "unattributed": conv_skipped,
             },
+            "cashCheck": cash_check,
             "minLotUsd": MIN_LOT_USD,
         },
         # The trimmed per-lot rows the attribution panel windows by date. The
