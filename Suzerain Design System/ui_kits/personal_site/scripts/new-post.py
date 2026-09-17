@@ -7,10 +7,12 @@ Usage (run from the personal_site folder):
 Options:
   --slug   override the auto-generated slug
   --date   YYYY-MM-DD (default: today)
-  --log    also add a log entry with this text, tied to the post by slug.
-           The two then render as one row (post title over the log text) in
-           the hero log and the thoughts archive; without it the post shows
-           up in both on its own, blurbed with --summary.
+  --log    text for the post's log entry (default: --summary)
+
+Every post gets a log entry tied to it by slug. The pair renders as one row
+(post title over the log text) in the hero log and the thoughts archive, and
+the entry is what pins the post's diamond on the book chart, which reads only
+home.log and never the post manifest.
 
 Then: write the body in data/posts/<slug>.md, commit, push.
 """
@@ -51,8 +53,11 @@ def main():
     ap.add_argument('--summary', default='')
     ap.add_argument('--slug')
     ap.add_argument('--date', default=datetime.date.today().isoformat())
-    ap.add_argument('--log', help='brief homepage log entry text')
+    ap.add_argument('--log', help='log entry text (default: --summary)')
     args = ap.parse_args()
+    log_body = (args.log or args.summary).rstrip()
+    if not log_body:
+        sys.exit('error: every post needs a log entry; pass --summary or --log')
 
     slug = args.slug or slugify(args.title)
     md = POSTS / f'{slug}.md'
@@ -74,13 +79,12 @@ def main():
     print(f'created  {md}')
     print(f'indexed  {slug} ({args.date})')
 
-    if args.log:
-        content = load(CONTENT)
-        content['home']['log'].insert(0, OrderedDict([
-            ('date', args.date), ('body', args.log.rstrip()), ('slug', slug),
-        ]))
-        save(CONTENT, content)
-        print(f'logged   log entry tied to {slug}')
+    content = load(CONTENT)
+    content['home']['log'].insert(0, OrderedDict([
+        ('date', args.date), ('body', log_body), ('slug', slug),
+    ]))
+    save(CONTENT, content)
+    print(f'logged   log entry tied to {slug}')
 
     print(f'\nnext: edit {md.relative_to(ROOT)}, then commit & push.')
 

@@ -22,6 +22,11 @@
     "sub": "tracker live since 2026",
     "log": [
       {
+        "date": "2026-09-16",
+        "body": "Prediction markets underpriced a Fed hike against CME's /ZQ fed funds futures, so I bought the hike on Polymarket, bought /ZQ against it, and netted around +17k.",
+        "slug": "fomc-arbitrage"
+      },
+      {
         "date": "2026-08-21",
         "body": "Hit the goal set when I launched the site: 1m net liquidity.",
         "slug": "promises-made-promises-kept"
