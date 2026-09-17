@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17T01:17:01Z",
+  "generatedAt": "2026-09-17T11:52:04Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -746,41 +746,41 @@
     }
   },
   "openBook": {
-    "n": 109,
-    "cost": 145451.93,
-    "mark": 155611.18,
-    "unrealized": 10159.24
+    "n": 112,
+    "cost": 221118.01,
+    "mark": 231704.21,
+    "unrealized": 10586.19
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 2601.61,
-      "mark": 2539.31,
-      "unrealized": -62.3
+      "mark": 2583.75,
+      "unrealized": -17.86
     },
     "geopolitics": {
-      "n": 29,
-      "cost": 61144.89,
-      "mark": 68216.86,
-      "unrealized": 7071.97
+      "n": 30,
+      "cost": 61810.98,
+      "mark": 69102.68,
+      "unrealized": 7291.7
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 307.8,
-      "unrealized": -30.6
+      "mark": 311.4,
+      "unrealized": -27.0
     },
     "politics": {
-      "n": 68,
-      "cost": 76184.17,
-      "mark": 79109.92,
-      "unrealized": 2925.74
+      "n": 70,
+      "cost": 151184.17,
+      "mark": 154273.27,
+      "unrealized": 3089.09
     },
     "sports": {
       "n": 8,
       "cost": 3399.36,
-      "mark": 3672.57,
-      "unrealized": 273.22
+      "mark": 3668.39,
+      "unrealized": 269.03
     },
     "tech": {
       "n": 1,
@@ -850,6 +850,7 @@
     "0x7586a96520578acaaaa4ea84a2582f197f84255da1f3392a7aa300386c187b37": "geopolitics",
     "0x771873c365f87bffd990644e4b688aebc1be7f18396d2eab64b996ff66e88669": "politics",
     "0x78cd764ab3cdfa56aed4b35f5c9b0f19b011c429ea896a8211dd11d9b9820716": "politics",
+    "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x812d9ea644c58f1e889643bbd9184e9c5fdacbba55d1f9fef2eb2d55ce5dc1c2": "politics",
     "0x81a537b379a35e4e17c286d3b37394e94bd74c1779bbe9a13670eb991b201a3a": "geopolitics",
     "0x883c09380a078565f29485a9d3671fff48853a87de9a5bf48bc204f7161250c9": "politics",
@@ -875,6 +876,7 @@
     "0xc528b5c384832a754585eeb005f96efd2842db3db1ebfd574bc3c8235a6dbae0": "politics",
     "0xc5eae79d1ffe716572353962eb926b1e3964c500a4880a7a94f58408218ee76b": "politics",
     "0xcd953913ecd5bf5387092bf447fe13190871b2bc9436c85b0918b4767c3fa58a": "politics",
+    "0xcee04ba47d02f6c64642369b34193c355f64de1b9ae425c71ea4efef1989d271": "geopolitics",
     "0xcf74254eb635dae1db5d96da6582146510fcbbd7e2645b482756ae04ad566237": "politics",
     "0xcfbc2e5fbabb9e8a03bf234367244d4c97eaaf3ac33e2ba001541ee3e0e62416": "geopolitics",
     "0xd0536d9612e041312235baceac52bde48821e8aad4607533513b3782904b7d49": "geopolitics",
