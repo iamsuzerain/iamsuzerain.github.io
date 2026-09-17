@@ -1,5 +1,5 @@
 // Records.jsx — the whole book's all-time records, over a calendar of every day.
-// Globals: React, Cursor, window.szBook (Combined.jsx)
+// Globals: React, Cursor, SzToggle (Chart.jsx), window.szBook (Combined.jsx)
 //
 // Everything here reads the build the book view draws (window.szBook.load) and
 // its chained TWR (window.szBook.pctSeries), never a loader of its own: a day's
@@ -397,6 +397,10 @@ function recBets(cal) {
 // (a partial first week, 52 whole ones, a partial last), so the width never
 // changes and history grows downward, one block a year.
 //
+// Stacking every year stopped scaling too, so one block draws at a time: the
+// past 365 days by default, each calendar year behind a switch in the panel
+// head. A span of 365 days is at most 53 week columns, so it fits the same 54.
+//
 // Drawn at a fixed pitch and scaled as a whole (aspect kept), so the labels can
 // live in the SVG without being stretched; below a readable cell size it
 // scrolls sideways instead of shrinking further, which only happens on a phone.
@@ -408,38 +412,33 @@ function recBets(cal) {
 // surface, and the highs moved to a band of their own under it.
 const REC_CELL = 13, REC_GAP = 1, REC_PITCH = REC_CELL + REC_GAP;
 const REC_LEFT = 30, REC_HEAD = 16, REC_COLS = 54;
-const REC_BAND_GAP = 6, REC_BAND = 5;   // the new-highs band under each year
-const REC_BLOCK_GAP = 18;
+const REC_BAND_GAP = 6, REC_BAND = 5;   // the new-highs band under the cells
 const REC_BLOCK = REC_HEAD + 7 * REC_PITCH + REC_BAND_GAP + REC_BAND;
 
-function RecCalendar({ rec, active, hover, onHover }) {
+function RecCalendar({ rec, span, active, hover, onHover }) {
   const scrollRef = React.useRef(null);
   const svgRef = React.useRef(null);
   const byDay = React.useMemo(() => new Map(rec.days.map(x => [x.day, x])), [rec]);
   const lit = active ? active.set : null;
+  const { from, to } = span;
+  const inSpan = (day) => day >= from && day <= to;
+  const days = React.useMemo(() => rec.days.filter(x => inSpan(x.day)), [rec, from, to]);
+  const W = REC_LEFT + REC_COLS * REC_PITCH, H = REC_BLOCK;
 
-  const y0 = +recIso(rec.firstDay).slice(0, 4), y1 = +recIso(rec.lastDay).slice(0, 4);
-  const years = [];
-  for (let y = y1; y >= y0; y--) years.push(y);
-  const W = REC_LEFT + REC_COLS * REC_PITCH;
-  const H = years.length * REC_BLOCK + (years.length - 1) * REC_BLOCK_GAP;
-
-  const yearOf = (day) => +recIso(day).slice(0, 4);
-  const jan1 = (y) => Math.floor(Date.UTC(y, 0, 1) / REC_DAY_MS);
-  const colOf = (day) => (recWeekStart(day) - recWeekStart(jan1(yearOf(day)))) / 7;
+  const col0 = recWeekStart(from);
+  const colOf = (day) => (recWeekStart(day) - col0) / 7;
   const rowOf = (day) => (recDow(day) + 6) % 7;   // monday on top
-  const topOf = (y) => (y1 - y) * (REC_BLOCK + REC_BLOCK_GAP);
   const cellX = (day) => REC_LEFT + colOf(day) * REC_PITCH;
-  const cellY = (day) => topOf(yearOf(day)) + REC_HEAD + rowOf(day) * REC_PITCH;
+  const cellY = (day) => REC_HEAD + rowOf(day) * REC_PITCH;
 
-  // When it has to scroll, bring the latest day into view: it sits in the top
-  // block, usually well short of december.
+  // When it has to scroll, bring the span's latest day into view: in the
+  // current year that is usually well short of december.
   React.useEffect(() => {
     const el = scrollRef.current, svg = svgRef.current;
-    if (!el || !svg || el.scrollWidth <= el.clientWidth) return;
+    if (!el || !svg || !days.length || el.scrollWidth <= el.clientWidth) return;
     const scale = svg.getBoundingClientRect().width / W;
-    el.scrollLeft = Math.max(0, (cellX(rec.lastDay) + REC_PITCH * 3) * scale - el.clientWidth);
-  }, []);
+    el.scrollLeft = Math.max(0, (cellX(days[days.length - 1].day) + REC_PITCH * 3) * scale - el.clientWidth);
+  }, [from, to]);
 
   function onMove(e) {
     const svg = svgRef.current;
@@ -448,61 +447,69 @@ function RecCalendar({ rec, active, hover, onHover }) {
     const t = e.touches && e.touches.length ? e.touches[0] : e;
     const px = ((t.clientX - rect.left) / rect.width) * W;
     const py = ((t.clientY - rect.top) / rect.height) * H;
-    const b = Math.floor(py / (REC_BLOCK + REC_BLOCK_GAP));
-    const y = y1 - b;
     const col = Math.floor((px - REC_LEFT) / REC_PITCH);
-    const row = Math.floor((py - topOf(y) - REC_HEAD) / REC_PITCH);
-    if (y < y0 || col < 0 || col >= REC_COLS || row < 0 || row > 6) { onHover(null); return; }
-    const day = recWeekStart(jan1(y)) + col * 7 + row;
-    const x = yearOf(day) === y ? byDay.get(day) : null;
+    const row = Math.floor((py - REC_HEAD) / REC_PITCH);
+    if (col < 0 || col >= REC_COLS || row < 0 || row > 6) { onHover(null); return; }
+    const day = col0 + col * 7 + row;
+    const x = inSpan(day) ? byDay.get(day) : null;
     onHover(x ? x.day : null);
   }
 
   const out = [];
-  for (const y of years) {
-    const top = topOf(y);
-    out.push(<text key={`y${y}`} className="rec-cal-year" x="0" y={top + REC_HEAD - 5}>{y}</text>);
-    // Every month labeled over the column holding its 1st, whether or not the
-    // history reaches it: an empty january is still january.
-    for (let m = 0; m < 12; m++) {
-      const c = colOf(Math.floor(Date.UTC(y, m, 1) / REC_DAY_MS));
-      out.push(<text key={`m${y}-${m}`} className="rec-cal-label"
-        x={REC_LEFT + c * REC_PITCH} y={top + REC_HEAD - 5}>{REC_MONTHS[m]}</text>);
-    }
-    for (const row of [0, 2, 4]) {
-      out.push(<text key={`d${y}-${row}`} className="rec-cal-label" x="0"
-        y={top + REC_HEAD + row * REC_PITCH + REC_CELL - 3}>{REC_DOW[(row + 1) % 7]}</text>);
-    }
-    out.push(<text key={`h${y}`} className="rec-cal-label" x="0"
-      y={top + REC_BLOCK}>high</text>);
+  // Every month labeled over the column holding its 1st, whether or not the
+  // history reaches it: an empty january is still january. A span that starts
+  // mid-month labels that month at its first column too, when the next label
+  // leaves it room. In a year the corner names the year; across two, the year
+  // takes january's place, where it turns.
+  const fromIso = recIso(from);
+  const isYear = fromIso.slice(5) === '01-01';
+  if (isYear) out.push(<text key="y" className="rec-cal-year" x="0" y={REC_HEAD - 5}>{fromIso.slice(0, 4)}</text>);
+  const firsts = [from];   // the span's own first month, 1st or not
+  for (let y = +fromIso.slice(0, 4), m = +fromIso.slice(5, 7); ; m++) {
+    const day = Math.floor(Date.UTC(y, m, 1) / REC_DAY_MS);   // Date.UTC rolls m = 12 over
+    if (day > to) break;
+    firsts.push(day);
   }
+  firsts.forEach((day, i) => {
+    const c = colOf(day), next = firsts[i + 1];
+    if (i === 0 && fromIso.slice(8) !== '01' && next != null && colOf(next) - c < 3) return;
+    const [y, m] = recIso(day).split('-').map(Number);
+    const yearMark = !isYear && m === 1;
+    out.push(<text key={`m${day}`} className={yearMark ? 'rec-cal-year' : 'rec-cal-label'}
+      x={REC_LEFT + c * REC_PITCH} y={REC_HEAD - 5}>{yearMark ? y : REC_MONTHS[m - 1]}</text>);
+  });
+  for (const row of [0, 2, 4]) {
+    out.push(<text key={`d${row}`} className="rec-cal-label" x="0"
+      y={REC_HEAD + row * REC_PITCH + REC_CELL - 3}>{REC_DOW[(row + 1) % 7]}</text>);
+  }
+  out.push(<text key="h" className="rec-cal-label" x="0" y={REC_BLOCK}>high</text>);
 
   // Sign rides on the ramp alone (see REC_NEG); the readout under the calendar
   // and every record row also spell it out in text.
-  for (const x of rec.days) {
+  for (const x of days) {
     out.push(<rect key={x.day} x={cellX(x.day)} y={cellY(x.day)} width={REC_CELL} height={REC_CELL} rx="1"
       fill={recFill(x.r)} opacity={lit && !lit.has(x.day) ? 0.16 : 1}/>);
   }
 
-  // New highs per week, as one continuous band under each year: a column's
+  // New highs per week, as one continuous band under the span: a column's
   // shade is how many of its days closed at a high. Adjacent weeks share an
   // edge, so a run of highs reads as a bar rather than a row of separate marks.
   const highsByCol = new Map();
   for (const h of rec.highs) {
-    const k = `${yearOf(h.day)}:${colOf(h.day)}`;
-    if (!highsByCol.has(k)) highsByCol.set(k, []);
-    highsByCol.get(k).push(h.day);
+    if (!inSpan(h.day)) continue;
+    const c = colOf(h.day);
+    if (!highsByCol.has(c)) highsByCol.set(c, []);
+    highsByCol.get(c).push(h.day);
   }
-  for (const [k, ds] of highsByCol) {
-    const [y, c] = k.split(':').map(Number);
+  for (const [c, ds] of highsByCol) {
     const on = !lit || ds.some(d => lit.has(d));
-    out.push(<rect key={`b${k}`} x={REC_LEFT + c * REC_PITCH}
-      y={topOf(y) + REC_HEAD + 7 * REC_PITCH + REC_BAND_GAP}
+    out.push(<rect key={`b${c}`} x={REC_LEFT + c * REC_PITCH}
+      y={REC_HEAD + 7 * REC_PITCH + REC_BAND_GAP}
       width={REC_PITCH} height={REC_BAND}
       fill="#f5f0ff" fillOpacity={0.18 + 0.1 * ds.length} opacity={on ? 1 : 0.16}/>);
   }
 
-  const hx = hover != null ? byDay.get(hover) : null;
+  const hx = hover != null && inSpan(hover) ? byDay.get(hover) : null;
 
   return (
     <div className="rec-cal-scroll" ref={scrollRef}>
@@ -766,6 +773,7 @@ function Records() {
   const [hoverRec, setHoverRec] = React.useState(null);
   const [pinned, setPinned] = React.useState(null);
   const [hoverDay, setHoverDay] = React.useState(null);
+  const [span, setSpan] = React.useState('recent');   // 'recent' or a year
   const calRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -822,9 +830,19 @@ function Records() {
   ];
   const activeId = hoverRec || pinned;
   const active = activeId ? allRows.find(x => x.id === activeId) : null;
+  const recYear = (day) => +recIso(day).slice(0, 4);
+  const years = [];
+  for (let y = recYear(rec.lastDay); y >= recYear(rec.firstDay); y--) years.push(y);
+  // The past 365 days by default, so the calendar is never a near-empty
+  // january; each year's own block is a click away.
+  const spanOf = (k) => k === 'recent'
+    ? { from: rec.lastDay - 364, to: rec.lastDay }
+    : { from: recEpoch(`${k}-01-01`), to: recEpoch(`${k}-12-31`) };
+  const shown = spanOf(span);
+  const spanDays = rec.days.filter(x => x.day >= shown.from && x.day <= shown.to);
   const shownDay = hoverDay != null
     ? rec.days.find(x => x.day === hoverDay)
-    : rec.days[rec.days.length - 1];
+    : spanDays[spanDays.length - 1];
   const first = rec.days[0].d, last = rec.days[rec.days.length - 1].d;
   // Most of the rows sit well below the calendar, where a hover lights cells
   // nobody can see. A tap pins the record and brings the calendar back into
@@ -832,6 +850,12 @@ function Records() {
   const togglePin = (id) => {
     const pinning = pinned !== id;
     setPinned(pinning ? id : null);
+    // A record wholly outside the span on screen turns the calendar to the
+    // latest year it touches.
+    const hit = pinning ? allRows.find(x => x.id === id) : null;
+    if (hit && hit.set.size && ![...hit.set].some(d => d >= shown.from && d <= shown.to)) {
+      setSpan(Math.max(...[...hit.set].map(recYear)));
+    }
     const el = calRef.current;
     if (pinning && el) {
       const r = el.getBoundingClientRect();
@@ -869,9 +893,17 @@ function Records() {
       <div className="pf-panel" ref={calRef}>
         <div className="pf-panel-head">
           <span className="pf-panel-title">every day</span>
-          <span className="pf-panel-meta">weeks run monday to sunday · weekends are polymarket alone</span>
+          <div className="pf-panel-head-right">
+            <span className="pf-panel-meta">weeks run monday to sunday · weekends are polymarket alone</span>
+            {years.length > 1 && (
+              <div className="pf-range" role="group" aria-label="calendar span">
+                <SzToggle options={[['recent', 'past 365 days'], ...years.map(y => [y, String(y)])]}
+                  value={span} onChange={(k) => { setSpan(k); setHoverDay(null); }}/>
+              </div>
+            )}
+          </div>
         </div>
-        <RecCalendar rec={rec} active={active} hover={hoverDay} onHover={setHoverDay}/>
+        <RecCalendar rec={rec} span={shown} active={active} hover={hoverDay} onHover={setHoverDay}/>
         <RecReadout x={shownDay}/>
         <RecLegend/>
       </div>
