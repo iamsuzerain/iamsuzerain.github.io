@@ -247,22 +247,32 @@ function cmbTransferMarks(series, transfers) {
 // amounts differ by fees and rounding, up to -$8.5k out of IBKR on 2026-03-05
 // against $10k landing on 03-13. So a withdrawal pairs with the nearest
 // unpaired deposit to polymarket 0-10 days after it, within 25% on amount.
+//
+// The trip back pairs the same way, so a round trip through the bank is one
+// diamond like every move before it: an IBKR deposit pairs with a polymarket
+// withdrawal ledgered up to 10 days before it (or the day after, since the
+// ledger carries the raw scrape date and the money left the day before). The
+// polymarket diamond is the one kept, as it is for the outbound direction.
 const CMB_FLOW_PAIR_DAYS = 10;
 const CMB_FLOW_PAIR_TOL = 0.25;
 
 function cmbIbkrFlowMarks(series, flows, transfers) {
   if (!series || !series.length || !flows || !flows.length) return [];
   const days = series.map(p => cmbEpochDay(p.d));
-  const deposits = (transfers || [])
-    .filter(t => t && t.date && (t.amount || 0) > 0)
+  const ledger = (transfers || [])
+    .filter(t => t && t.date && t.amount)
     .map(t => ({ day: cmbEpochDay(t.date), amount: t.amount, used: false }))
     .sort((a, b) => a.day - b.day);
   const paired = (f) => {
-    if (!(f.amount < 0)) return false;
+    if (!f.amount) return false;
     const d = cmbEpochDay(f.d);
-    const hit = deposits.find(t => !t.used
-      && t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
-      && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * t.amount);
+    const hit = ledger.find(t => !t.used
+      // opposite signs: out of ibkr into polymarket, or out of polymarket into ibkr
+      && Math.sign(t.amount) === -Math.sign(f.amount)
+      && (f.amount < 0
+        ? t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
+        : d >= t.day - 1 && d - t.day <= CMB_FLOW_PAIR_DAYS)
+      && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * Math.abs(t.amount));
     if (hit) hit.used = true;
     return !!hit;
   };
