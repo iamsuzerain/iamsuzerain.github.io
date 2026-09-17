@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17T01:12:15Z",
+  "generatedAt": "2026-09-17T01:17:01Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -748,8 +748,8 @@
   "openBook": {
     "n": 109,
     "cost": 145451.93,
-    "mark": 155634.52,
-    "unrealized": 10182.59
+    "mark": 155611.18,
+    "unrealized": 10159.24
   },
   "openByCategory": {
     "commodities": {
@@ -773,14 +773,14 @@
     "politics": {
       "n": 68,
       "cost": 76184.17,
-      "mark": 79134.89,
-      "unrealized": 2950.72
+      "mark": 79109.92,
+      "unrealized": 2925.74
     },
     "sports": {
       "n": 8,
       "cost": 3399.36,
-      "mark": 3670.94,
-      "unrealized": 271.58
+      "mark": 3672.57,
+      "unrealized": 273.22
     },
     "tech": {
       "n": 1,
