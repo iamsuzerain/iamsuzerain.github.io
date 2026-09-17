@@ -1,6 +1,12 @@
 {
   "posts": [
     {
+      "slug": "fomc-arbitrage",
+      "title": "FOMC Arbitrage",
+      "date": "2026-09-16",
+      "summary": "Prediction markets keep underpricing a Fed hike against CME's /ZQ fed funds futures, and why the two crowds pull the spread wider."
+    },
+    {
       "slug": "promises-made-promises-kept",
       "title": "Promises made, promises kept",
       "date": "2026-08-21",
