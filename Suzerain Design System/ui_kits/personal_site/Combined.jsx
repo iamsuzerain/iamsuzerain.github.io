@@ -226,7 +226,12 @@ function cmbTransferMarks(series, transfers) {
   if (!series || !series.length || !transfers || !transfers.length) return [];
   const days = series.map(p => cmbEpochDay(p.d));
   return transfers.map(t => {
-    const i = t ? cmbPinIndex(days, t.date) : null;
+    // A deposit's step lands on its ledger date (pmCapitalAt backs the restated
+    // scrape out a day). A withdrawal isn't backed out, so its step is where the
+    // restated scrape files it: the day before.
+    const at = t && t.date && (t.amount || 0) < 0
+      ? cmbFromEpochDay(cmbEpochDay(t.date) - 1) : t && t.date;
+    const i = at ? cmbPinIndex(days, at) : null;
     return i == null ? null : { i, date: t.date, amount: t.amount || 0 };
   }).filter(Boolean);
 }
@@ -604,8 +609,12 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
     const at = pmNavDays[best];
     const level = pmNavByDay.get(at);
     if (at !== day) return level;
+    // Deposits only. The double count is IBKR still holding the dollars at its
+    // close; a withdrawal to a bank has no such counterpart, so backing it out
+    // re-adds money that has left. On 2026-09-17 that read the -$25k wire as
+    // $344,571 of polymarket against a scraped $319,571.
     const t = transfersOn(day + 1);
-    if (!t) return level;
+    if (!(t > 0)) return level;
     // Structurally, a restated row for day D IS the raw row for D+1, and the raw
     // rows are aligned with the ledger — so a row dated D always contains a
     // transfer dated D+1, whatever that day's P&L did to the level. Testing for
@@ -1608,7 +1617,9 @@ function CmbCapitalChart({ series, transfers }) {
         readout={hp
           ? `${cmbFullDate(hp.d)}, ibkr ${cmbUSD(hp.ibkrLevel)}, polymarket ${cmbUSD(hp.pmLevel)}, `
             + `total ${cmbUSD(hpTotal)}`
-            + (hpXfer ? `, moved ${cmbUSDk(hpXfer.amount)} to polymarket` : '')
+            + (hpXfer ? (hpXfer.amount < 0
+              ? `, withdrew ${cmbUSDk(-hpXfer.amount)} from polymarket`
+              : `, moved ${cmbUSDk(hpXfer.amount)} to polymarket`) : '')
           : ''}>
         {/* Venue colors, matching the bar below — violet is IBKR and pink is
             Polymarket here, not gain and loss. Flat fills for the same reason
@@ -1659,7 +1670,9 @@ function CmbCapitalChart({ series, transfers }) {
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className="cmb-tt-num">{cmbUSD(hp.pmLevel)}</span></div>
           <div className="cmb-tt-row cmb-tt-sum">total<span className="cmb-tt-num">{cmbUSD(hpTotal)}</span></div>
           {hpXfer && (
-            <div className="cmb-tt-xfer">moved {cmbUSDk(hpXfer.amount)} → polymarket</div>
+            <div className="cmb-tt-xfer">{hpXfer.amount < 0
+              ? `withdrew ${cmbUSDk(-hpXfer.amount)} ← polymarket`
+              : `moved ${cmbUSDk(hpXfer.amount)} → polymarket`}</div>
           )}
         </SzTooltip>
       )}
