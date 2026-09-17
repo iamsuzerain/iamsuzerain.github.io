@@ -236,6 +236,28 @@ function cmbTransferMarks(series, transfers) {
   }).filter(Boolean);
 }
 
+// Money crossing the IBKR account's outer edge — a bank wire in or out — from
+// content.json ibkrFlows. Markers only: IBKR's NAV already carries the step and
+// build_pnl_series nets the flow out of P&L, so nothing reads these amounts.
+// Kept apart from pmTransfers because every entry there is load-bearing for the
+// polymarket book walk and the capital base. Dated on IBKR's own close, which is
+// the chart's axis, so no restatement.
+function cmbIbkrFlowMarks(series, flows) {
+  if (!series || !series.length || !flows || !flows.length) return [];
+  const days = series.map(p => cmbEpochDay(p.d));
+  return flows.map(f => {
+    const i = f && f.date ? cmbPinIndex(days, f.date) : null;
+    return i == null ? null : { i, date: f.date, amount: f.amount || 0, venue: 'ibkr' };
+  }).filter(Boolean);
+}
+
+// Tooltip / readout wording for a capital-chart marker.
+function cmbFlowLabel(m) {
+  const amt = cmbUSDk(Math.abs(m.amount));
+  if (m.venue === 'ibkr') return m.amount < 0 ? `withdrew ${amt} ← ibkr` : `deposited ${amt} → ibkr`;
+  return m.amount < 0 ? `withdrew ${amt} ← polymarket` : `moved ${amt} → polymarket`;
+}
+
 // Mirror Hero.jsx: an entry's link {text, href} turns the first occurrence of
 // `text` in the body into an anchor, so a marker caption can point at a post.
 function cmbCaptionBody(entry) {
@@ -1557,7 +1579,7 @@ function cmbCapitalPoints(series) {
 // from nothing.
 const CMB_CAP_FRAME = szFrame(160, 16, 28);
 
-function CmbCapitalChart({ series, transfers }) {
+function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   const F = CMB_CAP_FRAME;
   const hv = useChartHover(F);
   const pts = cmbCapitalPoints(series);
@@ -1592,7 +1614,9 @@ function CmbCapitalChart({ series, transfers }) {
   // nothing. Dropped rather than drawn — which is also what takes the ledger's
   // condensed opening entry off the chart, since the split is floored on its
   // date (see splitFloor).
-  const marks = cmbTransferMarks(pts, transfers).filter(m => m.i > 0);
+  const marks = cmbTransferMarks(pts, transfers)
+    .concat(cmbIbkrFlowMarks(pts, ibkrFlows))
+    .filter(m => m.i > 0);
   const ticks = szTicks(pts, 6);
   const spanDays = cmbEpochDay(pts[last].d) - cmbEpochDay(pts[0].d);
   const axisMode = spanDays <= 95 ? 'day'
@@ -1603,7 +1627,7 @@ function CmbCapitalChart({ series, transfers }) {
   // A transfer is only called out when the cursor is on its own column. The tick
   // is already drawn; repeating the nearest one at every column would attach a
   // decision to days it wasn't made on.
-  const hpXfer = hp ? marks.find(m => m.i === hv.i) : null;
+  const hpXfers = hp ? marks.filter(m => m.i === hv.i) : [];
 
   return (
     <div className="pm-chart-wrap">
@@ -1617,9 +1641,7 @@ function CmbCapitalChart({ series, transfers }) {
         readout={hp
           ? `${cmbFullDate(hp.d)}, ibkr ${cmbUSD(hp.ibkrLevel)}, polymarket ${cmbUSD(hp.pmLevel)}, `
             + `total ${cmbUSD(hpTotal)}`
-            + (hpXfer ? (hpXfer.amount < 0
-              ? `, withdrew ${cmbUSDk(-hpXfer.amount)} from polymarket`
-              : `, moved ${cmbUSDk(hpXfer.amount)} to polymarket`) : '')
+            + hpXfers.map(m => `, ${cmbFlowLabel(m)}`).join('')
           : ''}>
         {/* Venue colors, matching the bar below — violet is IBKR and pink is
             Polymarket here, not gain and loss. Flat fills for the same reason
@@ -1669,11 +1691,9 @@ function CmbCapitalChart({ series, transfers }) {
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className="cmb-tt-num">{cmbUSD(hp.ibkrLevel)}</span></div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className="cmb-tt-num">{cmbUSD(hp.pmLevel)}</span></div>
           <div className="cmb-tt-row cmb-tt-sum">total<span className="cmb-tt-num">{cmbUSD(hpTotal)}</span></div>
-          {hpXfer && (
-            <div className="cmb-tt-xfer">{hpXfer.amount < 0
-              ? `withdrew ${cmbUSDk(-hpXfer.amount)} ← polymarket`
-              : `moved ${cmbUSDk(hpXfer.amount)} → polymarket`}</div>
-          )}
+          {hpXfers.map((m, k) => (
+            <div key={k} className="cmb-tt-xfer">{cmbFlowLabel(m)}</div>
+          ))}
         </SzTooltip>
       )}
     </div>
@@ -1932,6 +1952,8 @@ async function cmbLoadBook() {
   const content = await contentP;
   const log = (content && content.home && content.home.log) || [];
   const pmTransfers = (content && content.pmTransfers) || [];
+  // Bank <-> IBKR wires, for capital-chart markers only (cmbIbkrFlowMarks).
+  const ibkrFlows = (content && content.ibkrFlows) || [];
 
   // Fed funds, for the Sharpe on the risk panel. Best-effort like the rest:
   // missing, the tile falls back to rf 0 and its note says so. Awaited ahead
@@ -1967,6 +1989,7 @@ async function cmbLoadBook() {
 
   const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
   built.log = log;
+  built.ibkrFlows = ibkrFlows;
   built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
   built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
   return built;
@@ -2256,7 +2279,7 @@ function Combined({ setView }) {
               {xferTotal > 0 ? `, ${cmbUSDk(xferTotal)} to date` : ''}
             </span>
           </div>
-          <CmbCapitalChart series={win.series} transfers={data.transfers}/>
+          <CmbCapitalChart series={win.series} transfers={data.transfers} ibkrFlows={data.ibkrFlows}/>
         </div>
       )}
 
