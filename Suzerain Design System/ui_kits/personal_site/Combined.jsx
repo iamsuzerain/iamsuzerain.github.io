@@ -236,19 +236,44 @@ function cmbTransferMarks(series, transfers) {
   }).filter(Boolean);
 }
 
-// Money crossing the IBKR account's outer edge — a bank wire in or out — from
-// content.json ibkrFlows. Markers only: IBKR's NAV already carries the step and
+// IBKR deposits and withdrawals of $5k and up (data/ibkr-flows.json, written by
+// merge-ibkr-flows.py). Markers only: IBKR's NAV already carries the step and
 // build_pnl_series nets the flow out of P&L, so nothing reads these amounts.
-// Kept apart from pmTransfers because every entry there is load-bearing for the
-// polymarket book walk and the capital base. Dated on IBKR's own close, which is
-// the chart's axis, so no restatement.
-function cmbIbkrFlowMarks(series, flows) {
+// Dated on IBKR's own close, which is the chart's axis, so no restatement.
+//
+// The file holds every flow, including IBKR's side of a move to polymarket,
+// which pmTransfers already marks. Those are paired off here. The legs don't
+// line up exactly: the wire leaves IBKR 0-8 days before the ledger date and the
+// amounts differ by fees and rounding, up to -$8.5k out of IBKR on 2026-03-05
+// against $10k landing on 03-13. So a withdrawal pairs with the nearest
+// unpaired deposit to polymarket 0-10 days after it, within 25% on amount.
+const CMB_FLOW_PAIR_DAYS = 10;
+const CMB_FLOW_PAIR_TOL = 0.25;
+
+function cmbIbkrFlowMarks(series, flows, transfers) {
   if (!series || !series.length || !flows || !flows.length) return [];
   const days = series.map(p => cmbEpochDay(p.d));
-  return flows.map(f => {
-    const i = f && f.date ? cmbPinIndex(days, f.date) : null;
-    return i == null ? null : { i, date: f.date, amount: f.amount || 0, venue: 'ibkr' };
-  }).filter(Boolean);
+  const deposits = (transfers || [])
+    .filter(t => t && t.date && (t.amount || 0) > 0)
+    .map(t => ({ day: cmbEpochDay(t.date), amount: t.amount, used: false }))
+    .sort((a, b) => a.day - b.day);
+  const paired = (f) => {
+    if (!(f.amount < 0)) return false;
+    const d = cmbEpochDay(f.d);
+    const hit = deposits.find(t => !t.used
+      && t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
+      && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * t.amount);
+    if (hit) hit.used = true;
+    return !!hit;
+  };
+  return flows
+    .filter(f => f && f.d)
+    .slice().sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
+    .filter(f => !paired(f))
+    .map(f => {
+      const i = cmbPinIndex(days, f.d);
+      return i == null ? null : { i, date: f.d, amount: f.amount || 0, venue: 'ibkr' };
+    }).filter(Boolean);
 }
 
 // Tooltip / readout wording for a capital-chart marker.
@@ -1615,7 +1640,7 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   // condensed opening entry off the chart, since the split is floored on its
   // date (see splitFloor).
   const marks = cmbTransferMarks(pts, transfers)
-    .concat(cmbIbkrFlowMarks(pts, ibkrFlows))
+    .concat(cmbIbkrFlowMarks(pts, ibkrFlows, transfers))
     .filter(m => m.i > 0);
   const ticks = szTicks(pts, 6);
   const spanDays = cmbEpochDay(pts[last].d) - cmbEpochDay(pts[0].d);
@@ -1911,6 +1936,7 @@ async function cmbLoadBook() {
   const navHistP    = cmbGetJson('data/nav-history.json');
   const breakdownP  = cmbGetJson('data/polymarket-breakdown.json');
   const bdHistP     = cmbGetJson('data/polymarket-breakdown-history.json');
+  const flowsP      = cmbGetJson('data/ibkr-flows.json');
 
   const portfolio = await pPromise;
 
@@ -1952,8 +1978,6 @@ async function cmbLoadBook() {
   const content = await contentP;
   const log = (content && content.home && content.home.log) || [];
   const pmTransfers = (content && content.pmTransfers) || [];
-  // Bank <-> IBKR wires, for capital-chart markers only (cmbIbkrFlowMarks).
-  const ibkrFlows = (content && content.ibkrFlows) || [];
 
   // Fed funds, for the Sharpe on the risk panel. Best-effort like the rest:
   // missing, the tile falls back to rf 0 and its note says so. Awaited ahead
@@ -1989,7 +2013,9 @@ async function cmbLoadBook() {
 
   const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
   built.log = log;
-  built.ibkrFlows = ibkrFlows;
+  // IBKR deposits/withdrawals, for capital-chart markers only (cmbIbkrFlowMarks).
+  const flowsJson = await flowsP;
+  built.ibkrFlows = (flowsJson && flowsJson.rows) || [];
   built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
   built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
   return built;

@@ -819,6 +819,29 @@ def build_pnl_series(nav_series: list[dict], cash_flows: dict[str, float]) -> li
     return out
 
 
+# Smallest per-day net flow the site marks. Below it a movement is housekeeping,
+# and a marker would clutter the capital chart.
+FLOW_MARK_MIN = 5000
+
+
+def build_flow_marks(cash_flows: dict[str, float]) -> list[dict]:
+    """Per-day net deposits/withdrawals of at least FLOW_MARK_MIN, for the capital
+    chart's markers. Rounded to the nearest $1k: a marker needs the size of the
+    move, not its cents. Published on purpose (the user's call, 2026-09-16) —
+    unlike reconcile_flows, whose per-transaction detail stays local-only.
+
+    Includes the IBKR side of IBKR->Polymarket transfers. The site pairs those
+    against pmTransfers and drops them, since that ledger already marks them.
+    merge-ibkr-flows.py accumulates this into data/ibkr-flows.json.
+    """
+    out = []
+    for d in sorted(cash_flows):
+        v = cash_flows[d]
+        if abs(v) >= FLOW_MARK_MIN:
+            out.append({"d": d, "amount": int(math.copysign(math.floor(abs(v) / 1000 + 0.5) * 1000, v))})
+    return out
+
+
 _FUT_MONTHS = set("FGHJKMNQUVXZ")  # CME month codes Jan–Dec
 
 
@@ -1418,6 +1441,7 @@ def transform(root: ET.Element) -> dict:
         "navSeries": [{"d": p["d"], "v": p["v"]} for p in nav_series],
         "perfSeries": perf_series,
         "pnlSeries": build_pnl_series(nav_series, cash_flows),
+        "flows": build_flow_marks(cash_flows),
         "allocation": build_allocation(positions, cash),
         "positions": positions[:20],  # top 20 by value
     }

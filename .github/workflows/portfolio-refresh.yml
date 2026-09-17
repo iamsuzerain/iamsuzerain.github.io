@@ -92,6 +92,13 @@ jobs:
         run: |
           python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/merge-nav-history.py"
 
+      - name: merge IBKR flows history
+        # Same idea for the capital chart's markers: deposits/withdrawals of $5k
+        # and up (portfolio.json `flows`) accumulate into ibkr-flows.json so they
+        # outlive the Flex window. Logs counts only.
+        run: |
+          python3 "Suzerain Design System/ui_kits/personal_site/scripts/ibkr-flex/merge-ibkr-flows.py"
+
       - name: fetch benchmark closes (see TICKERS in fetch-benchmarks.py)
         # Best-effort: a Yahoo hiccup shouldn't block the IBKR refresh.
         run: |
@@ -110,7 +117,7 @@ jobs:
       - name: continuity canary
         run: |
           cd "Suzerain Design System/ui_kits/personal_site"
-          python3 scripts/canary/continuity.py data/portfolio.json data/nav-history.json
+          python3 scripts/canary/continuity.py data/portfolio.json data/nav-history.json data/ibkr-flows.json
 
       - name: commit + push if changed
         run: |
@@ -118,6 +125,7 @@ jobs:
           git config user.email "portfolio-bot@users.noreply.github.com"
           git add "Suzerain Design System/ui_kits/personal_site/data/portfolio.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/nav-history.json" \
+                  "Suzerain Design System/ui_kits/personal_site/data/ibkr-flows.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/benchmarks.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/riskfree.json"
           # Stage first, then test the index rather than running `git diff` over

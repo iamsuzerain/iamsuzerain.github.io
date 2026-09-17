@@ -66,6 +66,8 @@ from pathlib import Path
 # the flag by the end of the first week.
 SERIES = {
     "nav-history.json":                  dict(rows="rows", key="d", value="n"),
+    # Sparse by design (a row is a flow of $5k+), so there is no level to jump.
+    "ibkr-flows.json":                   dict(rows="rows", key="d", value=None),
     "polymarket-nav-history.json":       dict(rows="rows", key="d", value="nav"),
     "polymarket-breakdown-history.json": dict(rows="rows", key="d", value="nav"),
     "portfolio.json":                    dict(rows="navSeries", key="d", value="v",
