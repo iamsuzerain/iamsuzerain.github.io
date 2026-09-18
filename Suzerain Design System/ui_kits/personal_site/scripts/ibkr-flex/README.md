@@ -327,13 +327,34 @@ other by eye every time the page is opened.
 
 ## 6 — Gotchas
 
-- **First request takes ~30–60s.** IBKR's Flex service renders the report on
-  demand. The script calls `SendRequest` to kick it off, sleeps, then polls
-  `GetStatement` up to 5 times.
-- **Rate-limited to ~1 request per minute** per query. Don't cron more
-  aggressively than that.
-- **Tokens expire.** IBKR rotates them every ~1 year. If the workflow starts
-  failing with `1003` or `1012` error codes, regenerate the token.
+- **"Not ready yet" arrives as an error, not as a wait.** The Flex service
+  renders on demand, and both legs of the handshake report that with a 200, a
+  `Status` of `Warn` and an `ErrorCode`: `SendRequest` answers `1004 Statement
+  is incomplete at this time` while IBKR is still closing the books, and
+  `GetStatement` answers `1019 Statement generation in progress` while it
+  renders ours. Both end their own message with *"Please try again shortly"*,
+  and `TRANSIENT_CODES` in `fetch-ibkr.py` is every code that does. The script
+  waits each leg out on a wall-clock budget — 5min on `SendRequest` at a fixed
+  20s, 10min on `GetStatement` backing off 5s → 30s — and prints each retry to
+  stderr as a code and a countdown, so a slow night reads as a slow night in
+  the Actions log rather than two and a half minutes of silence and one error.
+  A normal night still costs one request per leg and finishes in ~30–60s.
+- **Those budgets are sized off a night they were not enough.** On 2026-09-18
+  five consecutive runs failed: three died on the *first* `SendRequest` reply,
+  in under a second, because that leg had no retry at all, and two polled
+  `GetStatement` for the 152s an eight-step ladder allowed and gave up with the
+  statement still generating. The allowlist was two codes wide (1018, 1019) and
+  did not include the 1004 that killed the other three.
+- **A code outside that set fails on the first reply**, deliberately: `1012`
+  (expired token), `1015` (invalid token), `1014` (invalid query), `1013` (IP
+  restriction), `1003` (statement unavailable) and `1017` (reference code
+  already spent) do not clear by waiting, and spending fifteen minutes proving
+  the token is still wrong only delays the bad news. Tokens rotate every ~1
+  year, so `1012` or `1015` on a refresh that used to work means regenerate.
+- **Rate-limited to ~1 request per minute** per query — and `1018 Too many
+  requests` is itself one of the transient codes, so the poll backoff widens
+  under it rather than tightening into the condition it is waiting out. Don't
+  cron more aggressively than that.
 - **Market data fields may be blank** outside regular trading hours. Schedule
   the cron for after 16:30 ET to be safe.
 - **NAV time series** needs a Flex period of at least `Month to Date`, ideally

@@ -10,7 +10,7 @@ Writes JSON to stdout. Pipe it into ui_kits/personal_site/data/portfolio.json.
 Stdlib only.
 """
 from __future__ import annotations
-import bisect, json, math, os, sys, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+import bisect, json, math, os, sys, time, urllib.error, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 
 BASE = "https://ndcdyn.interactivebrokers.com/AccountManagement/FlexWebService"
@@ -46,6 +46,71 @@ ALLOC_ORDER = ["us equities", "intl equities", "bonds", "crypto", "options",
                "futures", "futures options", "cash", "other"]
 
 
+# ── The Flex handshake ──────────────────────────────────────────────────────
+# Neither leg reports "not ready yet" as an HTTP status. Both answer 200 with a
+# Status of Warn and an ErrorCode, and the codes below are every one whose own
+# ErrorMessage ends "Please try again shortly." — IBKR asking to be asked again.
+# SendRequest answers 1004 while the books are still closing; GetStatement
+# answers 1019 while it renders. Retrying is the documented handling for both.
+#
+# Every code absent from this set is permanent — 1003 statement unavailable,
+# 1010 legacy query, 1011 inactive service account, 1012 expired token, 1013 IP
+# restriction, 1014 invalid query, 1015 invalid token, 1016 invalid account,
+# 1017 spent reference code, 1020 unvalidatable request. Those must fail on the
+# first reply rather than spend the whole budget proving the token is still
+# wrong, which is why this is an allowlist of the transient ones and not a
+# denylist of the fatal ones.
+TRANSIENT_CODES = {
+    "1001",  # Statement could not be generated at this time
+    "1004",  # Statement is incomplete at this time
+    "1005",  # Settlement data is not ready at this time
+    "1006",  # FIFO P/L data is not ready at this time
+    "1007",  # MTM P/L data is not ready at this time
+    "1008",  # MTM and FIFO P/L data is not ready at this time
+    "1009",  # The server is under heavy load
+    "1018",  # Too many requests have been made
+    "1019",  # Statement generation in progress
+    "1021",  # Statement could not be retrieved at this time
+}
+
+# Wall-clock budget per leg, and the gap between tries. Sized off the night of
+# 2026-09-18, when five consecutive runs failed: three died on the first
+# SendRequest reply, in under a second, because that leg had no retry at all;
+# two polled GetStatement for the 152s the old eight-step ladder allowed and
+# gave up while IBKR was still generating. A budget is wall clock rather than a
+# poll count so the ceiling is legible here instead of being the sum of a
+# ladder, and so widening it is one number.
+#
+# Gaps stay this side of leisurely on purpose: 1018 "Too many requests" is
+# itself one of the transient codes, so a tighter poll can create the condition
+# it is waiting out. A leg that cannot finish inside these is a real outage, and
+# the 09:00 UTC cron is the next attempt.
+SEND_BUDGET_S = 300.0     # SendRequest: waiting on IBKR to close the books
+SEND_GAP_S = 20.0         # fixed — 1004 clears on IBKR's schedule, not ours
+POLL_BUDGET_S = 600.0     # GetStatement: waiting on our statement to render
+POLL_GAP_S = 5.0          # first gap, then doubling
+POLL_GAP_MAX_S = 30.0
+
+
+class FlexError(SystemExit):
+    """A Flex reply carrying Status != Success.
+
+    Subclasses SystemExit so main()'s handler, the one-line stderr message and
+    the exit code are all exactly what they were. The point of the class is
+    `.flex_code`: the retry decision reads the field IBKR sent rather than
+    substring-matching the rendered message, which previously meant a statement
+    whose text happened to contain "1019" would have been read as transient.
+
+    Named `flex_code` and not `code` because SystemExit already owns `.code` —
+    that one is the process exit status, and quietly holding "1019" there would
+    exit with the string the day this is raised outside main()'s handler.
+    """
+
+    def __init__(self, code: str, message: str):
+        super().__init__(f"IBKR Flex error {code}: {message}")
+        self.flex_code = code
+
+
 def fetch(url: str) -> ET.Element:
     req = urllib.request.Request(url, headers={"User-Agent": "suzerain-site/1.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -53,38 +118,90 @@ def fetch(url: str) -> ET.Element:
     root = ET.fromstring(body)
     status = root.findtext("Status") or ""
     if status and status != "Success":
-        err_code = root.findtext("ErrorCode") or "?"
-        err_msg = root.findtext("ErrorMessage") or "unknown"
-        raise SystemExit(f"IBKR Flex error {err_code}: {err_msg}")
+        raise FlexError(root.findtext("ErrorCode") or "?",
+                        root.findtext("ErrorMessage") or "unknown")
     return root
 
 
+def _fetch_retrying(url: str, leg: str, budget_s: float, gap_s: float,
+                    gap_max_s: float, accept=None) -> ET.Element:
+    """fetch(url) until it yields a usable reply or the budget is spent.
+
+    Retries a transient Flex code, a transport blip, and — when `accept` is
+    given — a reply that is nominally a success but is not the document this
+    leg is waiting for. Re-raises anything else on the first reply. On
+    exhaustion it raises the last failure, so the job dies with IBKR's own
+    message rather than a summary of ours.
+
+    Progress goes to stderr as codes and seconds only. This lands in a
+    world-readable Actions log, the same rule the flow canary follows, and
+    there is nothing account-identifying in a retry notice.
+    """
+    deadline = time.monotonic() + budget_s
+    gap, last = gap_s, None
+    while True:
+        try:
+            root = fetch(url)
+            if accept is None or accept(root):
+                return root
+            # Status was Success but the payload is not the statement. Not
+            # documented as a state this reaches; treated as transient because
+            # the alternative is failing the run on a reply we cannot read.
+            last = SystemExit(f"IBKR Flex {leg}: unexpected <{root.tag}> payload")
+            why = f"<{root.tag}>"
+        except FlexError as e:
+            if e.flex_code not in TRANSIENT_CODES:
+                raise
+            last, why = e, e.flex_code
+        except (OSError, ET.ParseError) as e:
+            # Reset connection, DNS, read timeout, truncated body. This runs
+            # unattended at 23:10 Pacific, so a transport blip is worth the
+            # same wait as a "try again shortly" rather than a failed night.
+            #
+            # HTTPError is an OSError, so it lands here too — and a 4xx is the
+            # one transport failure that will still be a 4xx in ten minutes.
+            # 408 and 429 are the exceptions, being the HTTP spellings of the
+            # two conditions this function exists to wait out.
+            if (isinstance(e, urllib.error.HTTPError)
+                    and 400 <= e.code < 500 and e.code not in (408, 429)):
+                raise SystemExit(f"IBKR Flex {leg}: HTTP {e.code} {e.reason}")
+            last, why = SystemExit(f"IBKR Flex {leg} transport error: {e!r}"), type(e).__name__
+        left = deadline - time.monotonic()
+        if left <= 0:
+            print(f"flex {leg}: {why} still, {budget_s:.0f}s budget spent — giving up",
+                  file=sys.stderr)
+            raise last
+        wait = min(gap, left)
+        print(f"flex {leg}: {why}, retrying in {wait:.0f}s "
+              f"({left:.0f}s of budget left)", file=sys.stderr)
+        time.sleep(wait)
+        gap = min(gap * 2, gap_max_s)
+
+
 def run_flex(token: str, query_id: str) -> ET.Element:
+    started = time.monotonic()
+
     # Step 1: SendRequest -> ReferenceCode
     params = urllib.parse.urlencode({"t": token, "q": query_id, "v": VERSION})
-    root = fetch(f"{SEND}?{params}")
+    root = _fetch_retrying(f"{SEND}?{params}", "SendRequest",
+                           SEND_BUDGET_S, SEND_GAP_S, SEND_GAP_S)
     ref = root.findtext("ReferenceCode")
     if not ref:
         raise SystemExit("no ReferenceCode in SendRequest response")
 
-    # Step 2: GetStatement (poll, because IBKR renders on demand)
+    # Step 2: GetStatement (poll, because IBKR renders on demand). The first
+    # sleep is kept from the original and is deliberate: the statement is never
+    # ready the instant the reference code is issued, so an immediate GET only
+    # spends a request against the 1018 ceiling to be told 1019.
     get_params = urllib.parse.urlencode({"t": token, "q": ref, "v": VERSION})
-    url = f"{GET}?{get_params}"
-    last_err = None
-    for attempt in range(8):
-        time.sleep(5 + attempt * 4)  # 5, 9, 13, ... ~backoff
-        try:
-            root = fetch(url)
-            # A successful statement has FlexStatements as the root tag, not Status
-            if root.tag == "FlexQueryResponse":
-                return root
-        except SystemExit as e:
-            last_err = e
-            # code 1019 = "Statement generation in progress". Retry.
-            if "1019" in str(e) or "1018" in str(e):
-                continue
-            raise
-    raise last_err or SystemExit("Flex statement never ready after 8 polls")
+    time.sleep(POLL_GAP_S)
+    # A ready statement is a FlexQueryResponse; anything else is still rendering.
+    root = _fetch_retrying(f"{GET}?{get_params}", "GetStatement",
+                           POLL_BUDGET_S, POLL_GAP_S, POLL_GAP_MAX_S,
+                           accept=lambda r: r.tag == "FlexQueryResponse")
+    print(f"flex: statement ready after {time.monotonic() - started:.0f}s",
+          file=sys.stderr)
+    return root
 
 
 # ---------- transforms ----------
