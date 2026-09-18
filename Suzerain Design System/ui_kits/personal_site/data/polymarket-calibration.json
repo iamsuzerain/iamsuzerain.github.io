@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-17T11:52:04Z",
+  "generatedAt": "2026-09-18T11:25:35Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 681,
-      "wins": 624,
+      "n": 683,
+      "wins": 626,
       "pushes": 0,
-      "hitRate": 0.9163,
-      "volume": 3979549.3,
-      "realizedPnl": 104928.98,
-      "roi": 0.0264,
-      "brier": 0.0408,
-      "avgImplied": 0.894,
+      "hitRate": 0.9165,
+      "volume": 3997958.77,
+      "realizedPnl": 105287.37,
+      "roi": 0.0263,
+      "brier": 0.0406,
+      "avgImplied": 0.8943,
       "edge": 0.0223,
       "calibrationError": 0.0309
     },
     "exit": {
-      "n": 297,
-      "wins": 197,
+      "n": 300,
+      "wins": 200,
       "pushes": 9,
-      "hitRate": 0.684,
-      "volume": 1407253.33,
-      "realizedPnl": -25021.77,
-      "roi": -0.0178
+      "hitRate": 0.6873,
+      "volume": 1430521.65,
+      "realizedPnl": -24853.21,
+      "roi": -0.0174
     }
   },
   "buckets": {
@@ -222,16 +222,16 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 229,
-        "wins": 228,
+        "n": 231,
+        "wins": 230,
         "pushes": 0,
-        "winRate": 0.9956,
+        "winRate": 0.9957,
         "avgImplied": 0.9723,
-        "volume": 1717023.6,
-        "realizedPnl": 47148.99,
-        "grossPnl": 48430.37,
+        "volume": 1735433.07,
+        "realizedPnl": 47507.38,
+        "grossPnl": 48788.76,
         "winRateByVolume": 0.9996,
-        "wilsonLo": 0.9757,
+        "wilsonLo": 0.9759,
         "wilsonHi": 0.9992
       },
       {
@@ -299,17 +299,17 @@
       {
         "lo": 0.3,
         "hi": 0.4,
-        "n": 8,
-        "wins": 3,
+        "n": 9,
+        "wins": 4,
         "pushes": 2,
-        "winRate": 0.5,
-        "avgImplied": 0.34,
-        "volume": 3586.75,
-        "realizedPnl": -758.33,
-        "grossPnl": 828.05,
-        "winRateByVolume": 0.3619,
-        "wilsonLo": 0.1876,
-        "wilsonHi": 0.8124
+        "winRate": 0.5714,
+        "avgImplied": 0.3383,
+        "volume": 4024.85,
+        "realizedPnl": -750.6,
+        "grossPnl": 835.78,
+        "winRateByVolume": 0.4313,
+        "wilsonLo": 0.2505,
+        "wilsonHi": 0.8418
       },
       {
         "lo": 0.4,
@@ -329,17 +329,17 @@
       {
         "lo": 0.5,
         "hi": 0.6,
-        "n": 8,
-        "wins": 4,
+        "n": 9,
+        "wins": 5,
         "pushes": 0,
-        "winRate": 0.5,
-        "avgImplied": 0.56,
-        "volume": 31237.28,
-        "realizedPnl": -761.69,
-        "grossPnl": 1038.35,
-        "winRateByVolume": 0.0782,
-        "wilsonLo": 0.2152,
-        "wilsonHi": 0.7848
+        "winRate": 0.5556,
+        "avgImplied": 0.5549,
+        "volume": 31263.0,
+        "realizedPnl": -738.41,
+        "grossPnl": 1061.63,
+        "winRateByVolume": 0.079,
+        "wilsonLo": 0.2666,
+        "wilsonHi": 0.8112
       },
       {
         "lo": 0.6,
@@ -404,17 +404,17 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 68,
-        "wins": 55,
+        "n": 69,
+        "wins": 56,
         "pushes": 0,
-        "winRate": 0.8088,
-        "avgImplied": 0.9683,
-        "volume": 506062.19,
-        "realizedPnl": -15560.32,
-        "grossPnl": 28785.36,
-        "winRateByVolume": 0.8278,
-        "wilsonLo": 0.6999,
-        "wilsonHi": 0.8847
+        "winRate": 0.8116,
+        "avgImplied": 0.9681,
+        "volume": 528866.69,
+        "realizedPnl": -15422.77,
+        "grossPnl": 28922.91,
+        "winRateByVolume": 0.8352,
+        "wilsonLo": 0.7039,
+        "wilsonHi": 0.8865
       },
       {
         "lo": 0.99,
@@ -564,13 +564,13 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 238,
-        "volume": 1952647.39,
-        "realizedPnl": 50821.22,
+        "n": 239,
+        "volume": 1953085.49,
+        "realizedPnl": 50828.95,
         "roi": 0.026,
-        "hitRate": 0.8675,
-        "avgImplied": 0.8679,
-        "edge": -0.0004,
+        "hitRate": 0.8681,
+        "avgImplied": 0.8656,
+        "edge": 0.0024,
         "top1Share": 0.2177
       },
       "settlement": {
@@ -584,13 +584,13 @@
         "top1Share": 0.3713
       },
       "exit": {
-        "n": 99,
-        "volume": 654700.38,
-        "realizedPnl": -5257.55,
+        "n": 100,
+        "volume": 655138.48,
+        "realizedPnl": -5249.82,
         "roi": -0.008,
-        "hitRate": 0.7158,
-        "avgImplied": 0.7678,
-        "edge": -0.052,
+        "hitRate": 0.7188,
+        "avgImplied": 0.7634,
+        "edge": -0.0446,
         "top1Share": 0.2083
       }
     },
@@ -682,34 +682,34 @@
     },
     "sports": {
       "combined": {
-        "n": 293,
-        "volume": 773941.4,
-        "realizedPnl": -5516.75,
-        "roi": -0.0071,
-        "hitRate": 0.8048,
-        "avgImplied": 0.8187,
-        "edge": -0.0139,
-        "top1Share": 0.1297
+        "n": 297,
+        "volume": 815181.09,
+        "realizedPnl": -4997.53,
+        "roi": -0.0061,
+        "hitRate": 0.8074,
+        "avgImplied": 0.8192,
+        "edge": -0.0118,
+        "top1Share": 0.1287
       },
       "settlement": {
-        "n": 241,
-        "volume": 605464.97,
-        "realizedPnl": 8735.94,
-        "roi": 0.0144,
-        "hitRate": 0.8714,
-        "avgImplied": 0.8468,
+        "n": 243,
+        "volume": 623874.44,
+        "realizedPnl": 9094.33,
+        "roi": 0.0146,
+        "hitRate": 0.8724,
+        "avgImplied": 0.8479,
         "edge": 0.0246,
-        "top1Share": 0.0792
+        "top1Share": 0.0781
       },
       "exit": {
-        "n": 52,
-        "volume": 168476.43,
-        "realizedPnl": -14252.69,
-        "roi": -0.0846,
-        "hitRate": 0.4902,
-        "avgImplied": 0.6886,
-        "edge": -0.1984,
-        "top1Share": 0.2118
+        "n": 54,
+        "volume": 191306.65,
+        "realizedPnl": -14091.86,
+        "roi": -0.0737,
+        "hitRate": 0.5094,
+        "avgImplied": 0.6902,
+        "edge": -0.1808,
+        "top1Share": 0.211
       }
     },
     "tech": {
@@ -746,47 +746,47 @@
     }
   },
   "openBook": {
-    "n": 112,
-    "cost": 221118.01,
-    "mark": 231704.21,
-    "unrealized": 10586.19
+    "n": 115,
+    "cost": 258200.77,
+    "mark": 269239.04,
+    "unrealized": 11038.26
   },
   "openByCategory": {
     "commodities": {
-      "n": 2,
-      "cost": 2601.61,
-      "mark": 2583.75,
-      "unrealized": -17.86
+      "n": 4,
+      "cost": 7094.3,
+      "mark": 7213.86,
+      "unrealized": 119.56
     },
     "geopolitics": {
       "n": 30,
-      "cost": 61810.98,
-      "mark": 69102.68,
-      "unrealized": 7291.7
+      "cost": 62235.2,
+      "mark": 69426.29,
+      "unrealized": 7191.08
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 311.4,
-      "unrealized": -27.0
+      "mark": 307.8,
+      "unrealized": -30.6
     },
     "politics": {
-      "n": 70,
-      "cost": 151184.17,
-      "mark": 154273.27,
-      "unrealized": 3089.09
+      "n": 71,
+      "cost": 183375.37,
+      "mark": 186953.22,
+      "unrealized": 3577.85
     },
     "sports": {
       "n": 8,
-      "cost": 3399.36,
-      "mark": 3668.39,
-      "unrealized": 269.03
+      "cost": 3374.01,
+      "mark": 3575.97,
+      "unrealized": 201.96
     },
     "tech": {
       "n": 1,
       "cost": 1783.49,
-      "mark": 1764.72,
-      "unrealized": -18.77
+      "mark": 1761.9,
+      "unrealized": -21.59
     }
   },
   "openCategories": {
@@ -830,6 +830,7 @@
     "0x4dc5c13eb9646b10da7d5f079f77ef2480ec5466861ce1cfbc910fabed3d7d0d": "politics",
     "0x4de72138204727d2821bff847d8158819ab5b591db1b5b263676126cbb3a0430": "politics",
     "0x4e4f77e7dbf4cab666e9a1943674d7ae66348e862df03ea6f44b11eb95731928": "politics",
+    "0x4fff0816578447a11fba1fa044f82b7af092e68a1e97943c61e7e1ce7d4f6f86": "commodities",
     "0x50b78cd83de62d75d504d7a184ba1171436628068b3c3d4dd0384e65d4a40d1b": "politics",
     "0x52284e2210068126179495aa36b333b455be2973ada738f6bffad6061bb116a6": "politics",
     "0x53bbdde2bff0255be814d3779de1e2b3cb55383defda7af65a76a171cfd3e64b": "sports",
@@ -863,6 +864,7 @@
     "0x9c76ad6476f3d09545596d3c2b916a4e24814e8200dfb763e07baf30a5b8e184": "politics",
     "0xa59bb6bb91e5c1e4d533864520fbd3bb75d6d0ebb813b4cd8a8b88479bfa8966": "geopolitics",
     "0xa5cef1a89dcf98ac03e6e67b00ababfa64125389540cbe160b438fc8f48fee82": "politics",
+    "0xa5d79e71e66c9fe122f8b8b3ca6ab7a0e3048bd8508f130746944e92ed79ddf3": "politics",
     "0xa81e63ff4a59e8611215a7cc37c86e4ac6164924b86a1f4aab73379a073f88fb": "politics",
     "0xab7ef0fd65f6aa5a63c92cebc19acfbb6c4f01ffcf6204f2f896b52ec62561ec": "politics",
     "0xac6a2448a21343261722348565ddfe6432a534ac76e2011d101346f1f26ce617": "politics",
@@ -872,6 +874,7 @@
     "0xb40b0cd531184a1e436d23ca898e1590418187b116f387158753d1adb9853e47": "other",
     "0xbca3d70ec52a5a441ccc365a3b1b48b9cd0f08dfff4bc5871e2cd92d0d92caa1": "geopolitics",
     "0xbd72208a4ceea9fde59f3a42d2f4c5c78bd7cc05c4fada7fe60f877d2fee6dc9": "politics",
+    "0xc0fff3b5ed4d7c82647b11050d56629450902b05c1562d8476df1452ae46510a": "commodities",
     "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
     "0xc528b5c384832a754585eeb005f96efd2842db3db1ebfd574bc3c8235a6dbae0": "politics",
     "0xc5eae79d1ffe716572353962eb926b1e3964c500a4880a7a94f58408218ee76b": "politics",
@@ -911,7 +914,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 463,
+      "events": 464,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1908,6 +1911,11 @@
     ["macro","2026-09-16","s",2532.21,-2532.21,0,0.0066,"Will the Fed increase interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
     ["macro","2026-09-16","e",27333.82,-144.19,0,0.529,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
     ["macro","2026-09-16","s",98629.33,87812.09,1,0.529,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
-    ["macro","2026-09-16","s",6854.72,5276.53,1,0.565,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"]
+    ["macro","2026-09-16","s",6854.72,5276.53,1,0.565,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"],
+    ["sports","2026-09-17","s",18266.44,354.42,1,0.981,"Los Angeles Dodgers vs. Cincinnati Reds","Los Angeles Dodgers",null],
+    ["geopolitics","2026-09-18","e",438.1,7.73,1,0.3243,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
+    ["sports","2026-09-18","e",25.72,23.28,1,0.5145,"Will Shohei Ohtani win the 2026 National League Hank Aaron Award?","No","MLB: 2026 NL Hank Aaron Winner"],
+    ["sports","2026-09-18","e",22804.5,137.55,1,0.95,"Lions vs. Bills","Bills",null],
+    ["sports","2026-09-18","s",143.03,3.97,1,0.973,"Lions vs. Bills: O/U 26.5","Over","Lions vs. Bills"]
   ]
 }
