@@ -1735,37 +1735,153 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   );
 }
 
-// ---------- Monthly P&L, split by book ----------
-// Each month's contribution per series = the change in that series' cumulative
-// (deposit-adjusted) P&L between the month's last observation and the prior
-// month's. `total` is the net of both books; `bench` is the chosen benchmark's
+// ---------- Periodic P&L, split by book ----------
+// Each period's contribution per series = the change in that series' cumulative
+// (deposit-adjusted) P&L between the period's last observation and the prior
+// period's. `total` is the net of both books; `bench` is the chosen benchmark's
 // dollar return on the same notional, present only when its overlay loaded.
 // Grouped bars around a shared zero line so signs read directly.
-function cmbMonthly(series, benchKey = 'spx') {
-  if (!series || series.length < 2) return [];
-  const end = new Map();                    // 'YYYY-MM' -> {ibkr, pm, bench}
-  for (const p of series) end.set(p.d.slice(0, 7), { ibkr: p.ibkr || 0, pm: p.pm || 0, bench: p[benchKey] });
+//
+// The period is not always a month. MAX is the one range whose length has no
+// ceiling — it opens at the first nav-history row and gains a column every
+// month — and a column, unlike the nav chart's line, cannot be downsampled to
+// fit: CMB_CHART_MAX_POINTS thins 2000 points into a line that reads the same,
+// but a bar has a minimum legible width (the step and width floors below), so
+// past a certain count the columns stop shrinking and start colliding with
+// their neighbours instead. So the period steps down a ladder instead: the
+// finest one whose column count still fits the plot. Each step coarser buys
+// 3-4x the runway, and none of the arithmetic moves — differencing cumulative
+// streams at period ends is correct across any boundary, which is what lets this
+// be a choice of bucket rather than a second chart.
+//
+// At the current frame the cap is 48 columns of three bars, so with the book
+// opening in Apr 2025: months to early 2029, quarters to 2037, then annual out
+// to 2072. The last rung is the last rung — 48 years in, annual columns start
+// crowding the same way and something has to give. Written down rather than
+// guarded against, because a 5-year bucket on a P&L chart would be nonsense and
+// the alternative (dropping the oldest columns) would quietly stop being
+// all-time.
+const CMB_PERIOD_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+// Keys sort lexicographically into chronological order in all three, which is
+// what the row build below relies on. `yearStart` marks the column that opens a
+// year: those carry the year in their axis label and draw the faint rule before
+// them, because a bare run of period names with two januaries in view cannot
+// say which year it is in. Years need neither — every column is already a year.
+const CMB_PERIODS = [
+  {
+    id: 'month', title: 'monthly',
+    key: (d) => d.slice(0, 7),                                  // 2026-09
+    yearStart: (k) => k.slice(5, 7) === '01',
+    label: (k) => CMB_PERIOD_MONTHS[+k.slice(5, 7) - 1],
+    labelYear: (k) => `${CMB_PERIOD_MONTHS[+k.slice(5, 7) - 1]} ${k.slice(2, 4)}`,
+    full: (k) => k,
+  },
+  {
+    id: 'quarter', title: 'quarterly',
+    key: (d) => `${d.slice(0, 4)}-Q${Math.floor((+d.slice(5, 7) - 1) / 3) + 1}`,
+    yearStart: (k) => k.slice(-1) === '1',
+    label: (k) => `q${k.slice(-1)}`,
+    labelYear: (k) => `q${k.slice(-1)} ${k.slice(2, 4)}`,
+    full: (k) => `${k.slice(0, 4)} q${k.slice(-1)}`,
+  },
+  {
+    id: 'year', title: 'annual',
+    key: (d) => d.slice(0, 4),
+    yearStart: () => false,
+    label: (k) => k,
+    labelYear: (k) => k,
+    full: (k) => k,
+  },
+];
+
+// How many columns of `nb` bars each the plot holds before groups touch. Derived
+// from the same floors the bar geometry uses rather than picked, so the two
+// cannot drift: at the floor a group spans STEP_MIN per gap plus the bar's own
+// width, and CMB_BAR_GAP_MIN is the air that has to survive between groups for
+// them to read as separate columns at all.
+const CMB_BAR_STEP_MIN = 6, CMB_BAR_STEP_MAX = 11;
+const CMB_BAR_W_RATIO = 0.8, CMB_BAR_SLOT_FILL = 0.62, CMB_BAR_GAP_MIN = 2;
+function cmbBarMaxCols(frame, nb) {
+  const group = CMB_BAR_STEP_MIN * (nb - 1 + CMB_BAR_W_RATIO);
+  return Math.max(2, Math.floor((frame.W - frame.PAD_L - frame.PAD_R) / (group + CMB_BAR_GAP_MIN)));
+}
+
+function cmbPeriodRows(series, period, benchKey) {
+  const end = new Map();                    // period key -> {ibkr, pm, bench}
+  for (const p of series) end.set(period.key(p.d), { ibkr: p.ibkr || 0, pm: p.pm || 0, bench: p[benchKey] });
   const keys = [...end.keys()].sort();
   // The window's first point is its *base* — the day every stream is rebased
   // against — so its own bucket is zero by construction. When the next point is
-  // already in a new month, that bucket holds nothing but the base and drew a
+  // already in a new period, that bucket holds nothing but the base and drew a
   // full-width empty column. Calendar windows always land here: they rebase on
   // the close BEFORE the period opens (see szRangeBaseIndex), so ytd led with an
   // empty "dec" and a picked quarter with the month before it. Drop it — `prev`
-  // below still starts from that base, so the first real month is unchanged.
-  const baseYm = series[0].d.slice(0, 7);
-  if (keys[0] === baseYm && series[1].d.slice(0, 7) !== baseYm) keys.shift();
+  // below still starts from that base, so the first real period is unchanged.
+  const baseK = period.key(series[0].d);
+  if (keys[0] === baseK && period.key(series[1].d) !== baseK) keys.shift();
   const out = [];
   let prev = { ibkr: series[0].ibkr || 0, pm: series[0].pm || 0, bench: series[0][benchKey] };
   for (const k of keys) {
     const e = end.get(k);
-    const row = { ym: k, ibkr: e.ibkr - prev.ibkr, pm: e.pm - prev.pm };
+    const row = { k, ibkr: e.ibkr - prev.ibkr, pm: e.pm - prev.pm };
     row.total = row.ibkr + row.pm;
     if (e.bench != null && prev.bench != null) row.bench = e.bench - prev.bench;
     out.push(row);
     prev = e;
   }
   return out;
+}
+
+// The rows, and the period they are bucketed at — the caller needs the period
+// too, to title the panel for what a column actually is.
+function cmbPeriodic(series, benchKey = 'spx', frame = CMB_BARS_FRAME) {
+  if (!series || series.length < 2) return { period: CMB_PERIODS[0], rows: [], hasBench: false };
+  // Read off the series rather than off the built rows, because the column cap
+  // depends on the bar count and the rows depend on the cap. A benchmark that
+  // loaded is a third bar in every group, and that third bar is what decides
+  // how many groups fit.
+  const maxCols = cmbBarMaxCols(frame, series.some(p => p[benchKey] != null) ? 3 : 2);
+  const fits = CMB_PERIODS.find(p => new Set(series.map(x => p.key(x.d))).size <= maxCols);
+  const period = fits || CMB_PERIODS[CMB_PERIODS.length - 1];
+  // `hasBench` follows the built rows, not the series: a key present at a single
+  // point in the window differences into nothing, and a bar with no values would
+  // still have taken a slot in every group and a swatch in the legend.
+  const rows = cmbPeriodRows(series, period, benchKey);
+  return { period, rows, hasBench: rows.some(r => r.bench != null) };
+}
+
+// Which columns get a text label under them. The axis is HTML at a fixed 10px
+// (see .pf-axis-x), so it is the one part of the chart that does NOT shrink with
+// the viewBox: at 18 columns a label owns ~50px of a desktop panel and ~19px of
+// a phone, and "jan 26" alone needs about 38. Hence a stride off the MEASURED
+// width — sizing it for the narrow case would thin a desktop axis that had room
+// for every label, and sizing it for the wide one is what smears the phone.
+//
+// Nothing is lost to a skipped label: the column is still there, and hovering it
+// names the period exactly in the tooltip.
+const CMB_AXIS_LABEL_PX = 42;   // "jan 26" at 10px mono with its letter-spacing, plus air
+function cmbAxisStride(rows, wrapW) {
+  // Before the first measurement, assume tight rather than roomy: an axis that
+  // starts sparse and fills in on measure is calmer than one that starts full
+  // and visibly thins.
+  if (!wrapW) return rows.length;
+  return Math.max(1, Math.ceil(CMB_AXIS_LABEL_PX / (wrapW / rows.length)));
+}
+// Claimed in three passes, each keeping only what clears everything already
+// kept by the stride. The order is the priority: the newest column first (the
+// period the book is in now is the one a reader looks for), then the year starts
+// (what says which year a run of "q3 q4 q1" is in), then whatever gaps are left.
+// Anchors thin against each other under the same rule rather than being
+// exempt — at ten years of quarters a q1 every year is itself too dense, and
+// exempting them was what pushed the newest column's own label off the axis.
+function cmbAxisKeep(rows, period, stride) {
+  if (stride <= 1) return null;                     // null: label every column
+  const n = rows.length;
+  const keep = [n - 1];
+  const clear = (i) => keep.every(j => Math.abs(j - i) >= stride);
+  for (let i = n - 2; i >= 0; i--) if (period.yearStart(rows[i].k) && clear(i)) keep.push(i);
+  for (let i = n - 2; i >= 0; i--) if (clear(i)) keep.push(i);
+  return new Set(keep);
 }
 
 // Outlined columns: 1px stroke over a 0.13 fill, square corners. Everything
@@ -1786,16 +1902,26 @@ const cmbBarMeta = (benchKey) => [
   { key: 'pm',    label: 'polymarket',              color: CMB_C_PM },
 ];
 
-function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
+function CmbPnlBars({ periodic, unit, benchKey = 'spx' }) {
   const svgRef = useCmbRef(null);
+  const wrapRef = useCmbRef(null);
   const [hover, setHover] = useCmbState(null);
-  // In percent the series carries additive contributions, so differencing month
+  const [wrapW, setWrapW] = useCmbState(0);
+  // On mount plus a resize listener rather than a ResizeObserver, which is how
+  // the rest of the site measures (usePmNarrow, the politics strip). Only the
+  // axis stride reads this — the chart itself is scale-free.
+  useCmbEffect(() => {
+    const measure = () => { if (wrapRef.current) setWrapW(wrapRef.current.clientWidth); };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+  // In percent the series carries additive contributions, so differencing period
   // ends still gives columns that sum to the window's total return — the same
   // arithmetic that works on cumulative dollars.
   const fmt = (v) => cmbFmt(v, unit);
-  const months = cmbMonthly(series, benchKey);
-  if (months.length < 2) return null;
-  const hasBench = months.some(m => m.bench != null);
+  const { period, rows, hasBench } = periodic;
+  if (rows.length < 2) return null;
   const bars = cmbBarMeta(benchKey).filter(b => b.key !== 'bench' || hasBench);
   const nb = bars.length;
   const F = CMB_BARS_FRAME;
@@ -1805,16 +1931,19 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
   // vertical center with a symmetric ±maxAbs. The books are lopsided (a
   // trailing year runs roughly -43k..+79k), so forced symmetry left a third of
   // the plot permanently empty and shortened every column to pay for it.
-  const vals = months.flatMap(m => bars.map(b => m[b.key]).filter(v => v != null));
+  const vals = rows.flatMap(m => bars.map(b => m[b.key]).filter(v => v != null));
   const { y0, y1 } = szDomain(vals, { pad: 0.08, floor: 1, min: 0, max: 0 });
   // Columns sit in slots rather than on coordinates, so only the y scale comes
   // from the shared pair — x is built from `slot` below.
-  const { y } = szScales(F, months.length, y0, y1);
+  const { y } = szScales(F, rows.length, y0, y1);
   const zeroY = y(0);
 
-  const slot = (W - PAD_L - PAD_R) / months.length;
-  const step = Math.max(6, Math.min(11, (slot * 0.62) / nb));
-  const bw = Math.max(3, Math.min(9, step * 0.8));
+  // The floors here are what cmbBarMaxCols solves for: the period ladder hands
+  // this a column count that keeps `slot` wider than a group, so the clamps are
+  // the guarantee the columns stay legible rather than the thing that fails.
+  const slot = (W - PAD_L - PAD_R) / rows.length;
+  const step = Math.max(CMB_BAR_STEP_MIN, Math.min(CMB_BAR_STEP_MAX, (slot * CMB_BAR_SLOT_FILL) / nb));
+  const bw = Math.max(3, Math.min(9, step * CMB_BAR_W_RATIO));
   const cx = (i) => PAD_L + slot * (i + 0.5);
   const barX = (i, j) => cx(i) + (j - (nb - 1) / 2) * step;
 
@@ -1824,15 +1953,15 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
     const rect = svg.getBoundingClientRect();
     const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
     const px = ((clientX - rect.left) / rect.width) * W;
-    const idx = Math.max(0, Math.min(months.length - 1, Math.floor((px - PAD_L) / slot)));
+    const idx = Math.max(0, Math.min(rows.length - 1, Math.floor((px - PAD_L) / slot)));
     setHover(idx);
   }
-  const hovered = hover != null ? months[hover] : null;
-  const mLabel = (ym) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][+ym.slice(5, 7) - 1];
+  const hovered = hover != null ? rows[hover] : null;
+  const keep = cmbAxisKeep(rows, period, cmbAxisStride(rows, wrapW));
 
   return (
     <React.Fragment>
-    <div className="pm-chart-wrap">
+    <div className="pm-chart-wrap" ref={wrapRef}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
@@ -1846,10 +1975,12 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
       >
         <SzRule frame={F} y={zeroY}/>
 
-        {/* Faint rule at each year boundary — a bare run of month abbreviations
-            with two januaries in view can't say which year it's in. */}
-        {months.map((m, i) => (i > 0 && m.ym.slice(5, 7) === '01') && (
-          <line key={`yr-${m.ym}`} x1={(cx(i) + cx(i - 1)) / 2} x2={(cx(i) + cx(i - 1)) / 2}
+        {/* Faint rule at each year boundary — a bare run of period names with
+            two januaries (or two q1s) in view can't say which year it's in. At
+            the annual period every column is a year, so there is nothing to
+            divide and `yearStart` returns false throughout. */}
+        {rows.map((m, i) => (i > 0 && period.yearStart(m.k)) && (
+          <line key={`yr-${m.k}`} x1={(cx(i) + cx(i - 1)) / 2} x2={(cx(i) + cx(i - 1)) / 2}
             y1={PAD_T - 6} y2={H - PAD_B + 2} stroke="rgba(229,225,241,0.10)"/>
         ))}
 
@@ -1858,14 +1989,14 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
             fill={CMB_C_IBKR} opacity="0.07"/>
         )}
 
-        {months.map((m, i) => (
-          <g key={m.ym} opacity={hover == null || hover === i ? 1 : 0.35}>
+        {rows.map((m, i) => (
+          <g key={m.k} opacity={hover == null || hover === i ? 1 : 0.35}>
             {bars.map((b, j) => {
               const v = m[b.key];
               if (v == null || v === 0) return null;
               const x = barX(i, j), yv = y(v);
               const h = Math.abs(yv - zeroY);
-              // Sub-pixel months keep their cap on the zero line instead of
+              // Sub-pixel periods keep their cap on the zero line instead of
               // vanishing or being floored to a fake minimum height — an
               // outline can lose its body and still read as itself. (The old
               // Math.max(0.5, …) drew these as a half-pixel fuzz along the
@@ -1886,15 +2017,20 @@ function CmbMonthlyBars({ series, unit, benchKey = 'spx' }) {
         ))}
       </svg>
       <div className="pf-axis-x">
-        {months.map((m, i) => (
-          <span key={m.ym} style={{ left: `${(cx(i) / W) * 100}%` }}>
-            {m.ym.slice(5, 7) === '01' ? `${mLabel(m.ym)} ${m.ym.slice(2, 4)}` : mLabel(m.ym)}
+        {/* The newest column carries its year whether or not it opens one, so the
+            axis is always year-resolvable from its right edge inward. Without it
+            a strided axis ending "… q1 28 · q2" cannot say which year that q2 is
+            in (the stride can drop the 2029 q1 right beside it), and even
+            unstrided a window holding no january named no year at all. */}
+        {rows.map((m, i) => (!keep || keep.has(i)) && (
+          <span key={m.k} style={{ left: `${(cx(i) / W) * 100}%` }}>
+            {(period.yearStart(m.k) || i === rows.length - 1) ? period.labelYear(m.k) : period.label(m.k)}
           </span>
         ))}
       </div>
       {hovered && (
         <SzTooltip frame={F} x={cx(hover)} top="6%">
-          <div className="pm-tt-date">{hovered.ym}</div>
+          <div className="pm-tt-date">{period.full(hovered.k)}</div>
           {/* Rows follow the on-chart column order so the tooltip reads left
               to right the same way the marks do. */}
           <div className="pf-tt-bench" style={{ color: CMB_C_IBKR }}>ibkr {fmt(hovered.ibkr)}</div>
@@ -2149,6 +2285,7 @@ function Combined({ setView }) {
   // Lifetime, not windowed: it labels the ledger the ticks come from, and a sum
   // that shrank when the reader picked 1M would look like money coming back.
   const xferTotal = (data.transfers || []).reduce((sum, t) => sum + ((t && t.amount) || 0), 0);
+  const periodic = cmbPeriodic(shown, primary);
   // The capital chart spans only the days the split is measured, which on any
   // window reaching back past 2026-01-09 is a suffix of the range every other
   // panel draws. Said in the meta rather than left for the reader to notice
@@ -2319,15 +2456,21 @@ function Combined({ setView }) {
         </div>
       )}
 
-      {cmbMonthly(win.series, primary).length > 1 && (
+      {/* Built here rather than inside the chart because the title has to name
+          what a column is: the period is chosen by how many of them the window
+          holds (see cmbPeriodic), so on a long-enough MAX this panel is
+          "quarterly pnl" and the columns are quarters. Built off `shown` — the
+          series actually drawn — so the guard and the title can't describe a
+          different chart from the one below them. */}
+      {periodic.rows.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">monthly pnl · {cmbRangeLabel(range)}</span>
+            <span className="pf-panel-title">{periodic.period.title} pnl · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">
               ibkr · {primaryName} · polymarket{pct ? ' · contribution to return' : ''}
             </span>
           </div>
-          <CmbMonthlyBars series={shown} unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
+          <CmbPnlBars periodic={periodic} unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
         </div>
       )}
 
