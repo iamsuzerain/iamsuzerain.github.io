@@ -2344,7 +2344,6 @@ function Polymarket() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">activity</span>
-            <span className="pf-panel-meta">last {activity.length} trades</span>
           </div>
           <PmActivity rows={activity}/>
         </div>

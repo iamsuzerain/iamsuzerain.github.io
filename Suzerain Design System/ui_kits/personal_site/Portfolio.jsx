@@ -1667,20 +1667,18 @@ function Portfolio() {
           carried is the big one — the other takes the small colored line
           underneath. Same shape under both units; only the pair swaps. */}
       <div className="pf-stats">
-        {/* Every kicker carries `· twr` now. It used to sit on 1y alone, which
-            read as a distinction — and was one: the other three divided dollar
-            P&L by the NAV the period opened on. All four are the same chained
-            return the chart draws, so the label says so on all four. */}
-        {[['mtd', 'mtd', 'month to date · twr'],
-          ['qtd', 'qtd', 'quarter to date · twr'],
-          ['ytd', 'ytd', 'year to date · twr'],
-          ['1y', '1y', 'trailing 12mo · twr']].map(([key, label, kicker]) => {
+        {/* `twr` on all four. It used to sit on 1y alone, which read as a
+            distinction — and was one: the other three divided dollar P&L by the
+            NAV the period opened on. All four are the same chained return the
+            chart draws, so every tile says so. The period itself is the label,
+            so the kicker does not spell it out a second time. */}
+        {['mtd', 'qtd', 'ytd', '1y'].map((key) => {
           const p = d.pnl[key];
           if (!p) return null;
           return usd
-            ? <StatTile key={key} label={label} value={fmtUSD(p.abs)} change={p.pct} kicker={kicker}/>
-            : <StatTile key={key} label={label} value={fmtPct(p.pct)} change={p.pct}
-                changeText={fmtUSD(p.abs)} kicker={kicker}/>;
+            ? <StatTile key={key} label={key} value={fmtUSD(p.abs)} change={p.pct} kicker="twr"/>
+            : <StatTile key={key} label={key} value={fmtPct(p.pct)} change={p.pct}
+                changeText={fmtUSD(p.abs)} kicker="twr"/>;
         })}
       </div>
 

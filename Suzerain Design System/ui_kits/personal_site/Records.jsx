@@ -879,7 +879,7 @@ function Records() {
     <section className="pf-wrap rec-view">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ records · ibkr + polymarket</div>
+          <div className="sz-kicker">◆ records</div>
           <h2 className="sz-h2 pm-headline">
             <span>{rec.days.length}</span>
             <span className="pf-currency">days on record</span>
