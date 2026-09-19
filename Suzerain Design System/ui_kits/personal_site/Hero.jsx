@@ -54,9 +54,9 @@ function StreamEntry({ entry }) {
     : <div className="sz-log-entry">{inner}</div>;
 }
 
-// No CTA row under the sub. It was book / ibkr / polymarket, which is three
-// of the seven destinations the nav already carries — and the nav is on screen
-// at the same moment, one line above it.
+// Name, tagline, log. Nothing else: the status line, the "tracker live since"
+// sub and the ibkr / polymarket / volatility footer all stated things the nav,
+// the about page or the log itself already carry.
 function Hero() {
   const c = window.CONTENT.home;
   const stream = buildStream(c.log, window.POSTS);
@@ -64,21 +64,11 @@ function Hero() {
   const older = stream.length - shown.length;
   return (
     <section className="sz-hero">
-      <div className="sz-hero-meta">▸ status · online · {new Date().toLocaleDateString('en-CA')}</div>
       <h1 className="sz-hero-name">{c.name}<Cursor /></h1>
       <p className="sz-hero-tag">{c.tag}</p>
-      <p className="sz-hero-sub">{c.sub}</p>
       <div className="sz-log">
         {shown.map(entry => <StreamEntry key={`${entry.date}/${entry.slug || ''}`} entry={entry} />)}
         {older > 0 && <a className="sz-log-more" href="#/thoughts">{older} older →</a>}
-      </div>
-
-      <div className="sz-hero-footer">
-        <span>ibkr </span>
-        <span className="sz-sep">·</span>
-        <span>polymarket </span>
-        <span className="sz-sep">·</span>
-        <span>volatility</span>
       </div>
     </section>
   );

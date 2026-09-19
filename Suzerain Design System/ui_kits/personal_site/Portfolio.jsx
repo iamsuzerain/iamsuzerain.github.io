@@ -1625,7 +1625,7 @@ function Portfolio() {
     <section className="pf-wrap">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ ibkr · flex query feed</div>
+          <div className="sz-kicker">◆ ibkr</div>
           <h2 className="sz-h2">${Math.round(d.account.nav).toLocaleString()}<span className="pf-currency">{d.account.currency}</span></h2>
           <div className="pf-sub">
             account {d.account.id} <span className="sz-sep">·</span>
@@ -1659,11 +1659,7 @@ function Portfolio() {
           past the fold, and a note explaining what the numbers are is no use
           underneath them. */}
       <div className="pf-footer pf-note-top">
-        <span>source · IBKR Flex Query (daily cron via github actions)</span>
-        <span className="sz-sep">·</span>
-        <span>not financial advice</span>
-        <span className="sz-sep">·</span>
-        <span>delayed up to 24h</span>
+        <span>source · IBKR Flex Query</span>
       </div>
 
       {/* These four are fixed calendar periods, not the range picker's window,
@@ -1698,7 +1694,7 @@ function Portfolio() {
               the vol tile two along is the entire reason this tile is here. */}
           <StatTile label="sortino" value={fmtNum(winRisk.sortino)}         kicker={`downside dev ${fmtPctBare(winRisk.downside)}`}/>
           <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
-          <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)} kicker="peak-to-trough"/>
+          <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)}/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}
                     kicker={betaObj ? `vs ${primaryName} · r² ${fmtNum(betaObj.r2)}` : `vs ${primaryName}`}/>
         </div>
@@ -1723,7 +1719,7 @@ function Portfolio() {
         {/* Drawdown stays in percent under both units: a decline from peak is a
             portfolio-level ratio, and the combined view reads it the same way. */}
         <div className="pf-strip-head">
-          <span className="pf-strip-label">underwater · drawdown from peak</span>
+          <span className="pf-strip-label">underwater</span>
           <span className="pf-strip-meta">max {fmtPctBare(winMaxDd)} · now {fmtPctBare(winCurDd)}</span>
         </div>
         <DrawdownStrip perfSeries={win.perf}/>
@@ -1773,7 +1769,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">benchmark comparison · {pfRangeLabel(range)}</span>
-            <span className="pf-panel-meta">click a row to draw it · → is the one the tiles above name</span>
+            <span className="pf-panel-meta">click a row to draw it</span>
           </div>
           <BenchTable rows={benchRows} selected={benchKeys} primary={primary}
             onToggle={toggleBench}/>
@@ -1819,7 +1815,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">drawdown episodes · {pfRangeLabel(range)}</span>
-            <span className="pf-panel-meta">deepest {episodes.length}, peak to recovery</span>
+            <span className="pf-panel-meta">peak to recovery</span>
           </div>
           <DrawdownTable episodes={episodes}/>
         </div>
@@ -1834,7 +1830,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">attribution · by instrument type · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per asset class · fixed 12mo, not range-linked</span>
+            <span className="pf-panel-meta">mark-to-market p&l per asset class</span>
           </div>
           <AssetClassBars rows={d.byAssetClass}/>
         </div>
@@ -1844,7 +1840,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">contribution to return · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per holding · fixed 12mo, not range-linked</span>
+            <span className="pf-panel-meta">mark-to-market p&l per holding</span>
           </div>
           <ContributionBars rows={d.contribution}/>
         </div>

@@ -1317,7 +1317,7 @@ function CmbDrawdownStrip({ series, markers, cur, onPick }) {
 
   return (
     <>
-      <SzStripHead label="underwater · drawdown from peak"
+      <SzStripHead label="underwater"
         meta={`max ${pct(maxDD)} · now ${pct(curDD)}`}/>
       <div className="pm-chart-wrap">
         <SzChartSvg frame={F} hover={hv} n={dd.length}
@@ -2161,13 +2161,13 @@ function Combined({ setView }) {
     <section className="pf-wrap cmb-view">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ book · ibkr + polymarket</div>
+          <div className="sz-kicker">◆ book</div>
           <h2 className="sz-h2 pm-headline">
             <span>{pct ? cmbPctFmt(sLast.v) : `${pos ? '+' : ''}${cmbUSD(wTotal)}`}</span>
             <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${cmbRangeLabel(range)} pnl`}</span>
           </h2>
           <div className="pf-sub">
-            deposit-adjusted brokerage + prediction-market trading{data.bdExtra ? ' + rewards' : ''}, {rangeSub}
+            deposit-adjusted <span className="sz-sep">·</span> {rangeSub}
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
@@ -2263,7 +2263,7 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">benchmark comparison · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">click a row to draw it · → is the one the tiles above name</span>
+            <span className="pf-panel-meta">click a row to draw it</span>
           </div>
           <SZ.BenchTable rows={cBenchRows} selected={benchKeys} primary={primary}
             onToggle={toggleBench}/>
@@ -2292,7 +2292,7 @@ function Combined({ setView }) {
             <CmbStat label="sortino" value={risk.sortino != null ? risk.sortino.toFixed(2) : '—'}
               note={`downside dev ${risk.downside != null ? pct1(risk.downside) : '—'}`}/>
             <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
-            <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined} note="peak-to-trough"/>
+            <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined}/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
               note={risk.beta != null && risk.r2 != null ? `vs ${primaryName} · r² ${risk.r2.toFixed(2)}` : `vs ${primaryName}`}/>
             {/* Full overlap, not the selected range — at 1M this would be ~21
@@ -2346,7 +2346,7 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">drawdown episodes · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">deepest {cEpisodes.length}, peak to recovery</span>
+            <span className="pf-panel-meta">peak to recovery</span>
           </div>
           <SZ.DrawdownTable episodes={cEpisodes}/>
         </div>

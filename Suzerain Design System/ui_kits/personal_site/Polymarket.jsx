@@ -1669,7 +1669,7 @@ function PmCalibration({ cal }) {
       {series === 'settlement' && (
         <div className="pf-panel-head" style={{ marginTop: 4 }}>
           <span className="pf-panel-meta">
-            positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved. the true calibration test
+            positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved
           </span>
         </div>
       )}
@@ -2235,7 +2235,7 @@ function Polymarket() {
     <section className="pf-wrap pm-view">
       <div className="pf-head">
         <div>
-          <div className="sz-kicker">◆ polymarket · live positions + daily snapshots</div>
+          <div className="sz-kicker">◆ polymarket</div>
           <h2 className="sz-h2 pm-headline">
             {pmUSD(summary.totalValue)}
             <span className="pf-currency">
@@ -2266,7 +2266,7 @@ function Polymarket() {
           value={pmUSD(realizedTotal)}
           tone={realizedTotal == null ? null : realizedTotal >= 0 ? 'pos' : 'neg'}
           kicker={pmPnlKicker('settled · all markets', hasPnl, pnlStale, pnlPending)}/>
-        <PmStat label="open positions" value={String(summary.openPositions)} kicker="markets currently held"/>
+        <PmStat label="open positions" value={String(summary.openPositions)}/>
       </div>
 
       <PmBreakdown bd={breakdown} tradingPnl={lifetimePnl} />

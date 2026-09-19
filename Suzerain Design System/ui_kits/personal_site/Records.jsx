@@ -885,7 +885,7 @@ function Records() {
             <span className="pf-currency">days on record</span>
           </h2>
           <div className="pf-sub">
-            the whole book, {recSpan(first, last)} · daily twr on the capital that earned it
+            the whole book, {recSpan(first, last)} · daily twr
           </div>
         </div>
       </div>
@@ -908,7 +908,7 @@ function Records() {
         <RecLegend/>
       </div>
 
-      <RecPanel title="records" meta="complete weeks and months only · tap any record to find it on the calendar">
+      <RecPanel title="records" meta="complete weeks and months only">
         {grid(groups.records)}
       </RecPanel>
 
@@ -923,7 +923,7 @@ function Records() {
       </RecPanel>
 
       {groups.bets && (
-        <RecPanel title="polymarket bets" meta={`${groups.betCount} closed bets · realized, sold or settled · best and worst by event · underdog means entered under 50¢`}>
+        <RecPanel title="polymarket bets" meta={`${groups.betCount} closed bets · realized, sold or settled · underdog means entered under 50¢`}>
           {grid(groups.bets)}
         </RecPanel>
       )}
