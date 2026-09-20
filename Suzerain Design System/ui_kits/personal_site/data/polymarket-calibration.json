@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T11:10:40Z",
+  "generatedAt": "2026-09-20T11:33:27Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 686,
-      "wins": 629,
+      "n": 691,
+      "wins": 634,
       "pushes": 0,
-      "hitRate": 0.9169,
-      "volume": 4010103.46,
-      "realizedPnl": 105451.27,
+      "hitRate": 0.9175,
+      "volume": 4024120.54,
+      "realizedPnl": 105832.09,
       "roi": 0.0263,
-      "brier": 0.0405,
-      "avgImplied": 0.8946,
-      "edge": 0.0223,
-      "calibrationError": 0.0309
+      "brier": 0.0402,
+      "avgImplied": 0.895,
+      "edge": 0.0225,
+      "calibrationError": 0.031
     },
     "exit": {
-      "n": 300,
+      "n": 301,
       "wins": 200,
       "pushes": 9,
-      "hitRate": 0.6873,
-      "volume": 1430586.9,
-      "realizedPnl": -24918.46,
-      "roi": -0.0174
+      "hitRate": 0.6849,
+      "volume": 1433700.93,
+      "realizedPnl": -25632.63,
+      "roi": -0.0179
     }
   },
   "buckets": {
@@ -192,17 +192,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 50,
-        "wins": 45,
+        "n": 51,
+        "wins": 46,
         "pushes": 0,
-        "winRate": 0.9,
-        "avgImplied": 0.8534,
-        "volume": 151315.38,
-        "realizedPnl": -70346.45,
-        "grossPnl": 94007.59,
-        "winRateByVolume": 0.4569,
-        "wilsonLo": 0.7864,
-        "wilsonHi": 0.9565
+        "winRate": 0.902,
+        "avgImplied": 0.8525,
+        "volume": 152665.24,
+        "realizedPnl": -70029.81,
+        "grossPnl": 94324.23,
+        "winRateByVolume": 0.4617,
+        "wilsonLo": 0.7902,
+        "wilsonHi": 0.9574
       },
       {
         "lo": 0.9,
@@ -222,31 +222,31 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 232,
-        "wins": 231,
+        "n": 233,
+        "wins": 232,
         "pushes": 0,
         "winRate": 0.9957,
-        "avgImplied": 0.9724,
-        "volume": 1746378.35,
-        "realizedPnl": 47622.62,
-        "grossPnl": 48904.0,
+        "avgImplied": 0.9723,
+        "volume": 1747052.75,
+        "realizedPnl": 47649.99,
+        "grossPnl": 48931.37,
         "winRateByVolume": 0.9996,
-        "wilsonLo": 0.976,
+        "wilsonLo": 0.9761,
         "wilsonHi": 0.9992
       },
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 188,
-        "wins": 187,
+        "n": 191,
+        "wins": 190,
         "pushes": 0,
-        "winRate": 0.9947,
+        "winRate": 0.9948,
         "avgImplied": 0.9949,
-        "volume": 1279993.65,
-        "realizedPnl": 5986.36,
-        "grossPnl": 6268.94,
+        "volume": 1291986.47,
+        "realizedPnl": 6023.17,
+        "grossPnl": 6305.75,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.9705,
+        "wilsonLo": 0.9709,
         "wilsonHi": 0.9991
       }
     ],
@@ -374,17 +374,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 53,
+        "n": 54,
         "wins": 30,
         "pushes": 2,
-        "winRate": 0.5882,
-        "avgImplied": 0.8506,
-        "volume": 157584.17,
-        "realizedPnl": -12289.74,
-        "grossPnl": 23932.08,
-        "winRateByVolume": 0.6109,
-        "wilsonLo": 0.4517,
-        "wilsonHi": 0.7125
+        "winRate": 0.5769,
+        "avgImplied": 0.8499,
+        "volume": 160554.02,
+        "realizedPnl": -12859.73,
+        "grossPnl": 24502.07,
+        "winRateByVolume": 0.5996,
+        "wilsonLo": 0.4419,
+        "wilsonHi": 0.7013
       },
       {
         "lo": 0.9,
@@ -393,10 +393,10 @@
         "wins": 40,
         "pushes": 1,
         "winRate": 0.7018,
-        "avgImplied": 0.9287,
-        "volume": 312507.6,
-        "realizedPnl": 3297.38,
-        "grossPnl": 23141.54,
+        "avgImplied": 0.9291,
+        "volume": 312651.78,
+        "realizedPnl": 3153.2,
+        "grossPnl": 22997.36,
         "winRateByVolume": 0.9084,
         "wilsonLo": 0.5734,
         "wilsonHi": 0.8047
@@ -565,13 +565,13 @@
     "geopolitics": {
       "combined": {
         "n": 239,
-        "volume": 1953171.31,
-        "realizedPnl": 50743.13,
-        "roi": 0.026,
+        "volume": 1953315.49,
+        "realizedPnl": 50598.95,
+        "roi": 0.0259,
         "hitRate": 0.8681,
-        "avgImplied": 0.8657,
-        "edge": 0.0024,
-        "top1Share": 0.2179
+        "avgImplied": 0.8658,
+        "edge": 0.0023,
+        "top1Share": 0.2181
       },
       "settlement": {
         "n": 139,
@@ -585,13 +585,13 @@
       },
       "exit": {
         "n": 100,
-        "volume": 655224.3,
-        "realizedPnl": -5335.64,
-        "roi": -0.0081,
+        "volume": 655368.48,
+        "realizedPnl": -5479.82,
+        "roi": -0.0084,
         "hitRate": 0.7188,
-        "avgImplied": 0.7635,
-        "edge": -0.0448,
-        "top1Share": 0.2086
+        "avgImplied": 0.7638,
+        "edge": -0.045,
+        "top1Share": 0.2091
       }
     },
     "macro": {
@@ -682,34 +682,34 @@
     },
     "sports": {
       "combined": {
-        "n": 296,
-        "volume": 825596.83,
-        "realizedPnl": -5003.82,
-        "roi": -0.0061,
-        "hitRate": 0.8068,
-        "avgImplied": 0.8194,
-        "edge": -0.0126,
-        "top1Share": 0.1287
+        "n": 302,
+        "volume": 842583.76,
+        "realizedPnl": -5192.99,
+        "roi": -0.0062,
+        "hitRate": 0.8073,
+        "avgImplied": 0.8215,
+        "edge": -0.0142,
+        "top1Share": 0.1268
       },
       "settlement": {
-        "n": 242,
-        "volume": 634290.18,
-        "realizedPnl": 9088.04,
-        "roi": 0.0143,
-        "hitRate": 0.8719,
-        "avgImplied": 0.8482,
-        "edge": 0.0237,
-        "top1Share": 0.0781
+        "n": 247,
+        "volume": 648307.26,
+        "realizedPnl": 9468.86,
+        "roi": 0.0146,
+        "hitRate": 0.8745,
+        "avgImplied": 0.8503,
+        "edge": 0.0242,
+        "top1Share": 0.0769
       },
       "exit": {
-        "n": 54,
-        "volume": 191306.65,
-        "realizedPnl": -14091.86,
-        "roi": -0.0737,
-        "hitRate": 0.5094,
-        "avgImplied": 0.6902,
-        "edge": -0.1808,
-        "top1Share": 0.211
+        "n": 55,
+        "volume": 194276.5,
+        "realizedPnl": -14661.85,
+        "roi": -0.0755,
+        "hitRate": 0.5,
+        "avgImplied": 0.6924,
+        "edge": -0.1924,
+        "top1Share": 0.208
       }
     },
     "tech": {
@@ -747,46 +747,46 @@
   },
   "openBook": {
     "n": 122,
-    "cost": 279703.59,
-    "mark": 290513.99,
-    "unrealized": 10810.39
+    "cost": 280241.85,
+    "mark": 290575.84,
+    "unrealized": 10333.98
   },
   "openByCategory": {
     "commodities": {
       "n": 5,
       "cost": 38446.79,
-      "mark": 38477.15,
-      "unrealized": 30.37
+      "mark": 38464.46,
+      "unrealized": 17.67
     },
     "geopolitics": {
-      "n": 32,
-      "cost": 66385.67,
-      "mark": 73849.16,
-      "unrealized": 7463.48
+      "n": 33,
+      "cost": 76107.24,
+      "mark": 82947.1,
+      "unrealized": 6839.86
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 286.2,
-      "unrealized": -52.2
+      "mark": 246.6,
+      "unrealized": -91.8
     },
     "politics": {
-      "n": 74,
-      "cost": 159647.1,
-      "mark": 162758.9,
-      "unrealized": 3111.79
+      "n": 75,
+      "cost": 160196.58,
+      "mark": 163605.24,
+      "unrealized": 3408.66
     },
     "sports": {
-      "n": 9,
-      "cost": 13102.14,
-      "mark": 13383.5,
-      "unrealized": 281.36
+      "n": 7,
+      "cost": 3369.36,
+      "mark": 3558.99,
+      "unrealized": 189.63
     },
     "tech": {
       "n": 1,
       "cost": 1783.49,
-      "mark": 1759.09,
-      "unrealized": -24.4
+      "mark": 1753.45,
+      "unrealized": -30.04
     }
   },
   "openCategories": {
@@ -802,7 +802,6 @@
     "0x190aad2ac982a1580aa8898eff5b5145bea98410efb1c27fa48b9855b0816816": "politics",
     "0x1a01bf78f56a507fcb666d564d8c8b91b0750679163ed6e96746102c9b7d285d": "geopolitics",
     "0x1c017cbb38a9d0ab233ebb265b25c78290317e6a2470657ca18a73a112397b55": "politics",
-    "0x1d314271645d7cba333899f967c38091450850f5902478e1b0539002fac0e484": "sports",
     "0x1df56873c9504fb7d14aa1a97be841679ae61f979b3630aa4865ffea0326fdc6": "politics",
     "0x21017b31d4a1d3985f2121f1d452d857d54ac45c975507c6ace3ae6041f9a62f": "politics",
     "0x2371ca77fc832c1dbb15274fd22ca0c47b9440b83a0eda040b603cf7b6d356c6": "commodities",
@@ -841,7 +840,6 @@
     "0x5c881188a151876e13d8bf67c36c03e34ce851bd5fbc2163288e9e45b93ef46c": "geopolitics",
     "0x5dacb3919e3eb6372770cba85c42e0f980ddf18b1a767751de700ee272269233": "politics",
     "0x5e95ab3b85ce3e98f7cc841671ddb18807c0819487134925b639402b499f360f": "politics",
-    "0x5f0c572a4cf1facef94b8c03b0ce2db5911447a885a02d5cd01382f9794ede77": "sports",
     "0x63d8f3a34c90bd5342dda8acf62b6a898dfa52f86475efaf180b66493ef6af80": "geopolitics",
     "0x64b001ee377252b9f1d1c9fec81fabdacfd3bcaeaccd35aa40939852107ed82c": "politics",
     "0x6664de877892786b699c552ef88f25ff6e4828f9a847e4f40e4d6d9cd30b1485": "politics",
@@ -855,6 +853,7 @@
     "0x771873c365f87bffd990644e4b688aebc1be7f18396d2eab64b996ff66e88669": "politics",
     "0x78cd764ab3cdfa56aed4b35f5c9b0f19b011c429ea896a8211dd11d9b9820716": "politics",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
+    "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
     "0x812d9ea644c58f1e889643bbd9184e9c5fdacbba55d1f9fef2eb2d55ce5dc1c2": "politics",
     "0x81a537b379a35e4e17c286d3b37394e94bd74c1779bbe9a13670eb991b201a3a": "geopolitics",
     "0x883c09380a078565f29485a9d3671fff48853a87de9a5bf48bc204f7161250c9": "politics",
@@ -920,7 +919,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 466,
+      "events": 470,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1923,8 +1922,14 @@
     ["sports","2026-09-18","e",22804.5,137.55,1,0.95,"Lions vs. Bills","Bills",null],
     ["sports","2026-09-18","s",143.03,3.97,1,0.973,"Lions vs. Bills: O/U 26.5","Over","Lions vs. Bills"],
     ["commodities","2026-09-19","s",449.14,47.92,1,0.9036,"Will WTI Crude Oil (WTI) hit (LOW) $95 in September?","Yes","What will WTI Crude Oil (WTI) hit in September 2026?"],
-    ["geopolitics","2026-09-19","e",5406.79,203.62,1,0.9247,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
+    ["sports","2026-09-19","s",1173.29,8.71,1,0.9926,"USC vs. Rutgers","USC",null],
+    ["sports","2026-09-19","s",9728.13,19.5,1,0.998,"Kent State vs. Ohio State","Ohio State",null],
     ["sports","2026-09-19","s",750.27,0.74,1,0.999,"San Francisco Giants vs. Los Angeles Dodgers","Los Angeles Dodgers",null],
-    ["sports","2026-09-19","s",10945.28,115.24,1,0.9896,"Miami (FL) vs. Wake Forest","Miami (FL)",null]
+    ["sports","2026-09-19","s",10945.28,115.24,1,0.9896,"Miami (FL) vs. Wake Forest","Miami (FL)",null],
+    ["geopolitics","2026-09-20","e",5550.97,59.44,1,0.9493,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
+    ["sports","2026-09-20","s",1091.4,8.6,1,0.9922,"San Francisco Giants vs. Los Angeles Dodgers","Los Angeles Dodgers",null],
+    ["sports","2026-09-20","e",2969.85,-569.99,0,0.81,"LSU vs. Ole Miss","Ole Miss",null],
+    ["sports","2026-09-20","s",1349.86,316.64,1,0.81,"LSU vs. Ole Miss","Ole Miss",null],
+    ["sports","2026-09-20","s",674.4,27.37,1,0.961,"Michigan State vs. Notre Dame","Notre Dame",null]
   ]
 }
