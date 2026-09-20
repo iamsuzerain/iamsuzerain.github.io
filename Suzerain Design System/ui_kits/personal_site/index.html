@@ -620,6 +620,18 @@
   @media (max-width: 900px) {
     .pf-stats-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
+  /* The four fixed tracks above are the ibkr page's four calendar periods. The
+     book runs a different row — ibkr, polymarket, and a `vs {bench}` that only
+     draws when the overlay loaded — so against a grid built for four it left a
+     quarter of itself empty on the right, which read as a fourth tile that had
+     failed to load rather than as a row of three. Column flow rather than a
+     count class: the row then fits two tiles or three without being told which
+     it got, and the benchmark tile can come and go on its own. */
+  .cmb-view > .pf-stats {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
   .pf-strip-head {
     display: flex; justify-content: space-between; align-items: baseline;
     margin-top: 16px; margin-bottom: 2px;
@@ -1053,7 +1065,10 @@
     /* Book's three tiles in two columns stranded the third on a row of its own
        and cost 250px ahead of the chart. As rows — name and note left, figure
        right — the three take about 180px. */
-    .cmb-view > .pf-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 16px; }
+    .cmb-view > .pf-stats {
+      grid-auto-flow: row;   /* undoes the column flow the wide rule sets */
+      grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 16px;
+    }
     .cmb-view > .pf-stats .pf-stat {
       display: grid; grid-template-columns: minmax(0, 1fr) auto;
       column-gap: 12px; row-gap: 3px; align-items: center;
