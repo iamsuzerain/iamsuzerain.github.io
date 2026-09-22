@@ -9,7 +9,7 @@
     "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "totals": {
-    "trading": 100643,
+    "trading": 100621,
     "lp": 8537,
     "yield": 68,
     "maker": 3555,
@@ -20,8 +20,8 @@
   },
   "balances": {
     "positionsSource": "polymarket",
-    "positions": 283395,
-    "cash": 39200,
-    "nav": 322595
+    "positions": 284097,
+    "cash": 38640,
+    "nav": 322737
   }
 }
