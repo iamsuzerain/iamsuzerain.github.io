@@ -31,12 +31,8 @@
      why .sz-nav never stuck to the top of the window. `clip` suppresses the
      same sideways overflow without creating that container. */
   html, body { margin: 0; padding: 0; min-height: 100vh; background: var(--ink-1); overflow-x: clip; }
-  /* `clip`, not `hidden`. overflow:hidden makes this a scroll container, and a
-     sticky descendant sticks to its nearest scroll container — so .sz-nav has
-     never actually stuck; it scrolled away with the page. overflow:clip does
-     the same clipping without creating that container, so sticky works again.
-     The decorative layers inside are position:fixed and clip to the viewport
-     either way, so nothing else changes. */
+  /* `clip`, not `hidden`, for the same reason. The decorative layers inside are
+     position:fixed and clip to the viewport either way, so nothing else changes. */
   .sz-chrome { position: relative; min-height: 100vh; overflow: clip; }
 
   /* base violet bloom — keep */

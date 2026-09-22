@@ -5,61 +5,20 @@
       "name": "personal_site",
       "runtimeExecutable": "python",
       "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8765",
-        "--directory",
-        "Suzerain Design System/ui_kits/personal_site"
+        "Suzerain Design System/ui_kits/personal_site/scripts/serve.py",
+        "8810"
       ],
-      "port": 8765
-    },
-    {
-      "name": "personal_site_8766",
-      "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8766",
-        "--directory",
-        "Suzerain Design System/ui_kits/personal_site"
-      ],
-      "port": 8766
-    },
-    {
-      "name": "personal_site_8767",
-      "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8767",
-        "--directory",
-        "Suzerain Design System/ui_kits/personal_site"
-      ],
-      "port": 8767
-    },
-    {
-      "name": "personal_site_8768",
-      "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8768",
-        "--directory",
-        "Suzerain Design System/ui_kits/personal_site"
-      ],
-      "port": 8768
+      "port": 8810
     },
     {
       "name": "personal_site_dist",
       "runtimeExecutable": "python",
       "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8769",
-        "--directory",
+        "Suzerain Design System/ui_kits/personal_site/scripts/serve.py",
+        "8811",
         "Suzerain Design System/ui_kits/personal_site/dist"
       ],
-      "port": 8769
+      "port": 8811
     }
   ]
 }
