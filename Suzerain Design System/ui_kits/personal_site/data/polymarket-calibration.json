@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T12:59:49Z",
+  "generatedAt": "2026-09-22T11:48:51Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 692,
-      "wins": 635,
+      "n": 694,
+      "wins": 636,
       "pushes": 0,
-      "hitRate": 0.9176,
-      "volume": 4036884.34,
-      "realizedPnl": 107698.81,
+      "hitRate": 0.9164,
+      "volume": 4037670.34,
+      "realizedPnl": 107712.81,
       "roi": 0.0267,
       "brier": 0.0402,
-      "avgImplied": 0.895,
-      "edge": 0.0227,
-      "calibrationError": 0.0311
+      "avgImplied": 0.8941,
+      "edge": 0.0223,
+      "calibrationError": 0.0315
     },
     "exit": {
-      "n": 302,
-      "wins": 200,
+      "n": 305,
+      "wins": 201,
       "pushes": 9,
-      "hitRate": 0.6826,
-      "volume": 1440445.16,
-      "realizedPnl": -22544.11,
-      "roi": -0.0157
+      "hitRate": 0.6791,
+      "volume": 1449783.88,
+      "realizedPnl": -25073.02,
+      "roi": -0.0173
     }
   },
   "buckets": {
@@ -102,17 +102,17 @@
       {
         "lo": 0.2,
         "hi": 0.3,
-        "n": 7,
+        "n": 8,
         "wins": 1,
         "pushes": 0,
-        "winRate": 0.1429,
-        "avgImplied": 0.2659,
-        "volume": 2614.71,
-        "realizedPnl": -2392.71,
-        "grossPnl": 2705.21,
-        "winRateByVolume": 0.0251,
-        "wilsonLo": 0.0257,
-        "wilsonHi": 0.5131
+        "winRate": 0.125,
+        "avgImplied": 0.2651,
+        "volume": 2640.71,
+        "realizedPnl": -2418.71,
+        "grossPnl": 2731.21,
+        "winRateByVolume": 0.0249,
+        "wilsonLo": 0.0224,
+        "wilsonHi": 0.4709
       },
       {
         "lo": 0.3,
@@ -222,16 +222,16 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 233,
-        "wins": 232,
+        "n": 234,
+        "wins": 233,
         "pushes": 0,
         "winRate": 0.9957,
         "avgImplied": 0.9723,
-        "volume": 1747052.75,
-        "realizedPnl": 47649.99,
-        "grossPnl": 48931.37,
+        "volume": 1747812.75,
+        "realizedPnl": 47689.99,
+        "grossPnl": 48971.37,
         "winRateByVolume": 0.9996,
-        "wilsonLo": 0.9761,
+        "wilsonLo": 0.9762,
         "wilsonHi": 0.9992
       },
       {
@@ -254,17 +254,17 @@
       {
         "lo": 0.0,
         "hi": 0.1,
-        "n": 19,
-        "wins": 10,
+        "n": 21,
+        "wins": 11,
         "pushes": 1,
-        "winRate": 0.5556,
-        "avgImplied": 0.0327,
-        "volume": 2302.28,
-        "realizedPnl": 863.7,
-        "grossPnl": 1264.54,
-        "winRateByVolume": 0.8222,
-        "wilsonLo": 0.3372,
-        "wilsonHi": 0.7544
+        "winRate": 0.55,
+        "avgImplied": 0.0297,
+        "volume": 2333.35,
+        "realizedPnl": 862.95,
+        "grossPnl": 1279.81,
+        "winRateByVolume": 0.8147,
+        "wilsonLo": 0.3421,
+        "wilsonHi": 0.7418
       },
       {
         "lo": 0.1,
@@ -329,17 +329,17 @@
       {
         "lo": 0.5,
         "hi": 0.6,
-        "n": 9,
+        "n": 10,
         "wins": 5,
         "pushes": 0,
-        "winRate": 0.5556,
-        "avgImplied": 0.5549,
-        "volume": 31263.0,
-        "realizedPnl": -738.41,
-        "grossPnl": 1061.63,
-        "winRateByVolume": 0.079,
-        "wilsonLo": 0.2666,
-        "wilsonHi": 0.8112
+        "winRate": 0.5,
+        "avgImplied": 0.555,
+        "volume": 40074.2,
+        "realizedPnl": -3327.53,
+        "grossPnl": 3710.93,
+        "winRateByVolume": 0.0625,
+        "wilsonLo": 0.2366,
+        "wilsonHi": 0.7634
       },
       {
         "lo": 0.6,
@@ -349,10 +349,10 @@
         "pushes": 0,
         "winRate": 0.6923,
         "avgImplied": 0.6587,
-        "volume": 50774.54,
-        "realizedPnl": -1995.74,
-        "grossPnl": 5840.94,
-        "winRateByVolume": 0.8075,
+        "volume": 51270.99,
+        "realizedPnl": -1934.78,
+        "grossPnl": 5901.9,
+        "winRateByVolume": 0.8093,
         "wilsonLo": 0.4237,
         "wilsonHi": 0.8732
       },
@@ -564,14 +564,14 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 241,
-        "volume": 1972823.52,
-        "realizedPnl": 55554.19,
-        "roi": 0.0282,
-        "hitRate": 0.865,
-        "avgImplied": 0.8639,
-        "edge": 0.001,
-        "top1Share": 0.2101
+        "n": 244,
+        "volume": 1981632.53,
+        "realizedPnl": 52934.23,
+        "roi": 0.0267,
+        "hitRate": 0.8583,
+        "avgImplied": 0.8556,
+        "edge": 0.0027,
+        "top1Share": 0.2062
       },
       "settlement": {
         "n": 140,
@@ -584,14 +584,14 @@
         "top1Share": 0.3627
       },
       "exit": {
-        "n": 101,
-        "volume": 662112.71,
-        "realizedPnl": -2391.3,
-        "roi": -0.0036,
-        "hitRate": 0.7113,
-        "avgImplied": 0.7603,
-        "edge": -0.049,
-        "top1Share": 0.1976
+        "n": 104,
+        "volume": 670921.72,
+        "realizedPnl": -5011.26,
+        "roi": -0.0075,
+        "hitRate": 0.7,
+        "avgImplied": 0.7437,
+        "edge": -0.0437,
+        "top1Share": 0.1891
       }
     },
     "macro": {
@@ -651,13 +651,13 @@
     "politics": {
       "combined": {
         "n": 196,
-        "volume": 1005660.93,
-        "realizedPnl": 19567.34,
+        "volume": 1006157.38,
+        "realizedPnl": 19628.3,
         "roi": 0.0195,
         "hitRate": 0.8438,
         "avgImplied": 0.8277,
         "edge": 0.016,
-        "top1Share": 0.1306
+        "top1Share": 0.1304
       },
       "settlement": {
         "n": 131,
@@ -671,45 +671,45 @@
       },
       "exit": {
         "n": 65,
-        "volume": 177213.75,
-        "realizedPnl": -5305.42,
-        "roi": -0.0299,
+        "volume": 177710.2,
+        "realizedPnl": -5244.46,
+        "roi": -0.0295,
         "hitRate": 0.6885,
         "avgImplied": 0.6797,
         "edge": 0.0088,
-        "top1Share": 0.1969
+        "top1Share": 0.1958
       }
     },
     "sports": {
       "combined": {
-        "n": 302,
-        "volume": 842583.76,
-        "realizedPnl": -5192.99,
-        "roi": -0.0062,
-        "hitRate": 0.8073,
-        "avgImplied": 0.8215,
-        "edge": -0.0142,
-        "top1Share": 0.1268
+        "n": 304,
+        "volume": 843403.02,
+        "realizedPnl": -5148.9,
+        "roi": -0.0061,
+        "hitRate": 0.8053,
+        "avgImplied": 0.8201,
+        "edge": -0.0148,
+        "top1Share": 0.1266
       },
       "settlement": {
-        "n": 247,
-        "volume": 648307.26,
-        "realizedPnl": 9468.86,
+        "n": 249,
+        "volume": 649093.26,
+        "realizedPnl": 9482.86,
         "roi": 0.0146,
-        "hitRate": 0.8745,
-        "avgImplied": 0.8503,
-        "edge": 0.0242,
-        "top1Share": 0.0769
+        "hitRate": 0.8715,
+        "avgImplied": 0.8483,
+        "edge": 0.0232,
+        "top1Share": 0.0767
       },
       "exit": {
         "n": 55,
-        "volume": 194276.5,
-        "realizedPnl": -14661.85,
-        "roi": -0.0755,
+        "volume": 194309.76,
+        "realizedPnl": -14631.76,
+        "roi": -0.0753,
         "hitRate": 0.5,
         "avgImplied": 0.6924,
         "edge": -0.1924,
-        "top1Share": 0.208
+        "top1Share": 0.2078
       }
     },
     "tech": {
@@ -746,41 +746,41 @@
     }
   },
   "openBook": {
-    "n": 122,
-    "cost": 284926.41,
-    "mark": 287248.26,
-    "unrealized": 2321.84
+    "n": 120,
+    "cost": 286425.0,
+    "mark": 284666.45,
+    "unrealized": -1758.56
   },
   "openByCategory": {
     "commodities": {
       "n": 6,
-      "cost": 41603.57,
-      "mark": 41781.25,
-      "unrealized": 177.68
+      "cost": 42822.59,
+      "mark": 43099.1,
+      "unrealized": 276.51
     },
     "geopolitics": {
-      "n": 31,
-      "cost": 80628.36,
-      "mark": 78887.5,
-      "unrealized": -1740.86
+      "n": 29,
+      "cost": 79341.29,
+      "mark": 73162.73,
+      "unrealized": -6178.56
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 279.0,
-      "unrealized": -59.4
+      "mark": 291.6,
+      "unrealized": -46.8
     },
     "politics": {
       "n": 76,
-      "cost": 157200.69,
-      "mark": 160969.93,
-      "unrealized": 3769.24
+      "cost": 158800.1,
+      "mark": 163055.19,
+      "unrealized": 4255.08
     },
     "sports": {
       "n": 7,
-      "cost": 3371.9,
-      "mark": 3554.59,
-      "unrealized": 182.69
+      "cost": 3339.13,
+      "mark": 3281.84,
+      "unrealized": -57.28
     },
     "tech": {
       "n": 1,
@@ -791,7 +791,7 @@
   },
   "openCategories": {
     "0x05297f854d3b757d5e51a1a29c7f225a80b14b2a161d6b7f9a61677da7a80ced": "geopolitics",
-    "0x054725b2a7971376f7924a7021221b12acc50fe78d97817824fe411704d5b5a2": "geopolitics",
+    "0x067524c76b05c2c106e736f7fbeafc65e18253bca06edd0a9b7f979449826d9e": "geopolitics",
     "0x087469b4129c64c688397028059dfd366796adbd426e0079ee4cfdd2e4a07b61": "geopolitics",
     "0x0f49db97f71c68b1e42a6d16e3de93d85dbf7d4148e3f018eb79e88554be9f75": "politics",
     "0x0f94ae65ad29cb9e7c7703a71d404f7616edeebbc2873257759c746156d96425": "geopolitics",
@@ -886,12 +886,10 @@
     "0xcd953913ecd5bf5387092bf447fe13190871b2bc9436c85b0918b4767c3fa58a": "politics",
     "0xcee04ba47d02f6c64642369b34193c355f64de1b9ae425c71ea4efef1989d271": "geopolitics",
     "0xcf74254eb635dae1db5d96da6582146510fcbbd7e2645b482756ae04ad566237": "politics",
-    "0xd0536d9612e041312235baceac52bde48821e8aad4607533513b3782904b7d49": "geopolitics",
     "0xd103195d48bf6183e28c4140bd374dd3e907e8f8d411374cb4d2d124ec4c216d": "politics",
     "0xd5e44002d2fe404c9bdf2404b5e3636d2898c6dcff556b7092d0b9f4df323d20": "politics",
     "0xd7e7300ecc03a88948a89186d7f06b1000750a7f4a0778e40566d50af9ef3147": "politics",
     "0xdd3d104667774208eae2239f576122ecdd1c04ba81cc14d26d22a36b33887977": "geopolitics",
-    "0xdf8e2dc5860027decbe6164555c3c1c9645c3bd33e16b9dc57ca87125047d4a8": "geopolitics",
     "0xe1d5733322fd2215f136412f419d9ff805d097f78c68de3261515ff736895f2b": "geopolitics",
     "0xe52419acfb3e5da37bc53c6341cb23857b429c3b60d61f3136f0c9244d888d8d": "politics",
     "0xe7567eb9c84e1f859a7e18f1042c724dbf57c3cc0459b312bee22156a57e60ea": "geopolitics",
@@ -918,7 +916,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 471,
+      "events": 472,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1880,7 +1878,6 @@
     ["geopolitics","2026-09-10","e",4792.23,-213.23,0,0.874,"Will Magdalena Andersson be the next Prime Minister of Sweden?","Yes","Next Prime Minister of Sweden"],
     ["geopolitics","2026-09-10","s",1487.48,16.19,1,0.9892,"Nothing Ever Happens: August","Nothing",null],
     ["macro","2026-09-10","s",37.47,4.26,0,0.0017,"Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
-    ["politics","2026-09-10","e",3195.12,94.99,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
     ["politics","2026-09-10","e",18.85,0.0,null,0.84,"Will the Democratic Party win the FL-27 House seat?","No","FL-27 House Election Winner"],
     ["politics","2026-09-11","e",1902.57,123.15,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
     ["sports","2026-09-11","s",2502.28,95.9,1,0.9631,"49ers vs. Rams","49ers",null],
@@ -1916,7 +1913,6 @@
     ["macro","2026-09-16","s",6854.72,5276.53,1,0.565,"Will there be no change in Fed interest rates after the September 2026 meeting?","No","Fed Decision in September?"],
     ["sports","2026-09-17","s",18266.44,354.42,1,0.981,"Los Angeles Dodgers vs. Cincinnati Reds","Los Angeles Dodgers",null],
     ["politics","2026-09-18","e",935.13,61.8,1,0.8442,"Will the Democrats win the New Hampshire Senate race in 2026?","Yes","New Hampshire Senate Election Winner"],
-    ["sports","2026-09-18","e",25.72,23.28,1,0.5145,"Will Shohei Ohtani win the 2026 National League Hank Aaron Award?","No","MLB: 2026 NL Hank Aaron Winner"],
     ["sports","2026-09-18","e",22804.5,137.55,1,0.95,"Lions vs. Bills","Bills",null],
     ["sports","2026-09-18","s",143.03,3.97,1,0.973,"Lions vs. Bills: O/U 26.5","Over","Lions vs. Bills"],
     ["commodities","2026-09-19","s",449.14,47.92,1,0.9036,"Will WTI Crude Oil (WTI) hit (LOW) $95 in September?","Yes","What will WTI Crude Oil (WTI) hit in September 2026?"],
@@ -1930,7 +1926,14 @@
     ["sports","2026-09-20","e",2969.85,-569.99,0,0.81,"LSU vs. Ole Miss","Ole Miss",null],
     ["sports","2026-09-20","s",1349.86,316.64,1,0.81,"LSU vs. Ole Miss","Ole Miss",null],
     ["sports","2026-09-20","s",674.4,27.37,1,0.961,"Michigan State vs. Notre Dame","Notre Dame",null],
+    ["geopolitics","2026-09-21","e",7.9,7.26,1,0.0005,"Will Geraldo Alckmin win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
+    ["geopolitics","2026-09-21","e",23.17,-8.01,0,0.0015,"Will Romeu Zema win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
+    ["geopolitics","2026-09-21","e",8777.94,-2619.21,0,0.5559,"Will Luiz In\u00e1cio Lula da Silva win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-09-21","e",6180.11,3152.78,1,0.3914,"Will Fl\u00e1vio Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
-    ["geopolitics","2026-09-21","e",876.19,69.51,1,0.3243,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"]
+    ["geopolitics","2026-09-21","e",876.19,69.51,1,0.3243,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
+    ["politics","2026-09-22","e",3691.57,155.95,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
+    ["sports","2026-09-22","e",58.98,53.37,1,0.5145,"Will Shohei Ohtani win the 2026 National League Hank Aaron Award?","No","MLB: 2026 NL Hank Aaron Winner"],
+    ["sports","2026-09-22","s",760.0,40.0,1,0.95,"Giants vs. Rams: O/U 69.5","Under","Giants vs. Rams"],
+    ["sports","2026-09-22","s",26.0,-26.0,0,0.26,"Giants vs. Rams","Giants",null]
   ]
 }
