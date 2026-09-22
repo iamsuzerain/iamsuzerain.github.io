@@ -574,7 +574,7 @@ function Politics({ scope: routeScope }) {
     <section className="pol-view">
       <div className="sz-surface sz-surface-raised pol-head">
         <div className="sz-kicker">◆ politics</div>
-        <h2 className="sz-h2">ENDORSEMENTS.</h2>
+        <h2 className="sz-h2">endorsements.</h2>
         <p className="pol-lede">{(log && log.note) || 'Sympathies, not projections.'}</p>
         <div className="pol-controls">
           <div className="pol-scopes" role="tablist" aria-label="map scope">

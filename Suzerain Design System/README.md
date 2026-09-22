@@ -40,7 +40,7 @@ Put another way — a claim about **purpose** can go in the masthead. A claim ab
 
 `i am suzerain.` · `i'm here to write the future.` · `notes from the desk.` · `no such post.` · `couldn't reach polymarket.` · `couldn't build book feed.`
 
-The period closes the statement and stops a lowercase heading reading as a fragment. One outlier ships today: `ENDORSEMENTS.` on the politics view, the only ALL-CAPS heading on the site.
+The period closes the statement and stops a lowercase heading reading as a fragment. Every page heading follows it, `endorsements.` on the politics view included.
 
 **In-progress states drop the period and take a blinking block cursor**, not an ellipsis: `fetching positions▋` · `merging feeds▋` · `loading▋`. That's `<Cursor/>`, which renders `▋`. There is not one `…` in the site's copy.
 
