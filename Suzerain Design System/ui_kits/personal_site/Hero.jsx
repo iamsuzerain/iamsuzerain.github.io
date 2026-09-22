@@ -62,9 +62,16 @@ function Hero() {
   const stream = buildStream(c.log, window.POSTS);
   const shown = stream.slice(0, HOME_ENTRIES);
   const older = stream.length - shown.length;
+  // The cursor rides on the last word. Between ~900 and ~1100px the whole name
+  // fills the line exactly, and a bare cursor used to wrap onto a line alone.
+  const name = c.name || '';
+  const cut = name.lastIndexOf(' ') + 1;
   return (
     <section className="sz-hero">
-      <h1 className="sz-hero-name">{c.name}<Cursor /></h1>
+      <h1 className="sz-hero-name">
+        {name.slice(0, cut)}
+        <span className="sz-hero-last">{name.slice(cut)}<Cursor /></span>
+      </h1>
       <p className="sz-hero-tag">{c.tag}</p>
       <div className="sz-log">
         {shown.map(entry => <StreamEntry key={`${entry.date}/${entry.slug || ''}`} entry={entry} />)}
