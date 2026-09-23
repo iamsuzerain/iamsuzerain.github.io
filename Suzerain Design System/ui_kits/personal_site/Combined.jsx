@@ -219,20 +219,32 @@ function cmbMarkers(series, log) {
   }).filter(Boolean);
 }
 
-// The same, for the IBKR->Polymarket ledger in content.json. These are the only
+// The same, for the polymarket deposit/withdrawal ledger in content.json. These are the only
 // events on the capital chart that are decisions rather than marks: every other
 // step in those two bands is the market moving.
-function cmbTransferMarks(series, transfers) {
+//
+// `paired` is the set of ledger entries with an IBKR leg (cmbPairFlows). The
+// rest came from or went to outside both accounts, which is the distinction the
+// tooltip draws: a move shifts the split and leaves the total alone, while money
+// from outside raises the total.
+//
+// Held to the same floor as IBKR's flows (FLOW_MARK_MIN in fetch-ibkr.py), so a
+// $2k deposit isn't a diamond on one account and invisible on the other. The
+// small entries still count toward the panel's net figure.
+const CMB_FLOW_MARK_MIN = 5000;
+
+function cmbTransferMarks(series, transfers, paired) {
   if (!series || !series.length || !transfers || !transfers.length) return [];
   const days = series.map(p => cmbEpochDay(p.d));
-  return transfers.map(t => {
+  return transfers.filter(t => t && Math.abs(t.amount || 0) >= CMB_FLOW_MARK_MIN).map(t => {
     // A deposit's step lands on its ledger date (pmCapitalAt backs the restated
     // scrape out a day). A withdrawal isn't backed out, so its step is where the
     // restated scrape files it: the day before.
     const at = t && t.date && (t.amount || 0) < 0
       ? cmbFromEpochDay(cmbEpochDay(t.date) - 1) : t && t.date;
     const i = at ? cmbPinIndex(days, at) : null;
-    return i == null ? null : { i, date: t.date, amount: t.amount || 0 };
+    return i == null ? null
+      : { i, date: t.date, amount: t.amount || 0, external: !(paired && paired.has(t)) };
   }).filter(Boolean);
 }
 
@@ -253,15 +265,20 @@ function cmbTransferMarks(series, transfers) {
 // withdrawal ledgered up to 10 days before it (or the day after, since the
 // ledger carries the raw scrape date and the money left the day before). The
 // polymarket diamond is the one kept, as it is for the outbound direction.
+//
+// Pairing runs over the lifetime ledger and flows, not the plotted window, so a
+// move whose IBKR leg falls just off the left edge still reads as a move. A leg
+// under the $5k floor never reaches the flows file, so its polymarket side
+// would read as outside money; none has so far.
 const CMB_FLOW_PAIR_DAYS = 10;
 const CMB_FLOW_PAIR_TOL = 0.25;
 
-function cmbIbkrFlowMarks(series, flows, transfers) {
-  if (!series || !series.length || !flows || !flows.length) return [];
-  const days = series.map(p => cmbEpochDay(p.d));
+// → { flows: IBKR flows with no polymarket leg, paired: Set of ledger entries
+// that have an IBKR one }.
+function cmbPairFlows(flows, transfers) {
   const ledger = (transfers || [])
     .filter(t => t && t.date && t.amount)
-    .map(t => ({ day: cmbEpochDay(t.date), amount: t.amount, used: false }))
+    .map(t => ({ t, day: cmbEpochDay(t.date), amount: t.amount, used: false }))
     .sort((a, b) => a.day - b.day);
   const paired = (f) => {
     if (!f.amount) return false;
@@ -276,21 +293,30 @@ function cmbIbkrFlowMarks(series, flows, transfers) {
     if (hit) hit.used = true;
     return !!hit;
   };
-  return flows
+  const unpaired = (flows || [])
     .filter(f => f && f.d)
     .slice().sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
-    .filter(f => !paired(f))
+    .filter(f => !paired(f));
+  return { flows: unpaired, paired: new Set(ledger.filter(l => l.used).map(l => l.t)) };
+}
+
+function cmbIbkrFlowMarks(series, flows) {
+  if (!series || !series.length || !flows || !flows.length) return [];
+  const days = series.map(p => cmbEpochDay(p.d));
+  return flows
     .map(f => {
       const i = cmbPinIndex(days, f.d);
       return i == null ? null : { i, date: f.d, amount: f.amount || 0, venue: 'ibkr' };
     }).filter(Boolean);
 }
 
-// Tooltip / readout wording for a capital-chart marker.
+// Tooltip / readout wording for a capital-chart marker. "moved" is between the
+// two accounts; "deposited" and "withdrew" cross the outer edge.
 function cmbFlowLabel(m) {
   const amt = cmbUSDk(Math.abs(m.amount));
   if (m.venue === 'ibkr') return m.amount < 0 ? `withdrew ${amt} ← ibkr` : `deposited ${amt} → ibkr`;
-  return m.amount < 0 ? `withdrew ${amt} ← polymarket` : `moved ${amt} → polymarket`;
+  if (m.external) return m.amount < 0 ? `withdrew ${amt} ← polymarket` : `deposited ${amt} → polymarket`;
+  return m.amount < 0 ? `moved ${amt} → ibkr` : `moved ${amt} → polymarket`;
 }
 
 // Mirror Hero.jsx: an entry's link {text, href} turns the first occurrence of
@@ -1649,8 +1675,9 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   // nothing. Dropped rather than drawn — which is also what takes the ledger's
   // condensed opening entry off the chart, since the split is floored on its
   // date (see splitFloor).
-  const marks = cmbTransferMarks(pts, transfers)
-    .concat(cmbIbkrFlowMarks(pts, ibkrFlows, transfers))
+  const pairing = cmbPairFlows(ibkrFlows, transfers);
+  const marks = cmbTransferMarks(pts, transfers, pairing.paired)
+    .concat(cmbIbkrFlowMarks(pts, pairing.flows))
     .filter(m => m.i > 0);
   const ticks = szTicks(pts, 6);
   const spanDays = cmbEpochDay(pts[last].d) - cmbEpochDay(pts[0].d);
@@ -2448,8 +2475,8 @@ function Combined({ setView }) {
           <div className="pf-panel-head">
             <span className="pf-panel-title">capital deployed · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">
-              ibkr nav + polymarket nav{capFrom ? ` from ${cmbFullDate(capFrom)}` : ''} · diamonds are transfers
-              {xferTotal > 0 ? `, ${cmbUSDk(xferTotal)} to date` : ''}
+              ibkr nav + polymarket nav{capFrom ? ` from ${cmbFullDate(capFrom)}` : ''} · diamonds mark money moving in, out or between
+              {xferTotal > 0 ? ` · ${cmbUSDk(xferTotal)} net into polymarket overall` : ''}
             </span>
           </div>
           <CmbCapitalChart series={win.series} transfers={data.transfers} ibkrFlows={data.ibkrFlows}/>

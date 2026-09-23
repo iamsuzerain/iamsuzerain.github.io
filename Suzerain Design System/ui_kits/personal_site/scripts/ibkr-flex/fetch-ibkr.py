@@ -937,7 +937,8 @@ def build_pnl_series(nav_series: list[dict], cash_flows: dict[str, float]) -> li
 
 
 # Smallest per-day net flow the site marks. Below it a movement is housekeeping,
-# and a marker would clutter the capital chart.
+# and a marker would clutter the capital chart. Combined.jsx holds polymarket's
+# ledger to the same floor (CMB_FLOW_MARK_MIN); change both together.
 FLOW_MARK_MIN = 5000
 
 
