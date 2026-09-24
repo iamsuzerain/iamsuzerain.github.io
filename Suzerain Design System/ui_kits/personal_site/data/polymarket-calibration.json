@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:48:19Z",
+  "generatedAt": "2026-09-24T11:57:31Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -62,9 +62,9 @@
       "wins": 201,
       "pushes": 9,
       "hitRate": 0.6791,
-      "volume": 1450861.43,
-      "realizedPnl": -24887.99,
-      "roi": -0.0172
+      "volume": 1450855.07,
+      "realizedPnl": -24878.51,
+      "roi": -0.0171
     }
   },
   "buckets": {
@@ -259,9 +259,9 @@
         "pushes": 1,
         "winRate": 0.55,
         "avgImplied": 0.0297,
-        "volume": 2333.53,
-        "realizedPnl": 863.42,
-        "grossPnl": 1280.28,
+        "volume": 2334.4,
+        "realizedPnl": 865.66,
+        "grossPnl": 1282.52,
         "winRateByVolume": 0.8147,
         "wilsonLo": 0.3421,
         "wilsonHi": 0.7418
@@ -393,10 +393,10 @@
         "wins": 39,
         "pushes": 1,
         "winRate": 0.6964,
-        "avgImplied": 0.9288,
-        "volume": 307100.81,
-        "realizedPnl": 3093.76,
-        "grossPnl": 22937.92,
+        "avgImplied": 0.9287,
+        "volume": 307093.58,
+        "realizedPnl": 3101.0,
+        "grossPnl": 22945.16,
         "winRateByVolume": 0.9068,
         "wilsonLo": 0.5666,
         "wilsonHi": 0.801
@@ -565,8 +565,8 @@
     "geopolitics": {
       "combined": {
         "n": 246,
-        "volume": 1981844.78,
-        "realizedPnl": 52926.16,
+        "volume": 1981838.42,
+        "realizedPnl": 52935.64,
         "roi": 0.0267,
         "hitRate": 0.8554,
         "avgImplied": 0.856,
@@ -585,13 +585,13 @@
       },
       "exit": {
         "n": 104,
-        "volume": 670936.32,
-        "realizedPnl": -5025.21,
+        "volume": 670929.96,
+        "realizedPnl": -5015.73,
         "roi": -0.0075,
         "hitRate": 0.7,
         "avgImplied": 0.7438,
         "edge": -0.0438,
-        "top1Share": 0.1892
+        "top1Share": 0.1891
       }
     },
     "macro": {
@@ -746,41 +746,47 @@
     }
   },
   "openBook": {
-    "n": 130,
-    "cost": 300740.1,
-    "mark": 299269.26,
-    "unrealized": -1470.85
+    "n": 134,
+    "cost": 317979.8,
+    "mark": 316879.91,
+    "unrealized": -1099.89
   },
   "openByCategory": {
     "commodities": {
       "n": 6,
       "cost": 42822.59,
-      "mark": 43146.3,
-      "unrealized": 323.71
+      "mark": 43348.62,
+      "unrealized": 526.02
     },
     "geopolitics": {
-      "n": 28,
-      "cost": 80171.94,
-      "mark": 74083.13,
-      "unrealized": -6088.81
+      "n": 29,
+      "cost": 83216.28,
+      "mark": 77118.23,
+      "unrealized": -6098.06
+    },
+    "macro": {
+      "n": 1,
+      "cost": 11534.21,
+      "mark": 11796.35,
+      "unrealized": 262.14
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 282.6,
-      "unrealized": -55.8
+      "mark": 279.0,
+      "unrealized": -59.4
     },
     "politics": {
-      "n": 88,
-      "cost": 172560.81,
-      "mark": 177102.81,
-      "unrealized": 4542.0
+      "n": 90,
+      "cost": 175221.96,
+      "mark": 179673.48,
+      "unrealized": 4451.52
     },
     "sports": {
       "n": 6,
       "cost": 3062.87,
-      "mark": 2873.74,
-      "unrealized": -189.13
+      "mark": 2883.57,
+      "unrealized": -179.3
     },
     "tech": {
       "n": 1,
@@ -797,6 +803,7 @@
     "0x101d084cd035070abde58d8a3113b78e11ba68028b0d9e7e38ea7d780797aecc": "geopolitics",
     "0x119b6b3b744ac3239c7a71100165d254234eaecea401abde5a3d303bef21d19e": "politics",
     "0x127422dfe382bb2c4a4fbca3ca9ec1278fc1948e8874928508a54c94b00f14ac": "sports",
+    "0x12aa13b3da17ceae1b0a59b5d5b77121e91bb79b4bb0b52bf6543ed3f8d0953b": "macro",
     "0x12ab600156edbfd74f7c342f24a7171af2e09d10ba04669f5a98a75b84e1145f": "politics",
     "0x12b727031b38130d945b3e164386874360d9a32fdd7e3d00ed2adb13857e089b": "politics",
     "0x1733cf14cc61874e50d27f69ded395d05347d15a3d3c1862587c25d216dfd186": "politics",
@@ -804,7 +811,9 @@
     "0x1c017cbb38a9d0ab233ebb265b25c78290317e6a2470657ca18a73a112397b55": "politics",
     "0x1cadccc29386c1913644c6197f92a7147d1db345ccfa3cab1429da293c9e7524": "commodities",
     "0x1df56873c9504fb7d14aa1a97be841679ae61f979b3630aa4865ffea0326fdc6": "politics",
+    "0x1e5f26f98c66b20d3497965523d24593b8287a6457293bbe60e3bfbdb7329afc": "geopolitics",
     "0x21017b31d4a1d3985f2121f1d452d857d54ac45c975507c6ace3ae6041f9a62f": "politics",
+    "0x22a05e0e5db73ae5a554eccc37a35e81e258edf487dec05e60bd0aba7e8cadac": "politics",
     "0x236fabcdc7506a5bde811505d8dc35863599dfea80ac3d39ac6f6d28dc922b08": "geopolitics",
     "0x2371ca77fc832c1dbb15274fd22ca0c47b9440b83a0eda040b603cf7b6d356c6": "commodities",
     "0x2582aadb90aaf4b0f51b36a49d146558bacd0e53c2c13d13704e194b3194c324": "commodities",
@@ -1882,7 +1891,6 @@
     ["geopolitics","2026-09-07","s",17.96,0.82,1,0.9564,"Sachsen-Anhalt Parliamentary Election: Linke Over/Under 12%?","Under",null],
     ["geopolitics","2026-09-07","s",37.57,0.33,1,0.9914,"Will AfD win the most seats in the 2026 Sachsen-Anhalt parliamentary elections?","Yes","Sachsen-Anhalt Parliamentary Election Winner"],
     ["geopolitics","2026-09-09","e",5201.71,47.48,1,0.986,"Russia Elections: Yabloko Clears Duma Threshold?","No",null],
-    ["geopolitics","2026-09-09","e",2437.4,71.78,1,0.9296,"Will any presidential candidate win outright in the first round of the Brazil election?","No",null],
     ["macro","2026-09-09","e",109382.1,501.41,1,0.9868,"Will the Fed decrease interest rates by 25 bps after the September 2026 meeting?","No","Fed Decision in September?"],
     ["geopolitics","2026-09-10","e",4792.23,-213.23,0,0.874,"Will Magdalena Andersson be the next Prime Minister of Sweden?","Yes","Next Prime Minister of Sweden"],
     ["geopolitics","2026-09-10","s",1487.48,16.19,1,0.9892,"Nothing Ever Happens: August","Nothing",null],
@@ -1945,7 +1953,8 @@
     ["politics","2026-09-22","e",4666.98,275.73,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
     ["sports","2026-09-22","s",760.0,40.0,1,0.95,"Giants vs. Rams: O/U 69.5","Under","Giants vs. Rams"],
     ["sports","2026-09-22","s",26.0,-26.0,0,0.26,"Giants vs. Rams","Giants",null],
-    ["geopolitics","2026-09-23","e",0.69,0.84,1,0.0006,"Will Jair Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
+    ["geopolitics","2026-09-23","e",2430.17,79.02,1,0.9269,"Will any presidential candidate win outright in the first round of the Brazil election?","No",null],
+    ["geopolitics","2026-09-23","e",1.56,3.08,1,0.0006,"Will Jair Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["sports","2026-09-23","e",146.52,132.57,1,0.5145,"Will Shohei Ohtani win the 2026 National League Hank Aaron Award?","No","MLB: 2026 NL Hank Aaron Winner"],
     ["sports","2026-09-23","s",504.64,-504.64,0,0.5046,"Will New York Yankees win the 2026 AL East title?","Yes","MLB: 2026 AL East Champion"]
   ]
