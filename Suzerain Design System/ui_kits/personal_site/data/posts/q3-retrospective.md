@@ -10,7 +10,7 @@ I put on two MU option complexes at the end of last quarter, when forward IV was
 
 ## World Cup
 
-I had two futures positions which I thought were well reasoned in England and Argentina. If I had just held those to right before the final, I would've made a 2x profit on the position, but instead I sold them both for a loss at stupid times. With England, I sold before their match at Azteca with Mexico, which is obviously bad practice since this draw was obvious when I entered. Argentina, I dumped when they were down 2-0 to Egypt, reasoning that they were screwed. Then they had a miraculous comeback and went all the way to the final on the strength of their extremely soft bracket, which was my original logic for the position. I should've held that one. Between the two, I took a 13k haircut.
+I had two futures positions which I thought were well reasoned in England and Argentina. If I had just held those to right before the final, I would've made a 2x profit on the position, but instead I sold them both for a loss at stupid times. With England, I sold before their match at Azteca with Mexico, which is obviously bad practice since this bracket was obvious when I entered. Argentina, I dumped when they were down 2-0 to Egypt, reasoning that they were screwed. Then they had a miraculous comeback and went all the way to the final on the strength of their extremely soft bracket, which was my original logic for the position. I should've held that one. Between the two, I took a 13k haircut.
 
 ## Oil and Iran
 
