@@ -20,7 +20,7 @@
     },
     {
       "slug": "the-charts-now-remember",
-      "title": "the charts now remember",
+      "title": "The Charts Now Remember",
       "date": "2026-07-24",
       "summary": "Shipped a max view for the P&L charts today. They used to cap at a year because IBKR's Flex Query only returns a trailing ~365 days, so now the site keeps its own history, rebuilt from old snapshots back to April 2025."
     },
@@ -32,7 +32,7 @@
     },
     {
       "slug": "dollars-on-sale-for-70-cents",
-      "title": "dollars on sale for 70 cents",
+      "title": "Dollars on Sale for 70 Cents",
       "date": "2026-06-02",
       "summary": "Moving another $100k into the MSTR market after Polymarket's clarification — and why I don't fully blame the people who got burned."
     }
