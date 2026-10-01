@@ -21,6 +21,11 @@
     "tag": "i'm here to write the future.",
     "log": [
       {
+        "date": "2026-10-01",
+        "body": "Net +143k in a quiet quarter. SPX short vol and an MU ratio spread carried it, while badly timed World Cup exits and cut oil deltas left money on the table.",
+        "slug": "q3-retrospective"
+      },
+      {
         "date": "2026-09-16",
         "body": "Prediction markets underpriced a Fed hike against CME's /ZQ fed funds futures, so I bought the hike on Polymarket, bought /ZQ against it, and netted around +17k.",
         "slug": "fomc-arbitrage"

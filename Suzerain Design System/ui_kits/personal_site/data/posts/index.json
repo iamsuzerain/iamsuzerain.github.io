@@ -1,6 +1,12 @@
 {
   "posts": [
     {
+      "slug": "q3-retrospective",
+      "title": "Q3 Retrospective",
+      "date": "2026-10-01",
+      "summary": "Net +143k in a quiet quarter. SPX short vol and an MU ratio spread carried it, while badly timed World Cup exits and cut oil deltas left money on the table."
+    },
+    {
       "slug": "fomc-arbitrage",
       "title": "FOMC Arbitrage",
       "date": "2026-09-16",
