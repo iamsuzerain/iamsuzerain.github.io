@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-28",
+  "updated": "2026-10-05",
   "note": "Sympathies, not projections.",
   "_schema": {
     "key": "match a feature by name (as spelled in geo-world.json / geo-us.json) or by its numeric id",
@@ -20,7 +20,7 @@
       "races": [
         {
           "office": "president",
-          "next": "2026-10-04",
+          "next": "2026-10-25",
           "pick": "Lula",
           "enthusiasm": "tactical",
           "logged": "2026-08-07"
