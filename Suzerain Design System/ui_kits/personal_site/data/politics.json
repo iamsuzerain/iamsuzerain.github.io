@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-05",
+  "updated": "2026-10-06",
   "note": "Sympathies, not projections.",
   "_schema": {
     "key": "match a feature by name (as spelled in geo-world.json / geo-us.json) or by its numeric id",
@@ -78,6 +78,17 @@
           "pick": "TOP",
           "enthusiasm": "qualified",
           "logged": "2026-08-15"
+        }
+      ]
+    },
+    "Spain": {
+      "races": [
+        {
+          "office": "prime minister",
+          "next": null,
+          "pick": "Sánchez",
+          "enthusiasm": "tactical",
+          "logged": "2026-10-06"
         }
       ]
     },
