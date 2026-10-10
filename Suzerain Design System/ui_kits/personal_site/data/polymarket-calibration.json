@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-09T13:29:08Z",
+  "generatedAt": "2026-10-10T12:42:05Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 763,
-      "wins": 682,
+      "n": 764,
+      "wins": 683,
       "pushes": 0,
-      "hitRate": 0.8938,
-      "volume": 4331967.67,
-      "realizedPnl": 108483.36,
+      "hitRate": 0.894,
+      "volume": 4335200.68,
+      "realizedPnl": 108583.35,
       "roi": 0.025,
-      "brier": 0.0418,
-      "avgImplied": 0.8736,
+      "brier": 0.0417,
+      "avgImplied": 0.8737,
       "edge": 0.0203,
       "calibrationError": 0.0308
     },
     "exit": {
-      "n": 324,
-      "wins": 214,
+      "n": 325,
+      "wins": 215,
       "pushes": 10,
-      "hitRate": 0.6815,
-      "volume": 1547774.57,
-      "realizedPnl": -25000.12,
-      "roi": -0.0162
+      "hitRate": 0.6825,
+      "volume": 1548468.2,
+      "realizedPnl": -24948.37,
+      "roi": -0.0161
     }
   },
   "buckets": {
@@ -222,16 +222,16 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 247,
-        "wins": 246,
+        "n": 248,
+        "wins": 247,
         "pushes": 0,
         "winRate": 0.996,
-        "avgImplied": 0.9723,
-        "volume": 1890557.74,
-        "realizedPnl": 51790.23,
-        "grossPnl": 53071.61,
+        "avgImplied": 0.9722,
+        "volume": 1893790.75,
+        "realizedPnl": 51890.22,
+        "grossPnl": 53171.6,
         "winRateByVolume": 0.9997,
-        "wilsonLo": 0.9774,
+        "wilsonLo": 0.9775,
         "wilsonHi": 0.9993
       },
       {
@@ -259,10 +259,10 @@
         "pushes": 1,
         "winRate": 0.5,
         "avgImplied": 0.0431,
-        "volume": 2223.85,
-        "realizedPnl": 937.85,
-        "grossPnl": 1247.75,
-        "winRateByVolume": 0.7786,
+        "volume": 2219.4,
+        "realizedPnl": 942.31,
+        "grossPnl": 1252.21,
+        "winRateByVolume": 0.7782,
         "wilsonLo": 0.28,
         "wilsonHi": 0.72
       },
@@ -273,11 +273,11 @@
         "wins": 6,
         "pushes": 0,
         "winRate": 0.6667,
-        "avgImplied": 0.1394,
-        "volume": 69047.08,
-        "realizedPnl": -4796.21,
-        "grossPnl": 10950.45,
-        "winRateByVolume": 0.6222,
+        "avgImplied": 0.1391,
+        "volume": 69025.07,
+        "realizedPnl": -4774.2,
+        "grossPnl": 10972.46,
+        "winRateByVolume": 0.6221,
         "wilsonLo": 0.3542,
         "wilsonHi": 0.8794
       },
@@ -379,9 +379,9 @@
         "pushes": 3,
         "winRate": 0.5902,
         "avgImplied": 0.8499,
-        "volume": 173550.31,
-        "realizedPnl": -12339.68,
-        "grossPnl": 25756.04,
+        "volume": 173552.91,
+        "realizedPnl": -12339.29,
+        "grossPnl": 25756.43,
         "winRateByVolume": 0.6121,
         "wilsonLo": 0.465,
         "wilsonHi": 0.7046
@@ -394,27 +394,27 @@
         "pushes": 1,
         "winRate": 0.7213,
         "avgImplied": 0.928,
-        "volume": 357243.27,
-        "realizedPnl": 3558.77,
-        "grossPnl": 23402.93,
-        "winRateByVolume": 0.9198,
+        "volume": 357370.6,
+        "realizedPnl": 3560.19,
+        "grossPnl": 23404.35,
+        "winRateByVolume": 0.9199,
         "wilsonLo": 0.5983,
         "wilsonHi": 0.8181
       },
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 73,
-        "wins": 58,
+        "n": 74,
+        "wins": 59,
         "pushes": 0,
-        "winRate": 0.7945,
-        "avgImplied": 0.9673,
-        "volume": 558463.77,
-        "realizedPnl": -14985.36,
-        "grossPnl": 29556.44,
-        "winRateByVolume": 0.8333,
-        "wilsonLo": 0.6883,
-        "wilsonHi": 0.8713
+        "winRate": 0.7973,
+        "avgImplied": 0.9671,
+        "volume": 559053.93,
+        "realizedPnl": -14961.89,
+        "grossPnl": 29579.91,
+        "winRateByVolume": 0.8335,
+        "wilsonLo": 0.6921,
+        "wilsonHi": 0.8731
       },
       {
         "lo": 0.99,
@@ -650,14 +650,14 @@
     },
     "politics": {
       "combined": {
-        "n": 215,
-        "volume": 1033285.64,
-        "realizedPnl": 20513.9,
+        "n": 216,
+        "volume": 1034376.92,
+        "realizedPnl": 20582.55,
         "roi": 0.0199,
-        "hitRate": 0.8381,
-        "avgImplied": 0.824,
-        "edge": 0.0141,
-        "top1Share": 0.1276
+        "hitRate": 0.8389,
+        "avgImplied": 0.8246,
+        "edge": 0.0143,
+        "top1Share": 0.1274
       },
       "settlement": {
         "n": 136,
@@ -670,36 +670,36 @@
         "top1Share": 0.1718
       },
       "exit": {
-        "n": 79,
-        "volume": 193961.05,
-        "realizedPnl": -4594.07,
-        "roi": -0.0237,
-        "hitRate": 0.6892,
-        "avgImplied": 0.686,
-        "edge": 0.0032,
-        "top1Share": 0.1834
+        "n": 80,
+        "volume": 195052.33,
+        "realizedPnl": -4525.42,
+        "roi": -0.0232,
+        "hitRate": 0.6933,
+        "avgImplied": 0.6892,
+        "edge": 0.0041,
+        "top1Share": 0.1824
       }
     },
     "sports": {
       "combined": {
-        "n": 341,
-        "volume": 990354.47,
-        "realizedPnl": -6448.5,
-        "roi": -0.0065,
-        "hitRate": 0.8059,
-        "avgImplied": 0.8177,
-        "edge": -0.0118,
-        "top1Share": 0.1161
+        "n": 342,
+        "volume": 993587.48,
+        "realizedPnl": -6348.51,
+        "roi": -0.0064,
+        "hitRate": 0.8065,
+        "avgImplied": 0.8181,
+        "edge": -0.0117,
+        "top1Share": 0.1159
       },
       "settlement": {
-        "n": 281,
-        "volume": 791638.17,
-        "realizedPnl": 7636.14,
-        "roi": 0.0096,
-        "hitRate": 0.8648,
-        "avgImplied": 0.8411,
+        "n": 282,
+        "volume": 794871.18,
+        "realizedPnl": 7736.13,
+        "roi": 0.0097,
+        "hitRate": 0.8652,
+        "avgImplied": 0.8416,
         "edge": 0.0237,
-        "top1Share": 0.0697
+        "top1Share": 0.0695
       },
       "exit": {
         "n": 60,
@@ -715,13 +715,13 @@
     "tech": {
       "combined": {
         "n": 9,
-        "volume": 177549.79,
-        "realizedPnl": 4328.54,
+        "volume": 177677.12,
+        "realizedPnl": 4329.96,
         "roi": 0.0244,
         "hitRate": 1.0,
         "avgImplied": 0.9339,
         "edge": 0.0661,
-        "top1Share": 0.6154
+        "top1Share": 0.6152
       },
       "settlement": {
         "n": 6,
@@ -735,64 +735,64 @@
       },
       "exit": {
         "n": 3,
-        "volume": 52161.72,
-        "realizedPnl": 306.59,
+        "volume": 52289.05,
+        "realizedPnl": 308.01,
         "roi": 0.0059,
         "hitRate": 1.0,
         "avgImplied": 0.8772,
         "edge": 0.1228,
-        "top1Share": 0.5981
+        "top1Share": 0.5999
       }
     }
   },
   "openBook": {
-    "n": 130,
-    "cost": 268424.13,
-    "mark": 263564.66,
-    "unrealized": -4859.47
+    "n": 132,
+    "cost": 274097.22,
+    "mark": 269198.82,
+    "unrealized": -4898.41
   },
   "openByCategory": {
     "commodities": {
       "n": 4,
       "cost": 21876.08,
-      "mark": 22502.24,
-      "unrealized": 626.16
+      "mark": 22459.75,
+      "unrealized": 583.67
     },
     "geopolitics": {
       "n": 9,
       "cost": 19053.93,
-      "mark": 18297.01,
-      "unrealized": -756.92
+      "mark": 18244.05,
+      "unrealized": -809.87
     },
     "macro": {
       "n": 3,
       "cost": 17217.52,
-      "mark": 5856.86,
-      "unrealized": -11360.66
+      "mark": 5891.63,
+      "unrealized": -11325.89
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 271.8,
-      "unrealized": -66.6
+      "mark": 275.4,
+      "unrealized": -63.0
     },
     "politics": {
-      "n": 103,
-      "cost": 195316.36,
-      "mark": 201868.9,
-      "unrealized": 6552.53
+      "n": 104,
+      "cost": 201111.93,
+      "mark": 207762.9,
+      "unrealized": 6650.96
     },
     "sports": {
-      "n": 8,
-      "cost": 3303.87,
-      "mark": 3383.27,
-      "unrealized": 79.4
+      "n": 9,
+      "cost": 3308.74,
+      "mark": 3307.86,
+      "unrealized": -0.88
     },
     "tech": {
       "n": 2,
-      "cost": 11317.96,
-      "mark": 11384.58,
-      "unrealized": 66.62
+      "cost": 11190.62,
+      "mark": 11257.22,
+      "unrealized": 66.6
     }
   },
   "openCategories": {
@@ -849,7 +849,6 @@
     "0x57599a84bf50c94b958adb020aa2a25bf02e26453e500d3b739d86e6b783774c": "politics",
     "0x587a72a6a00a6e395178fcab9bf4398f5f15bb9b87c25c0dc3e1aef342c4f125": "sports",
     "0x5ad7756609da59ffb359e37a16cc0b89285f4b823623e22e2900f054a77ed8ed": "politics",
-    "0x5d763463cd2a9bd939d49bbb5b4bbaf5fc2cd9ecee5966e6fcce0b6de57179fc": "politics",
     "0x5db999fad322cea2914535aae5517060c3f80ad6d8c0231cde2124a434d16846": "geopolitics",
     "0x5e95ab3b85ce3e98f7cc841671ddb18807c0819487134925b639402b499f360f": "politics",
     "0x64b001ee377252b9f1d1c9fec81fabdacfd3bcaeaccd35aa40939852107ed82c": "politics",
@@ -861,6 +860,7 @@
     "0x749d8eccbc0a99447e71fc5e40a0096842774bef4d5c8838b8adb39af068b3cb": "sports",
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7586a96520578acaaaa4ea84a2582f197f84255da1f3392a7aa300386c187b37": "geopolitics",
+    "0x77051d8ddec1e312de90cdf2ce026ce1c4df4c1c264cfa1525e55995b542fb0c": "politics",
     "0x771873c365f87bffd990644e4b688aebc1be7f18396d2eab64b996ff66e88669": "politics",
     "0x78cd764ab3cdfa56aed4b35f5c9b0f19b011c429ea896a8211dd11d9b9820716": "politics",
     "0x7d8ec7081ebac5b628ea2875a02172359e89954e6390a94a306ea8721a4e9940": "politics",
@@ -910,6 +910,8 @@
     "0xeca572826dbd8548c7969c165c5abdca214bb94e7b7191fae36cc898482d7eb9": "politics",
     "0xed91c4b84104e197f69c7062fe7df6468a721048c2d7a56d229137a7f09d9bb5": "politics",
     "0xf4ad902ef8628285f6f1e5b2a993a0d426363a93d45c2084b328cd0a371d4f27": "politics",
+    "0xf59e2d2b6bc5a3027a6e89b22603192e5a9a8b00e9ace38e0f54858b4bd9c491": "sports",
+    "0xf8864cc923193924f175991ede770984839c7fd8e57386e6cbd9aa32eb62f6d6": "politics",
     "0xf9b68b99b3ca714f63e49c5a595ade99bf65585e00bfa0e2ebd112cdc090456c": "politics",
     "0xfbd0a65112e26d9a2a68dc47f8a95c6c14d22650cb4837c5429b546726661b71": "politics",
     "0xfc5c740e4617eb9908ceada7c91bfbe1cd41f172d703ef811d544e60a7a70bb5": "politics",
@@ -919,15 +921,15 @@
     "hedged": {
       "markets": 7,
       "records": 17,
-      "realizedPnl": 5642.37
+      "realizedPnl": 5660.69
     },
     "conversions": {
-      "rows": 55,
-      "usd": 94716.61,
+      "rows": 56,
+      "usd": 95251.47,
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 519,
+      "events": 520,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2016,27 +2018,29 @@
     ["tech","2026-10-05","e",479.27,7.6,1,0.9519,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
     ["macro","2026-10-06","e",710.75,-156.27,0,0.4738,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
     ["geopolitics","2026-10-07","e",27028.59,398.4,1,0.7621,"Will the U.S. invade Iran before 2027?","No",null],
-    ["politics","2026-10-07","e",7747.54,119.5,1,0.9717,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-07","e",7747.54,120.37,1,0.9717,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-10-07","e",332.37,-34.7,0,0.8155,"Will the Democrats win the Vermont governor race in 2026?","No","Vermont Governor Election Winner"],
     ["politics","2026-10-07","e",1564.46,83.69,1,0.9354,"Will the Democratic Party win the NY-19 House seat?","Yes","NY-19 House Election Winner"],
     ["politics","2026-10-07","e",680.15,22.66,1,0.9416,"Will the Democratic Party win the IN-01 House seat?","Yes","IN-01 House Election Winner"],
-    ["politics","2026-10-07","e",12069.62,168.27,1,0.975,"Will the Republican Party hold exactly 56 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
-    ["politics","2026-10-07","e",1129.74,19.06,1,0.118,"Will the Republican Party hold exactly 52 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-10-07","e",140.71,-54.38,0,0.0137,"Will the Republican Party hold 57 or more Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
-    ["politics","2026-10-07","e",324.61,127.91,1,0.032,"Will the Republican Party hold exactly 54 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
-    ["politics","2026-10-07","e",452.23,90.25,1,0.05,"Will the Republican Party hold exactly 53 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
-    ["politics","2026-10-07","e",138.61,19.98,1,0.0255,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["sports","2026-10-07","s",489.99,-489.99,0,0.49,"Los Angeles Dodgers vs. Atlanta Braves","Atlanta Braves",null],
     ["commodities","2026-10-08","e",5149.22,91.56,1,0.9629,"Will WTI Crude Oil (WTI) hit (LOW) $65 in October?","No","What will WTI Crude Oil (WTI) hit in October 2026?"],
     ["geopolitics","2026-10-08","e",10082.41,2116.86,1,0.5272,"Will Fl\u00e1vio Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-10-08","e",1801.0,153.0,1,0.9005,"Will Alberta vote for independence in 2026?","No",null],
     ["politics","2026-10-08","e",3206.48,187.87,1,0.7557,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
     ["politics","2026-10-08","e",448.24,-65.78,0,0.8673,"Will the Republicans win the Vermont governor race in 2026?","Yes","Vermont Governor Election Winner"],
-    ["politics","2026-10-08","e",3093.27,29.14,1,0.9896,"Will the Republican Party hold 57 or more Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
     ["sports","2026-10-08","s",408.5,-408.5,0,0.43,"Los Angeles Dodgers vs. Atlanta Braves","Atlanta Braves",null],
     ["sports","2026-10-08","s",1.1,-1.1,0,0.22,"Will Atlanta Braves advance to the NLCS in the 2026 MLB Playoffs?","Yes","MLB Playoffs: Team to advance to NLCS"],
     ["sports","2026-10-08","s",2157.39,-2157.39,0,0.1029,"Will the New York Yankees win the 2026 World Series?","Yes","MLB World Series Champion 2026"],
-    ["politics","2026-10-09","e",2.86,0.43,1,0.8654,"Will Republicans win the Michigan, Minnesota, and New Hampshire Senate seats?","No","Senate Three-Way Combo: Michigan, Minnesota, New Hampshire"],
-    ["tech","2026-10-09","e",47263.56,183.36,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"]
+    ["politics","2026-10-09","e",5.46,0.82,1,0.8654,"Will Republicans win the Michigan, Minnesota, and New Hampshire Senate seats?","No","Senate Three-Way Combo: Michigan, Minnesota, New Hampshire"],
+    ["politics","2026-10-10","e",68.67,2.75,1,0.9519,"Will the Republican Party win the NM-01 House seat?","No","NM-01 House Election Winner"],
+    ["politics","2026-10-10","e",3622.86,42.85,1,0.9897,"Will the Republican Party hold 57 or more Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-10","e",12591.11,188.99,1,0.975,"Will the Republican Party hold exactly 56 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-10","e",1107.73,41.07,1,0.1157,"Will the Republican Party hold exactly 52 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-10","e",321.66,130.87,1,0.0317,"Will the Republican Party hold exactly 54 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-10","e",450.73,91.75,1,0.0499,"Will the Republican Party hold exactly 53 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-10-10","e",134.0,23.72,1,0.0246,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
+    ["sports","2026-10-10","s",3233.01,99.99,1,0.97,"Iowa vs. Washington","Iowa",null],
+    ["tech","2026-10-10","e",47390.89,184.78,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"]
   ]
 }
