@@ -102,6 +102,15 @@ function polPassed(race) {
   return d !== null && d < 0;
 }
 
+// Whether a place still has something to vote on — a scheduled race that
+// hasn't happened yet, or an undated one that hasn't been superseded. A
+// place logged only for its past (Morocco, Sweden) has none, and a place
+// whose sole race has been held is no different from one never logged —
+// both belong to history now, not to the map's current slate.
+function polHasUpcoming(entry) {
+  return polRaces(entry).some(race => !polPassed(race));
+}
+
 // Three buckets, in reading order: still to come, undated, already held. Then
 // date within the bucket — ascending for what is coming, most-recent-first for
 // what is done — and rank last, to settle a shared ballot.
@@ -289,11 +298,14 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
   // would clip Canada's border wherever Greenland happens to follow it.
   const ordered = usePolMemo(() => {
     const unlogged = [], logged = [];
-    geo.features.forEach(f => (polLookup(index, f) ? logged : unlogged).push(f));
+    geo.features.forEach(f => (polHasUpcoming(polLookup(index, f)) ? logged : unlogged).push(f));
     return unlogged.concat(logged);
   }, [geo, index]);
 
-  const marked = usePolMemo(() => ordered.filter(f => polLookup(index, f)), [ordered, index]);
+  const marked = usePolMemo(
+    () => ordered.filter(f => polHasUpcoming(polLookup(index, f))),
+    [ordered, index]
+  );
 
   return (
     <div className="pol-map-shell" onMouseLeave={() => onHover(null)}>
@@ -319,25 +331,29 @@ function PolMap({ geo, index, scope, selected, hovered, onSelect, onHover }) {
         </defs>
         {ordered.map((f) => {
           const entry = polLookup(index, f);
+          const isMarked = polHasUpcoming(entry);
           const isSel = selected === f.name;
           return (
             <path
               key={f.id + f.name}
               d={f.d}
-              className={`pol-shape ${entry ? 'pol-lv-' + polLevel(polPrimary(entry, scope, f.name)) : 'pol-none'} ${isSel ? 'is-selected' : ''}`}
-              // Unlogged shapes keep the CSS hairline; only marked ones carry a
-              // sized outline, clipped to themselves and doubled so the visible
-              // band still reads at the intended weight. The world map takes its
-              // weight per feature from build-geo.py, because a border heavy
-              // enough for Texas turns Japan into a blob. The US map is uniform
-              // and lighter — see POL_US_STROKE_MAX.
-              clipPath={entry ? `url(#pol-clip-${f.id})` : undefined}
-              style={entry ? { strokeWidth: scope === 'us' ? Math.min(f.w * 2, POL_US_STROKE_MAX) : f.w * 2 } : undefined}
-              // Only logged places are tab stops — 177 countries of tabbing to
-              // reach the ten that say anything isn't navigation.
-              tabIndex={entry ? 0 : undefined}
-              role={entry ? 'button' : undefined}
-              aria-label={entry ? `${f.name} — ${polLevel(polPrimary(entry, scope, f.name))}` : undefined}
+              className={`pol-shape ${isMarked ? 'pol-lv-' + polLevel(polPrimary(entry, scope, f.name)) : 'pol-none'} ${isSel ? 'is-selected' : ''}`}
+              // Unmarked shapes keep the CSS hairline — that now includes a
+              // place logged only for its past, same as one never logged at
+              // all; only a place with something still to vote on carries a
+              // sized outline, clipped to itself and doubled so the visible
+              // band still reads at the intended weight. The world map takes
+              // its weight per feature from build-geo.py, because a border
+              // heavy enough for Texas turns Japan into a blob. The US map is
+              // uniform and lighter — see POL_US_STROKE_MAX.
+              clipPath={isMarked ? `url(#pol-clip-${f.id})` : undefined}
+              style={isMarked ? { strokeWidth: scope === 'us' ? Math.min(f.w * 2, POL_US_STROKE_MAX) : f.w * 2 } : undefined}
+              // Only places with an upcoming race are tab stops — 177
+              // countries of tabbing to reach the ones that still have
+              // something to vote on isn't navigation.
+              tabIndex={isMarked ? 0 : undefined}
+              role={isMarked ? 'button' : undefined}
+              aria-label={isMarked ? `${f.name} — ${polLevel(polPrimary(entry, scope, f.name))}` : undefined}
               onMouseEnter={() => onHover(f.name)}
               onFocus={() => onHover(f.name)}
               onClick={() => onSelect(isSel ? null : f.name)}
