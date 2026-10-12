@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-06",
+  "updated": "2026-10-12",
   "note": "Sympathies, not projections.",
   "_schema": {
     "key": "match a feature by name (as spelled in geo-world.json / geo-us.json) or by its numeric id",
@@ -50,13 +50,12 @@
       ]
     },
     "Latvia": {
-      "races": [
+      "past": [
         {
+          "date": "2026-10-03",
           "office": "parliament",
-          "next": "2026-10-03",
           "pick": "Progressives",
-          "enthusiasm": "tactical",
-          "logged": "2026-08-25"
+          "enthusiasm": "tactical"
         }
       ]
     },
