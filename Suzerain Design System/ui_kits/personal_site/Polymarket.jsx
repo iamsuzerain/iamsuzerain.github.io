@@ -1042,10 +1042,6 @@ function PmBreakdown({ bd, tradingPnl }) {
 // move) guards against reading one trade as a category.
 // From the polymarket-calibration daily cron (`byCategory` and `lots`).
 const PM_CAT_MIN_N = 25;    // below this the row is noise — dimmed, not dropped
-// A category whose |P&L| is under this fraction of the largest bar renders as a
-// 1px speck indistinguishable from the zero-line divider. Plot only material
-// movers (like the contribution-to-return chart); the table keeps the full tail.
-const PM_CAT_BAR_FLOOR = 0.01;
 
 // A lifetime aggregate is the wrong instrument for a book whose shape changed,
 // and at 2026-09-08 it was hiding the damage rather than exaggerating it.
@@ -1240,8 +1236,8 @@ function PmCategoryPanel({ byCategory, lots, asOf, openBook, openByCategory }) {
   const maxAbs = Math.max(
     ...rows.map(r => Math.max(Math.abs(r.c.realizedPnl), Math.abs(r.total))), 1);
   const net = rows.reduce((a, r) => a + r.total, 0);
-  const barRows = rows.filter(r =>
-    Math.max(Math.abs(r.c.realizedPnl), Math.abs(r.total)) >= maxAbs * PM_CAT_BAR_FLOOR);
+  // Every category gets a row, near-zero ones included: their bar collapses to
+  // the 1px stub at the zero line, and the figure beside it carries the rest.
   // Track coordinate for a dollar figure: 50% is the zero line, ±50% the edges.
   const at = (v) => 50 + (v / maxAbs) * 50;
 
@@ -1250,7 +1246,7 @@ function PmCategoryPanel({ byCategory, lots, asOf, openBook, openByCategory }) {
       {head}
 
       <div className="pf-contrib pm-cat-bars" onMouseLeave={() => setHover(null)}>
-        {barRows.map(r => {
+        {rows.map(r => {
           // Two segments on one track. The solid one runs zero -> realized; the
           // faded one carries on from there to the total, so its length IS the
           // mark and its direction says whether the open book is adding to the
@@ -1309,7 +1305,6 @@ function PmCategoryPanel({ byCategory, lots, asOf, openBook, openByCategory }) {
         <div className="pf-contrib-foot">
           <span>
             {rows.length} market types · {rows.reduce((a, r) => a + r.c.n, 0)} lots
-            {barRows.length < rows.length && ` · ${rows.length - barRows.length} near zero`}
           </span>
           <span>
             {withOpen ? 'book ' : 'net '}{net >= 0 ? '+' : ''}{pmUSD(net)}
@@ -1327,7 +1322,7 @@ function PmCategoryPanel({ byCategory, lots, asOf, openBook, openByCategory }) {
             and, more usefully, the same edge clamping, so a hover on the
             left-hand category names doesn't push it out of the panel. */}
         {hover && (() => {
-          const r = barRows.find(b => b.cat === hover.cat);
+          const r = rows.find(b => b.cat === hover.cat);
           if (!r) return null;
           const money = (v) => `${v >= 0 ? '+' : ''}${pmUSD(v)}`;
           const tone = (v) => (v >= 0 ? 'pos' : 'neg');
