@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-17T10:53:40Z",
+  "generatedAt": "2026-10-18T11:19:05Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,25 +45,25 @@
   },
   "headline": {
     "settlement": {
-      "n": 774,
-      "wins": 692,
+      "n": 778,
+      "wins": 696,
       "pushes": 0,
-      "hitRate": 0.8941,
-      "volume": 4356238.66,
-      "realizedPnl": 110361.35,
+      "hitRate": 0.8946,
+      "volume": 4372403.75,
+      "realizedPnl": 110808.89,
       "roi": 0.0253,
       "brier": 0.0428,
       "avgImplied": 0.8735,
-      "edge": 0.0206,
-      "calibrationError": 0.03
+      "edge": 0.0211,
+      "calibrationError": 0.0294
     },
     "exit": {
-      "n": 330,
-      "wins": 220,
+      "n": 331,
+      "wins": 221,
       "pushes": 10,
-      "hitRate": 0.6875,
-      "volume": 1585877.97,
-      "realizedPnl": -23908.6,
+      "hitRate": 0.6885,
+      "volume": 1586449.76,
+      "realizedPnl": -23890.53,
       "roi": -0.0151
     }
   },
@@ -147,17 +147,17 @@
       {
         "lo": 0.5,
         "hi": 0.6,
-        "n": 11,
-        "wins": 5,
+        "n": 12,
+        "wins": 6,
         "pushes": 0,
-        "winRate": 0.4545,
-        "avgImplied": 0.5481,
-        "volume": 101957.54,
-        "realizedPnl": 84632.76,
-        "grossPnl": 91119.82,
+        "winRate": 0.5,
+        "avgImplied": 0.5508,
+        "volume": 102150.67,
+        "realizedPnl": 84772.62,
+        "grossPnl": 91259.68,
         "winRateByVolume": 0.9682,
-        "wilsonLo": 0.2127,
-        "wilsonHi": 0.7199
+        "wilsonLo": 0.2538,
+        "wilsonHi": 0.7462
       },
       {
         "lo": 0.6,
@@ -222,31 +222,31 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 250,
-        "wins": 249,
+        "n": 252,
+        "wins": 251,
         "pushes": 0,
         "winRate": 0.996,
         "avgImplied": 0.9723,
-        "volume": 1901083.85,
-        "realizedPnl": 52006.39,
-        "grossPnl": 53287.77,
+        "volume": 1910857.91,
+        "realizedPnl": 52300.5,
+        "grossPnl": 53581.88,
         "winRateByVolume": 0.9997,
-        "wilsonLo": 0.9777,
+        "wilsonLo": 0.9779,
         "wilsonHi": 0.9993
       },
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 215,
-        "wins": 214,
+        "n": 216,
+        "wins": 215,
         "pushes": 0,
-        "winRate": 0.9953,
+        "winRate": 0.9954,
         "avgImplied": 0.9949,
-        "volume": 1437021.39,
-        "realizedPnl": 6817.4,
-        "grossPnl": 7099.98,
+        "volume": 1443219.29,
+        "realizedPnl": 6830.97,
+        "grossPnl": 7113.55,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.9741,
+        "wilsonLo": 0.9742,
         "wilsonHi": 0.9992
       }
     ],
@@ -379,10 +379,10 @@
         "pushes": 3,
         "winRate": 0.6032,
         "avgImplied": 0.8506,
-        "volume": 174137.0,
-        "realizedPnl": -12282.8,
-        "grossPnl": 25812.92,
-        "winRateByVolume": 0.6134,
+        "volume": 174545.75,
+        "realizedPnl": -12269.44,
+        "grossPnl": 25826.28,
+        "winRateByVolume": 0.6143,
         "wilsonLo": 0.4798,
         "wilsonHi": 0.7147
       },
@@ -404,17 +404,17 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 74,
-        "wins": 59,
+        "n": 75,
+        "wins": 60,
         "pushes": 0,
-        "winRate": 0.7973,
+        "winRate": 0.8,
         "avgImplied": 0.9671,
-        "volume": 561350.36,
-        "realizedPnl": -14857.48,
-        "grossPnl": 29684.32,
+        "volume": 561513.4,
+        "realizedPnl": -14852.77,
+        "grossPnl": 29689.03,
         "winRateByVolume": 0.8342,
-        "wilsonLo": 0.6921,
-        "wilsonHi": 0.8731
+        "wilsonLo": 0.6959,
+        "wilsonHi": 0.8749
       },
       {
         "lo": 0.99,
@@ -651,13 +651,13 @@
     "politics": {
       "combined": {
         "n": 218,
-        "volume": 1042512.59,
-        "realizedPnl": 20909.91,
+        "volume": 1042921.34,
+        "realizedPnl": 20923.27,
         "roi": 0.0201,
         "hitRate": 0.8404,
         "avgImplied": 0.8254,
         "edge": 0.015,
-        "top1Share": 0.1265
+        "top1Share": 0.1264
       },
       "settlement": {
         "n": 136,
@@ -671,44 +671,44 @@
       },
       "exit": {
         "n": 82,
-        "volume": 203188.0,
-        "realizedPnl": -4198.06,
-        "roi": -0.0207,
+        "volume": 203596.75,
+        "realizedPnl": -4184.7,
+        "roi": -0.0206,
         "hitRate": 0.7013,
         "avgImplied": 0.6947,
         "edge": 0.0066,
-        "top1Share": 0.1774
+        "top1Share": 0.1772
       }
     },
     "sports": {
       "combined": {
-        "n": 352,
-        "volume": 1015045.48,
-        "realizedPnl": -4530.54,
-        "roi": -0.0045,
-        "hitRate": 0.8091,
-        "avgImplied": 0.8189,
-        "edge": -0.0097,
-        "top1Share": 0.1122
+        "n": 357,
+        "volume": 1031373.61,
+        "realizedPnl": -4078.29,
+        "roi": -0.004,
+        "hitRate": 0.8118,
+        "avgImplied": 0.82,
+        "edge": -0.0082,
+        "top1Share": 0.1115
       },
       "settlement": {
-        "n": 291,
-        "volume": 815904.19,
-        "realizedPnl": 9514.1,
-        "roi": 0.0117,
-        "hitRate": 0.866,
-        "avgImplied": 0.8416,
-        "edge": 0.0244,
-        "top1Share": 0.0646
+        "n": 295,
+        "volume": 832069.28,
+        "realizedPnl": 9961.64,
+        "roi": 0.012,
+        "hitRate": 0.8678,
+        "avgImplied": 0.8421,
+        "edge": 0.0257,
+        "top1Share": 0.0637
       },
       "exit": {
-        "n": 61,
-        "volume": 199141.29,
-        "realizedPnl": -14044.64,
-        "roi": -0.0705,
-        "hitRate": 0.5333,
-        "avgImplied": 0.7105,
-        "edge": -0.1771,
+        "n": 62,
+        "volume": 199304.33,
+        "realizedPnl": -14039.93,
+        "roi": -0.0704,
+        "hitRate": 0.541,
+        "avgImplied": 0.7146,
+        "edge": -0.1737,
         "top1Share": 0.2045
       }
     },
@@ -747,22 +747,22 @@
   },
   "openBook": {
     "n": 139,
-    "cost": 315804.49,
-    "mark": 310736.11,
-    "unrealized": -5068.39
+    "cost": 325008.85,
+    "mark": 320556.84,
+    "unrealized": -4452.02
   },
   "openByCategory": {
     "commodities": {
       "n": 4,
       "cost": 21876.08,
-      "mark": 22458.25,
-      "unrealized": 582.17
+      "mark": 22485.27,
+      "unrealized": 609.19
     },
     "geopolitics": {
       "n": 11,
       "cost": 39731.6,
-      "mark": 38618.03,
-      "unrealized": -1113.57
+      "mark": 38828.27,
+      "unrealized": -903.33
     },
     "macro": {
       "n": 3,
@@ -773,26 +773,26 @@
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 264.6,
-      "unrealized": -73.8
+      "mark": 257.4,
+      "unrealized": -81.0
     },
     "politics": {
-      "n": 111,
-      "cost": 227376.26,
-      "mark": 234992.47,
-      "unrealized": 7616.2
+      "n": 112,
+      "cost": 236773.75,
+      "mark": 244776.98,
+      "unrealized": 8003.22
     },
     "sports": {
-      "n": 7,
-      "cost": 3175.48,
-      "mark": 3183.14,
-      "unrealized": 7.67
+      "n": 6,
+      "cost": 2982.34,
+      "mark": 2987.93,
+      "unrealized": 5.59
     },
     "tech": {
       "n": 2,
       "cost": 6089.15,
-      "mark": 6118.48,
-      "unrealized": 29.33
+      "mark": 6119.85,
+      "unrealized": 30.7
     }
   },
   "openCategories": {
@@ -827,7 +827,6 @@
     "0x3c5b93b91196c8db64e63c424979da8cfbf44a4501afd70d2480ee28fbf306a2": "politics",
     "0x3fb5cd695a1a69d9bdcdc56473fe939b1f5f746fd93d95678c2aacfd02ecc8f1": "politics",
     "0x3fd189cac9280dfc49a07115581e8d4c9e0b7e1c1e8580a44e9ff3d74e39cf2d": "politics",
-    "0x4051174e9ccefce81be2b567c53a242be317cbb396ce23a46916a6727ce8453a": "sports",
     "0x4460b4d5604834b9579c7b001b19a3faa8441acb6b94b0c35067cf1aaa22d682": "politics",
     "0x44b642636473fb07f0c2319a1d25729a36134969076ffdbb8979cbfdda612b14": "politics",
     "0x44f7e3582eba72648fb5e03cb1dacc0ace21da93285999c7e14642cf91e279bf": "politics",
@@ -933,7 +932,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 531,
+      "events": 535,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1890,7 +1889,6 @@
     ["geopolitics","2026-09-10","s",1487.48,16.19,1,0.9892,"Nothing Ever Happens: August","Nothing",null],
     ["macro","2026-09-10","s",37.47,4.26,0,0.0017,"Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
     ["politics","2026-09-10","e",18.85,0.0,null,0.84,"Will the Democratic Party win the FL-27 House seat?","No","FL-27 House Election Winner"],
-    ["politics","2026-09-11","e",1902.57,123.15,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
     ["sports","2026-09-11","s",2502.28,95.9,1,0.9631,"49ers vs. Rams","49ers",null],
     ["sports","2026-09-12","e",2763.93,7758.38,1,0.231,"Will Shohei Ohtani win the 2026 National League MVP Award?","No","MLB: 2026 NL MVP"],
     ["sports","2026-09-12","e",1148.98,-739.15,0,0.5046,"Will New York Yankees win the 2026 AL East title?","Yes","MLB: 2026 AL East Champion"],
@@ -2060,6 +2058,12 @@
     ["politics","2026-10-16","e",0.9,0.1,1,0.8959,"Republican Senate odds hit 55% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-10-16","s",2911.7,1645.64,1,0.6389,"Will the Los Angeles Dodgers win the 2026 World Series?","No","MLB World Series Champion 2026"],
     ["sports","2026-10-16","s",286.38,-286.38,0,0.86,"Shohei Ohtani: Home Runs O/U 0.5","Under","Milwaukee Brewers vs. Los Angeles Dodgers - Player Props"],
-    ["sports","2026-10-17","s",6417.43,18.73,1,0.9971,"Washington vs. Purdue","Washington",null]
+    ["politics","2026-10-17","e",2311.32,136.51,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
+    ["sports","2026-10-17","s",6197.9,13.57,1,0.9978,"Alabama vs. Tennessee","Tennessee",null],
+    ["sports","2026-10-17","e",163.04,4.71,1,0.97,"Mississippi State vs. LSU","LSU",null],
+    ["sports","2026-10-17","s",6267.35,193.84,1,0.97,"Mississippi State vs. LSU","LSU",null],
+    ["sports","2026-10-17","s",6417.43,18.73,1,0.9971,"Washington vs. Purdue","Washington",null],
+    ["sports","2026-10-17","s",193.13,139.86,1,0.58,"Ohio State vs. Indiana","Ohio State",null],
+    ["sports","2026-10-18","s",3506.71,100.27,1,0.9722,"Florida State vs. Miami (FL)","Miami (FL)",null]
   ]
 }
