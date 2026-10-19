@@ -10,11 +10,11 @@
   ],
   "totals": {
     "trading": 96784,
-    "lp": 11036,
-    "yield": 132,
-    "maker": 4001,
+    "lp": 11553,
+    "yield": 134,
+    "maker": 4008,
     "taker": 82,
-    "sponsored": 514,
+    "sponsored": 0,
     "uma": 0,
     "fees": 3229
   },
@@ -25,5 +25,6 @@
     "nav": 321605,
     "cashCursor": 1792337851,
     "cashBasis": "betmoar, last real measurement before it became unfetchable on 2026-10-19"
-  }
+  },
+  "totalsBasis": "lp/maker/yield/taker re-baselined 2026-10-19 to the full sums of their own activity events; sponsored folded into lp - betmoar published lp as the REWARD stream minus sponsored and no first-party split exists. lp+sponsored is unchanged."
 }

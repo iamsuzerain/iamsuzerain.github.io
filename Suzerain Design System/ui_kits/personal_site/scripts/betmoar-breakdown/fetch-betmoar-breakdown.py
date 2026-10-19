@@ -18,8 +18,10 @@ pattern change; the mechanism it discovered stopped existing.
 
 WHERE THE NUMBERS COME FROM NOW
   trading, fees        data-api.polymarket.com/v2/user-pnl   (hourly series, no auth)
-  lp, maker, yield,    data-api /activity filtered by type - each reward IS an event
-    taker                with a usdcSize, so these sum from first principles
+  lp, maker, yield,    advanced from the previous committed totals by the reward
+    taker                events in the single /activity pull the cash figure needs.
+                         Summing each stream from scratch cost 4 types x 2 wallets of
+                         paged calls and hit HTTP 429 on a shared runner IP (2026-10-19)
   positions            data-api /positions, as before
   cash                 CARRIED FORWARD - nothing public reports a USDC balance
 
@@ -62,7 +64,7 @@ The newest entry at or before today wins and everything after it is re-derived. 
 derived cash ever goes negative the run fails, because the activity feed cannot spend
 money that was never there - that is proof a flow was missed.
 """
-import json, os, sys
+import json, os, sys, time
 from datetime import datetime, timezone
 from curl_cffi import requests
 
@@ -80,12 +82,38 @@ POS = "https://data-api.polymarket.com/positions"
 VAL = "https://data-api.polymarket.com/value"
 
 # Each reward stream is an activity type carrying a usdcSize, so the cumulative figure
-# sums from the feed with no prior state. REWARD includes what betmoar called sponsored.
+# advances exactly from the window's own events. REWARD includes what betmoar called
+# sponsored, which is why the seed below folds sponsored into lp once.
 REWARD_TYPES = {"REWARD": "lp", "MAKER_REBATE": "maker",
                 "YIELD": "yield", "TAKER_REBATE": "taker"}
 CASH_IN = {"REDEEM", "MERGE", "CONVERSION", "REWARD", "YIELD",
            "MAKER_REBATE", "TAKER_REBATE", "DEPOSIT"}
 CASH_OUT = {"SPLIT", "WITHDRAWAL"}
+
+
+def get(url, params, timeout=40, tries=5):
+    """GET with backoff on 429 and 5xx.
+
+    The 2026-10-19 run died on HTTP 429 partway through the per-type reward queries: a
+    shared GitHub runner IP against an endpoint that rate-limits, and this script makes
+    far more calls than the betmoar scrape it replaced. The call count is cut below, but
+    bursts still need absorbing.
+    """
+    delay = 2.0
+    for attempt in range(tries):
+        r = requests.get(url, params=params, impersonate="chrome", timeout=timeout)
+        if r.status_code < 400:
+            return r
+        if r.status_code != 429 and r.status_code < 500:
+            r.raise_for_status()
+        if attempt == tries - 1:
+            r.raise_for_status()
+        wait = float(r.headers.get("retry-after") or delay)
+        print(f"  {r.status_code} on {url.rsplit('/', 1)[-1]}, retrying in {wait:.0f}s "
+              f"({attempt + 1}/{tries})", file=sys.stderr)
+        time.sleep(wait)
+        delay = min(delay * 2, 30)
+    raise RuntimeError("unreachable")
 
 
 def _load(path):
@@ -123,9 +151,7 @@ def _load_prev(path):
 
 def user_pnl(wallet):
     """Latest point of the hourly P&L series."""
-    r = requests.get(PNL, params={"user": wallet, "interval": "1d"},
-                     impersonate="chrome", timeout=60)
-    r.raise_for_status()
+    r = get(PNL, {"user": wallet, "interval": "1d"}, timeout=60)
     pts = (r.json().get("data") or {}).get("points") or []
     if not pts:
         raise ValueError(f"v2/user-pnl returned no points for {wallet}")
@@ -139,8 +165,7 @@ def activity(wallet, since=None, kind=None):
         params = {"user": wallet, "limit": 500, "offset": offset}
         if kind:
             params["type"] = kind
-        r = requests.get(ACT, params=params, impersonate="chrome", timeout=40)
-        r.raise_for_status()
+        r = get(ACT, params)
         page = r.json()
         if not isinstance(page, list) or not page:
             break
@@ -163,10 +188,8 @@ def fetch_positions_value(wallet):
     """
     total, offset, limit = 0.0, 0, 500
     while True:
-        r = requests.get(POS, params={"user": wallet, "sizeThreshold": 0,
-                                      "limit": limit, "offset": offset},
-                         impersonate="chrome", timeout=30)
-        r.raise_for_status()
+        r = get(POS, {"user": wallet, "sizeThreshold": 0,
+                      "limit": limit, "offset": offset}, timeout=30)
         page = r.json()
         if not isinstance(page, list):
             raise ValueError(f"unexpected /positions response: {r.text[:200]}")
@@ -178,8 +201,7 @@ def fetch_positions_value(wallet):
 
 def fetch_value(wallet):
     """data-api /value - the figure betmoar's portfolioValue tracked."""
-    r = requests.get(VAL, params={"user": wallet}, impersonate="chrome", timeout=25)
-    r.raise_for_status()
+    r = get(VAL, {"user": wallet}, timeout=25)
     rows = r.json()
     if isinstance(rows, list) and rows:
         return rows[0].get("value")
@@ -271,14 +293,7 @@ def main():
         # No first-party split; the whole REWARD stream is reported as `lp` below.
         "sponsored": 0,
     }
-    try:
-        for kind, line in REWARD_TYPES.items():
-            rows = [x for w in WALLETS for x in activity(w, kind=kind)]
-            totals[line] = dollars(sum(x.get("usdcSize", 0) or 0 for x in rows))
-            print(f"{line}: {len(rows)} {kind} events", file=sys.stderr)
-    except Exception as e:
-        print(f"error summing reward activity: {e}", file=sys.stderr)
-        sys.exit(1)
+    # Filled in below, from the single activity pull the cash figure already needs.
 
     # ---------------------------------------------------------------- positions
     positions_source, pairs, positions = "polymarket", [], 0.0
@@ -318,7 +333,7 @@ def main():
 
     events = [x for w in WALLETS for x in activity(w, since=cursor)]
     net = 0.0
-    unknown = {}
+    unknown, gained = {}, {}
     for x in events:
         t, u = x["type"], (x.get("usdcSize", 0) or 0)
         if t == "TRADE":
@@ -329,6 +344,14 @@ def main():
             net -= u
         else:
             unknown[t] = unknown.get(t, 0) + 1
+        if t in REWARD_TYPES:
+            gained[REWARD_TYPES[t]] = gained.get(REWARD_TYPES[t], 0.0) + u
+
+    prev_tot = prev.get("totals") or {}
+    for line in REWARD_TYPES.values():
+        totals[line] = dollars((prev_tot.get(line) or 0) + gained.get(line, 0.0))
+    for line, got in sorted(gained.items()):
+        print(f"{line} +{got:,.2f} -> {totals[line]:,.0f}", file=sys.stderr)
 
     if anchor:
         cash = anchor[1] + net
