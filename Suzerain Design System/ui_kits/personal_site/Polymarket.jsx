@@ -24,7 +24,7 @@ const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = 'Seutervoinen';
 const PM_CACHE_KEY = 'pm-cache-v11'; // v11: caches the live halves, not the daily files
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
-const PM_BM_URL = `https://www.betmoar.fun/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
+const PM_PROFILE_URL = `https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
 // 500, not 100: the second wallet alone held 95 open markets on 2026-09-14,
 // and anything past the cap dropped out of the table — and so out of search —
@@ -87,26 +87,10 @@ function pmDownsample(arr, target = PM_CHART_MAX_POINTS) {
   return out;
 }
 
-// ---------- earnings breakdown (betmoar → polymarket-rewards.json fallback) ----------
-function pmParseBetmoar(html) {
-  const extract = (label) => {
-    const re = new RegExp(label + '[^<$]{0,60}\\$([\\d,]+)', 'i');
-    const m = html.match(re);
-    return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
-  };
-  const trading  = extract('Trading');
-  const lp       = extract('\\bLP\\b');
-  const yld      = extract('Yield');
-  const maker    = extract('Maker');
-  const taker    = extract('Taker');
-  const sponsored = extract('Sponsored');
-  const uma      = extract('\\bUMA\\b');
-  if (trading == null && lp == null && maker == null) return null;
-  return { trading, lp, yield: yld, maker, taker, sponsored, uma, source: 'betmoar' };
-}
-
+// ---------- earnings breakdown (polymarket-breakdown.json -> rewards.json) ----------
 async function pmFetchBreakdown() {
-  // Primary: polymarket-breakdown.json written by betmoar-refresh workflow
+  // Primary: polymarket-breakdown.json, written daily by
+  // polymarket-breakdown-refresh from data-api.polymarket.com
   try {
     const bd = await window.szJson('data/polymarket-breakdown.json');
     if (bd.totals) {
@@ -123,9 +107,9 @@ async function pmFetchBreakdown() {
         // snapshot; used as portfolio value so it matches the book view's
         // capital-deployment bar exactly.
         nav:       bd.balances ? bd.balances.nav : null,
-        // The scrape's UTC date, so figures read off it can say which day.
+        // The snapshot's UTC date, so figures read off it can say which day.
         asOf:      /^\d{4}-\d\d-\d\d/.test(bd.generatedAt || '') ? bd.generatedAt.slice(0, 10) : null,
-        source:    'betmoar',
+        source:    'data-api',
       };
     }
   } catch {}
@@ -1008,9 +992,9 @@ function PmBreakdown({ bd, tradingPnl }) {
       <div className="pf-panel-head">
         <span className="pf-panel-title">profit by source</span>
         <span className="pf-panel-meta">
-          {source === 'betmoar' ? 'via betmoar' : source === 'json' ? 'maker + lp via clob' : 'trading only'}
+          {source === 'data-api' ? 'via data-api' : source === 'json' ? 'maker + lp via clob' : 'trading only'}
           {' · '}
-          <a className="pm-breakdown-src" href={PM_BM_URL} target="_blank" rel="noreferrer">full dashboard ↗</a>
+          <a className="pm-breakdown-src" href={PM_PROFILE_URL} target="_blank" rel="noreferrer">full profile ↗</a>
         </span>
       </div>
       <div className="pm-breakdown-grid">
@@ -2356,10 +2340,10 @@ function Polymarket() {
 
       <div className="pf-footer pm-footer-deep">
         <span>positions & trades live · data-api.polymarket.com</span>
-        {breakdown && breakdown.source === 'betmoar' && (
+        {breakdown && breakdown.source === 'data-api' && (
           <>
             <span className="sz-sep">·</span>
-            <span>value & profit by source · betmoar{snapDay ? ` snapshot ${snapDay}` : ' daily snapshot'}</span>
+            <span>value & profit by source · {snapDay ? `daily snapshot ${snapDay}` : 'daily snapshot'}</span>
           </>
         )}
         <span className="sz-sep">·</span>

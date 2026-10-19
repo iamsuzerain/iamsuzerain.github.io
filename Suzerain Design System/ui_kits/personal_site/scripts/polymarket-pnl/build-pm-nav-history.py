@@ -172,7 +172,7 @@ def main() -> int:
     # conversion: it stays corrupted until the market closes, so a day derived
     # from it lands thousands out — in a file both views read as the capital base
     # and as the percent-mode denominator. Normally the two agree, because
-    # betmoar-refresh writes today's nav at 06:00 and this runs after it; the cap
+    # polymarket-breakdown-refresh writes today's nav at 06:00 and this runs after it; the cap
     # only bites on a day that scrape failed, which is the day it matters. A
     # short series is already handled by the consumers, which clamp; an invented
     # one is not.

@@ -24,7 +24,7 @@ name: site-freshness
 on:
   schedule:
     # Every four hours, deliberately off the top of the hour: GitHub queues the
-    # most schedule events at :00, and betmoar-refresh already documents a cron
+    # most schedule events at :00, and polymarket-breakdown-refresh already documents a cron
     # that sat there for months. Cadence is a ceiling, not a promise — schedule
     # events have been landing 6-12h late since 2026-08-27. That only delays
     # detection; it cannot produce a false alarm, because the verdict below is

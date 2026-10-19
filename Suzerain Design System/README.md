@@ -299,7 +299,7 @@ These are part of the iconography and appear throughout the system:
         ├── Combined.jsx      — combined IBKR + Polymarket book
         ├── Writing.jsx       — thoughts index + post reader
         ├── data/             — content.json, portfolio.json, polymarket-*.json, benchmarks.json, posts/
-        └── scripts/          — data refreshers (ibkr-flex, polymarket-pnl, betmoar-breakdown, benchmarks) + new-post.py
+        └── scripts/          — data refreshers (ibkr-flex, polymarket-pnl, polymarket-breakdown, benchmarks) + new-post.py
 ```
 
 ---

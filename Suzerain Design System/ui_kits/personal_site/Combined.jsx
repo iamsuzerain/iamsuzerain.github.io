@@ -615,10 +615,10 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // copies — identical on every day both hold — except at the tail, where it is
   // the only one that exists.
   //
-  // The two files are written by different workflows: betmoar-refresh appends
+  // The two files are written by different workflows: polymarket-breakdown-refresh appends
   // the scrape to the breakdown history, and polymarket-pnl-refresh rebuilds
   // nav-history off it ten minutes later. On the cron path they stay in step. A
-  // manual betmoar-refresh dispatch does not: it moves the breakdown that the
+  // manual polymarket-breakdown-refresh dispatch does not: it moves the breakdown that the
   // polymarket view reads its headline off, and leaves nav-history — and so this
   // page's polymarket level — on the previous day's scrape until the next 06:10
   // UTC run. That is a full scrape of drift between two numbers naming one

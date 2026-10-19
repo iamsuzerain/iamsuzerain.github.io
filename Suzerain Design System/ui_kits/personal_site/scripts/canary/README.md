@@ -15,7 +15,7 @@ quantity, an accounting identity, or yesterday's copy of the same file.
 |---|---|---|---|
 | `flow-sources:` | `ibkr-flex/fetch-ibkr.py` | CT, ES and CIN agree on the window's deposits | reports |
 | `flow-coverage:` | `ibkr-flex/fetch-ibkr.py` | the TWR has flows to adjust by | **stops the run** |
-| `positions-sources:` | `betmoar-breakdown/fetch-betmoar-breakdown.py` | polymarket `/positions` and betmoar `portfolioValue` describe the same book | reports |
+| `positions-sources:` | `polymarket-breakdown/fetch-polymarket-breakdown.py` | polymarket `/positions` and betmoar `portfolioValue` describe the same book | reports |
 | `continuity` | `canary/continuity.py` | today's file against the copy in git HEAD | reports; stops on dates duplicated or out of order |
 
 All four print one line to stderr, so the Actions log picks them up and stdout

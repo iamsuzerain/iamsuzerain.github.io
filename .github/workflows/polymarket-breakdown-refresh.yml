@@ -1,4 +1,4 @@
-name: betmoar-breakdown-refresh
+name: polymarket-breakdown-refresh
 # Fetches Polymarket profit-by-source breakdown daily
 
 on:
@@ -79,8 +79,8 @@ jobs:
           # for balances.cashCursor - redirecting straight over it handed the script
           # an empty file and took the 2026-10-19 run down. Moving also means a failed
           # fetch leaves the previous day's data intact instead of emptying it.
-          S="Suzerain Design System/ui_kits/personal_site/scripts/betmoar-breakdown"
-          python3 "$S/fetch-betmoar-breakdown.py" > "$RUNNER_TEMP/breakdown.json"
+          S="Suzerain Design System/ui_kits/personal_site/scripts/polymarket-breakdown"
+          python3 "$S/fetch-polymarket-breakdown.py" > "$RUNNER_TEMP/breakdown.json"
           mv "$RUNNER_TEMP/breakdown.json" "$D/polymarket-breakdown.json"
           echo "result:"
           cat "$D/polymarket-breakdown.json"
@@ -127,7 +127,7 @@ jobs:
       # the backstop for nights that machine is off.
       #
       # Reads polymarket-pnl.json from disk without refreshing it: that feed only
-      # supplies the walk-back for days before betmoar began reporting balances
+      # supplies the walk-back for days before the breakdown reported balances
       # (pre-2026-07-15), which a day-old copy covers identically. The recorded
       # rows come from the file written one step above.
       - name: rebuild polymarket nav history
@@ -151,8 +151,8 @@ jobs:
 
       - name: commit + push if changed
         run: |
-          git config user.name  "betmoar-bot"
-          git config user.email "betmoar-bot@users.noreply.github.com"
+          git config user.name  "polymarket-bot"
+          git config user.email "polymarket-bot@users.noreply.github.com"
           if git diff --quiet \
               "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
               "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json" \
@@ -163,7 +163,7 @@ jobs:
           git add "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown-history.json" \
                   "Suzerain Design System/ui_kits/personal_site/data/polymarket-nav-history.json"
-          git commit -m "polymarket: refresh betmoar breakdown $(date -u +%F)"
+          git commit -m "polymarket: refresh breakdown $(date -u +%F)"
           # Remote main may have advanced since checkout (concurrent runs / other pushes).
           # Rebase onto it, keeping our freshly generated data on conflict, then retry push.
           for attempt in 1 2 3 4 5; do

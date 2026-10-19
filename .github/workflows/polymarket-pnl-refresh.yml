@@ -5,7 +5,7 @@ name: polymarket-pnl-refresh
 
 on:
   schedule:
-    - cron: '10 6 * * *'   # daily at 06:10 UTC (staggered after betmoar-refresh)
+    - cron: '10 6 * * *'   # daily at 06:10 UTC (staggered after polymarket-breakdown-refresh)
   workflow_dispatch: {}
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
 
       # Rebuilt after the snapshot above, so it reads the fresh pnl series from
       # disk rather than re-hitting the API. Recorded NAV always wins; only the
-      # days before betmoar started reporting balances are reconstructed.
+      # days before the breakdown started reporting balances are reconstructed.
       - name: rebuild polymarket nav history
         run: |
           python3 "Suzerain Design System/ui_kits/personal_site/scripts/polymarket-pnl/build-pm-nav-history.py" \

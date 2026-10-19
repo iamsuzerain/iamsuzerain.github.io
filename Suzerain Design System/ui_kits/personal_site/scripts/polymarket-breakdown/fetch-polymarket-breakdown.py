@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-fetch-betmoar-breakdown.py
+fetch-polymarket-breakdown.py
 Polymarket profit-by-source breakdown (Trading, LP, Yield, Maker, Taker, UMA) and
-balances. Outputs JSON to stdout. The filename is kept because the workflow, the canary
-and three .jsx consumers reference it; betmoar is no longer involved.
+balances. Outputs JSON to stdout. Renamed off betmoar 2026-10-19; nothing in it touches betmoar any more.
 
 Usage:
-  python3 fetch-betmoar-breakdown.py > data/polymarket-breakdown.json
+  python3 fetch-polymarket-breakdown.py > data/polymarket-breakdown.json
 
 WHY BETMOAR IS GONE (2026-10-19)
 Betmoar replaced its Next.js server action with an authenticated REST API

@@ -27,7 +27,7 @@ WHAT IT CATCHES
     chart on the site walks these arrays assuming both.
   - a snapshot flipping to a degraded source — `positionsSource` going from
     polymarket to betmoar, which is the silent fallback documented in
-    fetch-betmoar-breakdown.py.
+    fetch-polymarket-breakdown.py.
 
 WHAT IT DOES NOT CATCH, AND WHY THE NAV THRESHOLD IS LOOSE
 
@@ -37,7 +37,7 @@ about 2.6%, and this book moves more than that on an ordinary day (5.5% on
 2026-09-15, legitimately). A threshold tight enough to catch it would fire
 constantly, and a canary that always cries is worse than none. So the jump flag
 sits where only a structural break lands, and that particular bug is left to the
-two-source comparison in fetch-betmoar-breakdown.py, which is the right
+two-source comparison in fetch-polymarket-breakdown.py, which is the right
 instrument for it.
 
 PRIVACY
@@ -194,7 +194,7 @@ def check_file(path: Path) -> tuple[str, bool]:
     except (OSError, ValueError) as e:
         # The path as given, not just its basename: when the argument itself is
         # wrong rather than the file, the basename hides the reason. A stray `\n`
-        # in the betmoar workflow's argument list once reached bash as the word
+        # in the breakdown workflow's argument list once reached bash as the word
         # `n`, and this line reported it as a missing file called `n`.
         return f"continuity {path}: unreadable ({type(e).__name__}) -> FATAL", True
 
