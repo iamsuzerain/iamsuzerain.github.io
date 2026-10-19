@@ -1,30 +1,32 @@
 {
-  "generatedAt": "2026-10-18",
+  "generatedAt": "2026-10-19",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
   ],
   "sources": [
-    "https://www.betmoar.fun/profile/0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
-    "https://www.betmoar.fun/profile/0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
+    "https://data-api.polymarket.com/v2/user-pnl?user=0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a&interval=1d",
+    "https://data-api.polymarket.com/v2/user-pnl?user=0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47&interval=1d",
+    "https://data-api.polymarket.com/activity",
+    "https://data-api.polymarket.com/positions"
   ],
   "totals": {
-    "trading": 96784,
-    "lp": 11553,
-    "yield": 134,
-    "maker": 4008,
-    "taker": 82,
-    "sponsored": 0,
+    "trading": 96982,
+    "fees": 3248,
     "uma": 0,
-    "fees": 3229
+    "sponsored": 0,
+    "lp": 11555,
+    "maker": 4015,
+    "yield": 136,
+    "taker": 82
   },
+  "totalsBasis": "trading and fees from v2/user-pnl; lp/maker/yield/taker summed from their own activity events; sponsored is folded into lp from 2026-10-19 - no first-party split exists, and the total of the two is unchanged",
   "balances": {
     "positionsSource": "polymarket",
-    "positions": 320358,
-    "cash": 1247,
-    "nav": 321605,
-    "cashCursor": 1792337851,
-    "cashBasis": "betmoar, last real measurement before it became unfetchable on 2026-10-19"
-  },
-  "totalsBasis": "lp/maker/yield/taker re-baselined 2026-10-19 to the full sums of their own activity events; sponsored folded into lp - betmoar published lp as the REWARD stream minus sponsored and no first-party split exists. lp+sponsored is unchanged."
+    "positions": 320605,
+    "cash": 957,
+    "nav": 321562,
+    "cashBasis": "DERIVED: 2026-10-18 cash plus 17 activity events; no public endpoint reports the USDC balance, and a transfer does NOT appear in the feed - state it in data/polymarket-cash-override.json",
+    "cashCursor": 1792388018
+  }
 }
