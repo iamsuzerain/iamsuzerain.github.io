@@ -22,6 +22,8 @@
     "positionsSource": "polymarket",
     "positions": 320358,
     "cash": 1247,
-    "nav": 321605
+    "nav": 321605,
+    "cashCursor": 1792337851,
+    "cashBasis": "betmoar, last real measurement before it became unfetchable on 2026-10-19"
   }
 }

@@ -1,145 +1,146 @@
 #!/usr/bin/env python3
 """
 fetch-betmoar-breakdown.py
-Calls the Betmoar Next.js server action to get the profit breakdown
-(Trading, LP, Yield, Maker, Taker, Sponsored, UMA). Outputs JSON to stdout.
+Polymarket profit-by-source breakdown (Trading, LP, Yield, Maker, Taker, UMA) and
+balances. Outputs JSON to stdout. The filename is kept because the workflow, the canary
+and three .jsx consumers reference it; betmoar is no longer involved.
 
 Usage:
   python3 fetch-betmoar-breakdown.py > data/polymarket-breakdown.json
+
+WHY BETMOAR IS GONE (2026-10-19)
+Betmoar replaced its Next.js server action with an authenticated REST API
+(`/api/user-data`, 401 anonymously). Its auth is a SIWE wallet signature - GET
+/api/auth/nonce, sign the message, POST /api/auth/login - so a session cookie expires
+and renewing it needs the PRIVATE KEY of the wallet holding the book. That is not a
+secret worth planting in CI to read a stats page. Hash discovery was not broken by a
+pattern change; the mechanism it discovered stopped existing.
+
+WHERE THE NUMBERS COME FROM NOW
+  trading, fees        data-api.polymarket.com/v2/user-pnl   (hourly series, no auth)
+  lp, maker, yield,    data-api /activity filtered by type - each reward IS an event
+    taker                with a usdcSize, so these sum from first principles
+  positions            data-api /positions, as before
+  cash                 CARRIED FORWARD - nothing public reports a USDC balance
+
+The retired `user-pnl-api.polymarket.com` host names v2/user-pnl as its replacement.
+Reconciliation against betmoar's last good read (2026-10-18):
+
+    trading   betmoar 96,784   trade_pnl  96,823    within $39 (hourly vs daily sample)
+    fees      betmoar  3,229   fees_paid   3,232    match
+    maker     betmoar  4,001   summed      4,008    match
+    yield     betmoar    132   summed        134    match
+    taker     betmoar     82   summed         82    match
+
+`lp` and `sponsored` move between columns and the TOTAL IS PRESERVED. Betmoar reported
+lp 11,036 + sponsored 514 = 11,550; the REWARD event stream sums to 11,553, i.e. betmoar
+was publishing lp as (REWARD stream minus sponsored). There is no first-party sponsored
+figure, so the whole stream is reported as `lp` and `sponsored` is 0. Charts that add the
+two are unaffected; a chart that plots sponsored alone goes flat from 2026-10-19.
+
+Do NOT read the reward fields from v2/user-pnl. They are a stale snapshot: across 168
+hourly points on 2026-10-19 reward_income, maker_rebate, yield_income and
+sponsored_income each held ONE distinct value while trade_pnl moved 45-57 times.
+
+CASH, AND WHY IT NEEDS A HUMAN OCCASIONALLY
+No public endpoint reports the USDC balance: data-api /value is positions only; /balance,
+/portfolio, /holdings and /collateral are 404; clob/balance-allowance and gamma/users
+need keys; and both proxy wallets hold 0 in USDC.e and native USDC on Polygon, so an
+on-chain balanceOf does not find the collateral. v2/user-pnl's deposits, withdrawals and
+cashflow_net are null across all 52,814 points.
+
+So cash is carried from the previous committed breakdown and advanced by the activity
+since `balances.cashCursor`. A DEPOSIT OR WITHDRAWAL DOES NOT APPEAR IN THE FEED -
+type=DEPOSIT and type=WITHDRAWAL are accepted by data-api (type=TRANSFER and
+type=CONVERT are rejected with 400) but have never returned a row, on an account that
+was plainly funded, because funding Polymarket is an on-chain bridge transaction. After
+moving money, state the balance Polymarket shows in
+
+    data/polymarket-cash-override.json      {"2026-10-20": 50000}
+
+The newest entry at or before today wins and everything after it is re-derived. If
+derived cash ever goes negative the run fails, because the activity feed cannot spend
+money that was never there - that is proof a flow was missed.
 """
-import json, re, sys
-from datetime import date
+import json, os, sys
+from datetime import datetime, timezone
 from curl_cffi import requests
 
 WALLETS = [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47",
 ]
+DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
+PREV_FILE = os.path.join(DATA, "polymarket-breakdown.json")
+OVERRIDE_FILE = os.path.join(DATA, "polymarket-cash-override.json")
 
-def bm_url(wallet):
-    return f"https://www.betmoar.fun/profile/{wallet}"
+PNL = "https://data-api.polymarket.com/v2/user-pnl"
+ACT = "https://data-api.polymarket.com/activity"
+POS = "https://data-api.polymarket.com/positions"
+VAL = "https://data-api.polymarket.com/value"
 
-# Fallback hash — used if dynamic discovery fails. Betmoar rotates this on every
-# redeploy, so it goes dead without warning; discovery is the real path and this
-# only buys a day or two. Refreshed 2026-08-09.
-_FALLBACK_HASH = "40e4d02f2fd0a00d3570b727b2686579471fa3b515"
+# Each reward stream is an activity type carrying a usdcSize, so the cumulative figure
+# sums from the feed with no prior state. REWARD includes what betmoar called sponsored.
+REWARD_TYPES = {"REWARD": "lp", "MAKER_REBATE": "maker",
+                "YIELD": "yield", "TAKER_REBATE": "taker"}
+CASH_IN = {"REDEEM", "MERGE", "CONVERSION", "REWARD", "YIELD",
+           "MAKER_REBATE", "TAKER_REBATE", "DEPOSIT"}
+CASH_OUT = {"SPLIT", "WITHDRAWAL"}
 
-class DiscoveryBroken(Exception):
-    """The page no longer looks the way the scraper expects.
 
-    Distinct from "discovery ran but no id validated": this means a regex
-    matched nothing at all, so our assumptions about betmoar's markup or bundle
-    layout are stale. The fallback hash is not a legitimate substitute here —
-    whatever redeploy changed the format almost certainly rotated the ids too,
-    and sliding to the fallback just relocates the failure to fetch_stats as a
-    misleading "Server action not found".
-    """
-
-def discover_action_hash():
-    """Scrape one profile page's JS bundles to find the current Next-Action hash."""
-    probe_wallet = WALLETS[0]
-    r = requests.get(bm_url(probe_wallet), impersonate="chrome")
-    r.raise_for_status()
-    html = r.text
-
-    # Collect all /_next/static JS chunk URLs. Don't pin the directory under
-    # /_next/static/ — betmoar's turbopack build moved chunks from
-    # `static/chunks/` to `static/immutable/chunks/` (2026-08-09) and a path
-    # pinned to the old layout matched zero bundles, so discovery found nothing
-    # and the run died on the stale fallback.
-    chunk_urls = re.findall(r'"(/_next/static/[^"]+\.js)"', html)
-    chunk_urls = list(dict.fromkeys(chunk_urls))
-    base = "https://www.betmoar.fun"
-
-    if not chunk_urls:
-        raise DiscoveryBroken(
-            f"no /_next/static JS chunk URLs in {len(html)} bytes of profile HTML "
-            f"— page markup or bundle layout changed")
-
-    candidates = 0
-    for path in chunk_urls:
-        try:
-            cr = requests.get(base + path, impersonate="chrome", timeout=10)
-            # Match the createServerReference call rather than any quoted hex run:
-            # that call site is what actually marks an id as a server action, and it
-            # survives the id format changing. Next bumped these from 40 to 42 chars
-            # (2026-08-08), which a hard `{40}` between quotes silently missed —
-            # discovery found nothing and the dead fallback took the run down.
-            matches = re.findall(
-                r'createServerReference\)?\(\s*["\'`]([0-9a-f]{40,64})', cr.text)
-            candidates += len(matches)
-            for m in matches:
-                # Quick sanity-check: try the hash and see if the response contains tradingProfit
-                if _try_hash(m, probe_wallet):
-                    return m
-        except Exception:
-            continue
-
-    if not candidates:
-        raise DiscoveryBroken(
-            f"scanned {len(chunk_urls)} chunks, found no createServerReference ids "
-            f"— call-site pattern or id format changed")
-
-    # Ids were found but none answered with stats: they may have rotated between
-    # the page load and the probe, or a network blip ate the check. Worth one
-    # shot at the fallback, loudly.
-    return None
-
-def _try_hash(action_hash, wallet):
+def _load(path):
     try:
-        body = json.dumps([wallet]).encode()
-        r = requests.post(
-            bm_url(wallet),
-            data=body,
-            headers={
-                "Content-Type":           "text/plain;charset=UTF-8",
-                "Next-Action":            action_hash,
-                "Next-Router-State-Tree": "%5B%22%22%2C%7B%7D%5D",
-            },
-            impersonate="chrome",
-            timeout=15,
-        )
-        return "tradingProfit" in r.text
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
     except Exception:
-        return False
+        return None
 
-def fetch_stats(action_hash, wallet):
-    body = json.dumps([wallet]).encode()
-    r = requests.post(
-        bm_url(wallet),
-        data=body,
-        headers={
-            "Content-Type":           "text/plain;charset=UTF-8",
-            "Next-Action":            action_hash,
-            "Next-Router-State-Tree": "%5B%22%22%2C%7B%7D%5D",
-        },
-        impersonate="chrome",
-        timeout=15,
-    )
-    raw = r.text
 
-    for line in raw.splitlines():
-        m = re.search(r'\{.+tradingProfit.+\}', line)
-        if m:
-            return json.loads(m.group())
-    raise ValueError(f"stats object not found in response: {raw[:200]}")
+def user_pnl(wallet):
+    """Latest point of the hourly P&L series."""
+    r = requests.get(PNL, params={"user": wallet, "interval": "1d"},
+                     impersonate="chrome", timeout=60)
+    r.raise_for_status()
+    pts = (r.json().get("data") or {}).get("points") or []
+    if not pts:
+        raise ValueError(f"v2/user-pnl returned no points for {wallet}")
+    return pts[-1]
+
+
+def activity(wallet, since=None, kind=None):
+    """Paged /activity, optionally filtered by type and truncated at a timestamp."""
+    out, offset = [], 0
+    while offset <= 5000:
+        params = {"user": wallet, "limit": 500, "offset": offset}
+        if kind:
+            params["type"] = kind
+        r = requests.get(ACT, params=params, impersonate="chrome", timeout=40)
+        r.raise_for_status()
+        page = r.json()
+        if not isinstance(page, list) or not page:
+            break
+        out += [x for x in page if since is None or x["timestamp"] > since]
+        if len(page) < 500 or (since is not None
+                               and min(x["timestamp"] for x in page) <= since):
+            break
+        offset += 500
+    return out
+
 
 def fetch_positions_value(wallet):
     """Open-position market value: sum of currentValue over data-api /positions.
 
-    Betmoar's `portfolioValue` tracks data-api /value, and /value is not a
-    stable read of /positions. On 2026-09-13 it swung one wallet between
-    $10.8k and $6.7k within twenty minutes while /positions returned identical
-    books both times; the scrape caught a low read and left ~$8k of positions
-    out of NAV while counting the cash spent on them. /positions is paged
-    because the other wallet already holds ~100.
+    Not data-api /value, which is not a stable read of /positions: on 2026-09-13 it swung
+    one wallet between $10.8k and $6.7k within twenty minutes while /positions returned
+    identical books both times, and a scrape caught the low read and left ~$8k of
+    positions out of NAV while counting the cash spent on them. /value is still fetched
+    below, as the second source for the agreement check.
     """
     total, offset, limit = 0.0, 0, 500
     while True:
-        r = requests.get("https://data-api.polymarket.com/positions",
-                         params={"user": wallet, "sizeThreshold": 0,
-                                 "limit": limit, "offset": offset},
-                         impersonate="chrome", timeout=15)
+        r = requests.get(POS, params={"user": wallet, "sizeThreshold": 0,
+                                      "limit": limit, "offset": offset},
+                         impersonate="chrome", timeout=30)
         r.raise_for_status()
         page = r.json()
         if not isinstance(page, list):
@@ -149,176 +150,207 @@ def fetch_positions_value(wallet):
             return total
         offset += limit
 
+
+def fetch_value(wallet):
+    """data-api /value - the figure betmoar's portfolioValue tracked."""
+    r = requests.get(VAL, params={"user": wallet}, impersonate="chrome", timeout=25)
+    r.raise_for_status()
+    rows = r.json()
+    if isinstance(rows, list) and rows:
+        return rows[0].get("value")
+    return None
+
+
 def positions_agreement(pairs, source):
     """One line saying whether the two position-value sources still agree.
 
-    Modeled on `flow_agreement` in fetch-ibkr.py: a per-wallet equality flag and
-    a verdict, no dollar amounts, safe for a world-readable Actions log.
+    Modeled on `flow_agreement` in fetch-ibkr.py: a per-wallet equality flag and a
+    verdict, no dollar amounts, safe for a world-readable Actions log.
 
-    The constant it watches is that Polymarket /positions and betmoar's
-    portfolioValue describe the same book. They did until 2026-09-13, when
-    betmoar's figure (which tracks data-api /value) swung one wallet between
-    $10.8k and $6.7k in twenty minutes while /positions returned an identical
-    book both times. The scrape caught a low read, NAV published ~$8k light, and
-    nothing in the pipeline said so — the gap was found by eye, days later.
+    The constant it watches is that Polymarket /positions and /value describe the same
+    book. They did until 2026-09-13, when /value swung one wallet between $10.8k and
+    $6.7k in twenty minutes while /positions returned an identical book both times. A
+    scrape caught the low read, NAV published ~$8k light, and nothing in the pipeline
+    said so - the gap was found by eye, days later. Betmoar's portfolioValue tracked
+    /value, so this is the same check against the same upstream, one hop shorter.
 
-    Tolerance is absolute, not proportional, because the failure is. Fourteen
-    readings in the Actions logs between 2026-09-12 and 2026-09-16 say the
-    healthy state is agreement *to the dollar* — thirteen of them differ by
-    exactly $0, which is what you would expect if betmoar's /value is derived
-    from the same snapshot as /positions whenever it is fresh.
+    Tolerance is absolute, not proportional, because the failure is. Fourteen readings in
+    the Actions logs between 2026-09-12 and 2026-09-16 say the healthy state is agreement
+    *to the dollar* - thirteen of them differ by exactly $0.
 
-    The fourteenth is the 2026-09-13 incident, and it is why this is not a
-    percentage:
+    The fourteenth is the 2026-09-13 incident, and it is why this is not a percentage:
 
-        w0   polymarket  10,782   betmoar   6,704   gap $4,078   37.8%
-        w1   polymarket 291,541   betmoar 287,382   gap $4,159    1.45%
+        w0   polymarket  10,782   /value   6,704   gap $4,078   37.8%
+        w1   polymarket 291,541   /value 287,382   gap $4,159    1.45%
 
-    Both legs are the same ~$4k mistake; they read as wildly different
-    percentages only because the wallets are different sizes. A 2% rule — the
-    first thing written here, sized off the 38% — catches w0 and waves w1
-    through, which is half of the ~$8k that went out that day.
+    Both legs are the same ~$4k mistake; they read as wildly different percentages only
+    because the wallets are different sizes. A 2% rule - the first thing written here,
+    sized off the 38% - catches w0 and waves w1 through, which is half of the ~$8k that
+    went out that day.
 
-    $250 is a floor for genuine drift between two calls a second apart, not a
-    measurement of anything. Every healthy reading so far has been $0.
+    $250 is a floor for genuine drift between two calls a second apart, not a measurement
+    of anything.
 
-    A disagreement is reported, not fatal. /positions is the better source and
-    is already the one used; the run should still publish. What matters is that
-    the day it starts disagreeing is a day somebody hears about.
+    A disagreement is reported, not fatal. /positions is the better source and is already
+    the one used; the run should still publish. What matters is that the day it starts
+    disagreeing is a day somebody hears about.
     """
     TOL = 250.0
     flags, bad = [], 0
-    for i, (pm, bm) in enumerate(pairs):
+    for i, (pm, other) in enumerate(pairs):
         if pm is None:
-            flags.append(f"w{i} PM?BM")      # /positions failed; nothing compared
+            flags.append(f"w{i} PM?VAL")
             continue
-        if not bm:
-            flags.append(f"w{i} PM?BM")      # betmoar reported nothing to compare
+        if not other:
+            flags.append(f"w{i} PM?VAL")
             continue
-        gap = pm - bm
+        gap = pm - other
         if abs(gap) <= TOL:
-            flags.append(f"w{i} PM==BM")
+            flags.append(f"w{i} PM==VAL")
         else:
-            # The gap in dollars, which is the thing that went wrong, and the
-            # percentage after it, which is the thing that made it look small.
-            flags.append(f"w{i} PM!=BM({gap:+,.0f} / {gap / abs(bm) * 100:+.1f}%)")
+            flags.append(f"w{i} PM!=VAL({gap:+,.0f} / {gap / abs(other) * 100:+.1f}%)")
             bad += 1
 
-    if source == "betmoar":
-        verdict = "FELL BACK to betmoar portfolioValue - positions may be missing"
+    if source != "polymarket":
+        verdict = "FELL BACK to /value - positions may be missing"
     elif bad:
-        verdict = f"{bad} of {len(pairs)} wallets disagree - betmoar /value drifting"
+        verdict = f"{bad} of {len(pairs)} wallets disagree - /value drifting"
     else:
         verdict = "agree (source: polymarket)"
     return "positions-sources: " + " ".join(flags) + f" -> {verdict}"
 
 
 def main():
+    today = datetime.now(timezone.utc).date().isoformat()
+    prev = _load(PREV_FILE) or {}
+    prev_bal = prev.get("balances") or {}
+
+    # ---------------------------------------------------------------- measured
     try:
-        action_hash = discover_action_hash()
-        if action_hash:
-            print(f"using action hash: {action_hash} (discovered)", file=sys.stderr)
-        else:
-            # Say this loudly: a passing run on the fallback still means discovery
-            # is broken, and the panel freezes the day betmoar rotates the id.
-            action_hash = _FALLBACK_HASH
-            print(f"WARNING: action hash discovery failed, using stale fallback "
-                  f"{action_hash} — fix discovery before it rotates", file=sys.stderr)
-        per_wallet = []
+        pnl = {w: user_pnl(w) for w in WALLETS}
         for w in WALLETS:
-            stats = fetch_stats(action_hash, w)
-            print(f"fetched stats for {w}", file=sys.stderr)
-            per_wallet.append(stats)
-    except DiscoveryBroken as e:
-        print(f"action hash discovery is broken: {e}", file=sys.stderr)
-        print(f"refusing to fall back to {_FALLBACK_HASH} — fix discovery, then "
-              f"refresh the fallback from the id it finds", file=sys.stderr)
-        sys.exit(1)
+            print(f"user-pnl {w}: trade_pnl {pnl[w].get('trade_pnl', 0):,.0f}",
+                  file=sys.stderr)
     except Exception as e:
-        print(f"error fetching stats: {e}", file=sys.stderr)
+        print(f"error fetching v2/user-pnl: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # A failed /positions call falls back to betmoar's figure rather than failing the
-    # run — losing the day's breakdown is worse than a possibly stale position
-    # value — but says so, and the source is recorded in the output.
-    positions_source = "polymarket"
-    pairs = []
-    for w, s in zip(WALLETS, per_wallet):
-        betmoar_value = s.get("portfolioValue") or 0
+    def dollars(v):
+        return round(v) if v else 0
+
+    totals = {
+        "trading": dollars(sum(pnl[w].get("trade_pnl") or 0 for w in WALLETS)),
+        # Stored as a positive dollar amount of fees paid, as betmoar's `fees` was.
+        "fees": dollars(-sum(pnl[w].get("fees_paid") or 0 for w in WALLETS)),
+        "uma": 0,
+        # No first-party split; the whole REWARD stream is reported as `lp` below.
+        "sponsored": 0,
+    }
+    try:
+        for kind, line in REWARD_TYPES.items():
+            rows = [x for w in WALLETS for x in activity(w, kind=kind)]
+            totals[line] = dollars(sum(x.get("usdcSize", 0) or 0 for x in rows))
+            print(f"{line}: {len(rows)} {kind} events", file=sys.stderr)
+    except Exception as e:
+        print(f"error summing reward activity: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # ---------------------------------------------------------------- positions
+    positions_source, pairs, positions = "polymarket", [], 0.0
+    for w in WALLETS:
+        other = None
+        try:
+            other = fetch_value(w)
+        except Exception as e:
+            print(f"WARNING /value failed for {w}: {e}", file=sys.stderr)
         try:
             live = fetch_positions_value(w)
-            print(f"positions {w}: polymarket {live:,.0f} vs betmoar "
-                  f"{betmoar_value:,.0f}", file=sys.stderr)
-            s["portfolioValue"] = live
-            pairs.append((live, betmoar_value))
+            positions += live
+            pairs.append((live, other))
+            print(f"positions {w}: polymarket {live:,.0f} vs /value "
+                  f"{(other or 0):,.0f}", file=sys.stderr)
         except Exception as e:
-            positions_source = "betmoar"
-            pairs.append((None, betmoar_value))
-            print(f"WARNING: polymarket /positions failed for {w} ({e}); using "
-                  f"betmoar portfolioValue, which can miss recent positions",
-                  file=sys.stderr)
-
-    # Always on, including in CI. The comparison above prints the two figures
-    # and leaves a human to notice; this states the verdict. See
-    # positions_agreement for the constant it watches and why it is safe to log.
+            positions_source = "value"
+            positions += other or 0
+            pairs.append((None, other))
+            print(f"WARNING /positions failed for {w} ({e}); using /value, which can "
+                  f"miss recent positions", file=sys.stderr)
     print(positions_agreement(pairs, positions_source), file=sys.stderr)
 
-    def dollars(val):
-        return round(val) if val else 0
+    # ---------------------------------------------------------------- cash, derived
+    override = _load(OVERRIDE_FILE) or {}
+    anchor = None
+    past = sorted(d for d in override if d <= today)
+    if past and past[-1] > (prev.get("generatedAt") or ""):
+        anchor = (past[-1], float(override[past[-1]]))
 
-    def sum_field(*keys):
-        return dollars(sum((s.get(k) or 0) for s in per_wallet for k in keys))
+    cursor = prev_bal.get("cashCursor")
+    if anchor is None and cursor is None:
+        print("REFUSING: no balances.cashCursor in the previous breakdown and no "
+              "override for today. Seed one of them - cash cannot be derived from "
+              "nothing.", file=sys.stderr)
+        sys.exit(1)
 
-    # Betmoar's `overallPNL` is the only field that nets out Polymarket trading
-    # fees; the Polymarket user-pnl-api series and `tradingProfit` both ignore
-    # them. Recover per-wallet fees as (sum of components − overallPNL), then
-    # sum across wallets. Stored as a positive dollar amount of fees paid.
-    def implied_fees(s):
-        components = (
-            (s.get("tradingProfit")    or 0)
-            + (s.get("lpRewards")      or 0)
-            + (s.get("makerRebates")   or 0)
-            + (s.get("yieldRewards")   or 0)
-            + (s.get("sponsoredRewards") or 0)
-            + (s.get("takerRebates")   or 0)
-            + (s.get("takerBackpay")   or 0)
-            + (s.get("umaPnl")         or 0)
-            + (s.get("refunds")        or 0)
-        )
-        return components - (s.get("overallPNL") or 0)
+    events = [x for w in WALLETS for x in activity(w, since=cursor)]
+    net = 0.0
+    unknown = {}
+    for x in events:
+        t, u = x["type"], (x.get("usdcSize", 0) or 0)
+        if t == "TRADE":
+            net += u if x.get("side") == "SELL" else -u
+        elif t in CASH_IN:
+            net += u
+        elif t in CASH_OUT:
+            net -= u
+        else:
+            unknown[t] = unknown.get(t, 0) + 1
+
+    if anchor:
+        cash = anchor[1] + net
+        basis = (f"ANCHORED to a stated balance of {anchor[1]:,.2f} on {anchor[0]}, "
+                 f"plus {len(events)} activity events since")
+        print(f"cash override: anchored to {anchor[1]:,.2f} on {anchor[0]}",
+              file=sys.stderr)
+    else:
+        cash = (prev_bal.get("cash") or 0) + net
+        basis = (f"DERIVED: {prev.get('generatedAt', '?')} cash plus {len(events)} "
+                 f"activity events; no public endpoint reports the USDC balance, and a "
+                 f"transfer does NOT appear in the feed - state it in "
+                 f"data/polymarket-cash-override.json")
+
+    if cash < 0:
+        print(f"REFUSING: derived cash is {cash:,.2f}, which is impossible - a deposit "
+              f"or withdrawal is missing. Put the real balance in "
+              f"data/polymarket-cash-override.json", file=sys.stderr)
+        sys.exit(1)
+    if unknown:
+        print(f"WARNING unhandled activity types, cash may drift: {unknown}",
+              file=sys.stderr)
+
+    new_cursor = max([x["timestamp"] for x in events], default=cursor)
+    print(f"cash {(anchor[1] if anchor else prev_bal.get('cash') or 0):,.0f} "
+          f"{net:+,.0f} -> {cash:,.0f} ({'anchored' if anchor else 'carried'})",
+          file=sys.stderr)
 
     breakdown = {
-        "generatedAt": date.today().isoformat(),
-        "wallets":     WALLETS,
-        "sources":     [bm_url(w) for w in WALLETS],
-        "totals": {
-            "trading":   sum_field("tradingProfit"),
-            "lp":        sum_field("lpRewards"),
-            "yield":     sum_field("yieldRewards"),
-            "maker":     sum_field("makerRebates"),
-            # Taker-side fee rebates, plus the backpay betmoar reports separately
-            # when Polymarket settles a rebate period late. Same fee-rebate stream
-            # as `maker`, so the site charts the two together.
-            "taker":     sum_field("takerRebates", "takerBackpay"),
-            "sponsored": sum_field("sponsoredRewards"),
-            "uma":       sum_field("umaPnl"),
-            "fees":      dollars(sum(implied_fees(s) for s in per_wallet)),
-        },
-        # Current Polymarket net asset value, summed across wallets: open-position
-        # market value (Polymarket /positions, see fetch_positions_value) + idle USDC
-        # (betmoar usdcBalance). Used by the book view's capital-deployment bar
-        # to weigh Poly against IBKR NAV.
+        "generatedAt": today,
+        "wallets": WALLETS,
+        "sources": [f"{PNL}?user={w}&interval=1d" for w in WALLETS] + [ACT, POS],
+        "totals": totals,
+        "totalsBasis": ("trading and fees from v2/user-pnl; lp/maker/yield/taker summed "
+                        "from their own activity events; sponsored is folded into lp "
+                        "from 2026-10-19 - no first-party split exists, and the total "
+                        "of the two is unchanged"),
         "balances": {
             "positionsSource": positions_source,
-            "positions": sum_field("portfolioValue"),
-            "cash":      sum_field("usdcBalance"),
-            "nav":       dollars(sum(
-                (s.get("portfolioValue") or 0) + (s.get("usdcBalance") or 0)
-                for s in per_wallet
-            )),
+            "positions": dollars(positions),
+            "cash": dollars(cash),
+            "nav": dollars(positions + cash),
+            "cashBasis": basis,
+            "cashCursor": new_cursor,
         },
     }
-
     print(json.dumps(breakdown, indent=2))
+
 
 main()
