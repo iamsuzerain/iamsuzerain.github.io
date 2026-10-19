@@ -70,13 +70,20 @@ jobs:
       - name: install deps
         run: pip install curl_cffi
 
-      - name: fetch betmoar breakdown
+      - name: fetch breakdown
         run: |
-          mkdir -p "Suzerain Design System/ui_kits/personal_site/data"
-          python3 "Suzerain Design System/ui_kits/personal_site/scripts/betmoar-breakdown/fetch-betmoar-breakdown.py" \
-            > "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+          D="Suzerain Design System/ui_kits/personal_site/data"
+          mkdir -p "$D"
+          # Write to a temp file and move it. A shell truncates a redirect target
+          # BEFORE the command runs, and the script reads polymarket-breakdown.json
+          # for balances.cashCursor - redirecting straight over it handed the script
+          # an empty file and took the 2026-10-19 run down. Moving also means a failed
+          # fetch leaves the previous day's data intact instead of emptying it.
+          S="Suzerain Design System/ui_kits/personal_site/scripts/betmoar-breakdown"
+          python3 "$S/fetch-betmoar-breakdown.py" > "$RUNNER_TEMP/breakdown.json"
+          mv "$RUNNER_TEMP/breakdown.json" "$D/polymarket-breakdown.json"
           echo "result:"
-          cat "Suzerain Design System/ui_kits/personal_site/data/polymarket-breakdown.json"
+          cat "$D/polymarket-breakdown.json"
 
       - name: append to history snapshot
         run: |

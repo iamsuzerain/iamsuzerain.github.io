@@ -96,6 +96,31 @@ def _load(path):
         return None
 
 
+def _load_prev(path):
+    """The previous breakdown, from the working tree or else from git.
+
+    `>` truncates its target before the command runs, so a workflow that redirects this
+    script's stdout over polymarket-breakdown.json leaves an empty file for this process
+    to read. Falling back to the committed copy makes the cursor survive that.
+    """
+    cur = _load(path)
+    if cur and (cur.get("balances") or {}).get("cashCursor") is not None:
+        return cur
+    try:
+        import subprocess
+        out = subprocess.run(["git", "-C", os.path.dirname(path), "show",
+                              "HEAD:./" + os.path.basename(path)],
+                             capture_output=True, text=True, timeout=20)
+        if out.returncode == 0 and out.stdout.strip():
+            from_git = json.loads(out.stdout)
+            print(f"prev breakdown read from git HEAD ({from_git.get('generatedAt')}); "
+                  f"the working file was empty or had no cursor", file=sys.stderr)
+            return from_git
+    except Exception as e:
+        print(f"WARNING could not read prev breakdown from git: {e}", file=sys.stderr)
+    return cur
+
+
 def user_pnl(wallet):
     """Latest point of the hourly P&L series."""
     r = requests.get(PNL, params={"user": wallet, "interval": "1d"},
@@ -222,7 +247,7 @@ def positions_agreement(pairs, source):
 
 def main():
     today = datetime.now(timezone.utc).date().isoformat()
-    prev = _load(PREV_FILE) or {}
+    prev = _load_prev(PREV_FILE) or {}
     prev_bal = prev.get("balances") or {}
 
     # ---------------------------------------------------------------- measured
