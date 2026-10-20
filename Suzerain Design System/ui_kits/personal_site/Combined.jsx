@@ -624,7 +624,9 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   // UTC run. That is a full scrape of drift between two numbers naming one
   // quantity, +$1,386 (0.55%) at the dispatch that turned it up. Reading the
   // scrape directly puts the level on the same footing the polymarket view has,
-  // and takes the rebuild off this page's critical path.
+  // and takes the rebuild off this page's critical path. (Since 2026-10-19 the
+  // breakdown workflow rebuilds nav-history itself and polymarket-pnl-refresh is
+  // retired, so the gap above no longer opens; the overlay stays as the nearer copy.)
   //
   // `nav` and `trading` are both read live off the profile, so the row also
   // pins the P&L the book had *at the moment its nav was measured* — kept here

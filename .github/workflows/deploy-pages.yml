@@ -10,7 +10,6 @@ on:
     workflows:
       - polymarket-breakdown-refresh
       - portfolio-refresh
-      - polymarket-pnl-refresh
       - polymarket-calibration-refresh
     types: [completed]
   workflow_dispatch: {}

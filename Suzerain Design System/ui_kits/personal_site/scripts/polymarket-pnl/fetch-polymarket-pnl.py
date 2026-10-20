@@ -7,6 +7,12 @@ unreachable.
 
 Outputs JSON to stdout → pipe to data/polymarket-pnl.json.
 
+NO WORKFLOW RUNS THIS (retired 2026-10-19). Every reader drops the series past
+SZ_PM_BOOK_SEAM (2026-08-25) and build-pm-nav-history.py only reads it before
+2026-07-15, so a daily refresh changed nothing on the site; the rows after the
+seam fed only the szPmBookDivergence console warning. The committed snapshot is
+frozen at 2026-10-20. Run this by hand if that warning is ever wanted again.
+
 Env:
   PM_WALLET  - comma-separated wallet addresses (defaults to hardcoded list)
 
