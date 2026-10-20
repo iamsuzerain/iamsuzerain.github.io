@@ -74,33 +74,17 @@ def load(path):
 
 
 def pnl_series() -> dict[str, float]:
-    """Summed cumulative user-pnl by date. Prefers the committed snapshot so a
-    CI run without network still rebuilds; falls back to the live API."""
+    """Summed cumulative user-pnl by date, read from the committed snapshot."""
     snap = load(os.path.join(DATA, "polymarket-pnl.json"))
     rows = (snap or {}).get("rows") or []
     if rows:
         log(f"pnl: {len(rows)} rows from polymarket-pnl.json")
     else:
-        from curl_cffi import requests
-        sess = requests.Session(impersonate="chrome124")
-        per = []
-        for w in WALLETS:
-            r = sess.get("https://user-pnl-api.polymarket.com/user-pnl"
-                         f"?user_address={w}&interval=all&fidelity=1d", timeout=20)
-            r.raise_for_status()
-            raw = r.json()
-            per.append(sorted((int(x["t"]), float(x["p"])) for x in raw if "t" in x and "p" in x))
-            log(f"pnl: fetched {len(per[-1])} points for {w[:10]}")
-        ts = sorted({t for s in per for t, _ in s})
-        cur = [0.0] * len(per)
-        idx = [0] * len(per)
-        rows = []
-        for t in ts:
-            for i, s in enumerate(per):
-                while idx[i] < len(s) and s[idx[i]][0] <= t:
-                    cur[i] = s[idx[i]][1]
-                    idx[i] += 1
-            rows.append({"t": t, "p": sum(cur)})
+        # There is no live fallback any more. user-pnl-api.polymarket.com was retired
+        # (HTTP 410), and its v2 replacement sits at a different level from the
+        # committed series, which fetch-polymarket-pnl.py rebases onto. A raw v2 read
+        # here would walk the reconstructed NAV off the wrong base.
+        raise SystemExit("pnl: polymarket-pnl.json is empty; run fetch-polymarket-pnl.py first")
 
     out = {}
     for r in rows:
