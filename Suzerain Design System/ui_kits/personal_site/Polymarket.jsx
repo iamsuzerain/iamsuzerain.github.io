@@ -22,7 +22,7 @@ const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
   : [window.SZ_ID.wallet];
 const PM_PRIMARY = PM_WALLETS[0];
 const PM_HANDLE = 'Seutervoinen';
-const PM_CACHE_KEY = 'pm-cache-v11'; // v11: caches the live halves, not the daily files
+const PM_CACHE_KEY = 'pm-cache-v12'; // v12: positions and activity only, no pnl series
 const PM_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const PM_PROFILE_URL = `https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRIMARY}`;
 
@@ -31,8 +31,6 @@ const PM_PROFILE_URL = `https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRI
 // without a word.
 const pmPositionsUrl = (w) =>
   `https://data-api.polymarket.com/positions?user=${w}&limit=500&sortBy=CURRENT&sortDirection=DESC`;
-const pmPnlUrl = (w) =>
-  `https://user-pnl-api.polymarket.com/user-pnl?user_address=${w}&interval=all&fidelity=1d`;
 const pmActivityUrl = (w) =>
   `https://data-api.polymarket.com/activity?user=${w}&limit=20`;
 
@@ -135,25 +133,20 @@ async function pmFetchBreakdown() {
   return null;
 }
 
-// ---------- cumulative-pnl snapshot (polymarket-pnl daily cron) ----------
-// Already summed across wallets by fetch-polymarket-pnl.py, same {t,p} shape as
-// the live feed, and same origin — one round trip against a static file rather
-// than a cold computation on user-pnl-api. The book view has read this for a
-// while as a last-resort fallback; here it is the opening hand, so the three
-// P&L figures and the chart have something true to draw on the first tick.
+// ---------- cumulative-pnl snapshot ----------
+// Already summed across wallets by fetch-polymarket-pnl.py, and the only source
+// for the series. It used to be the opening hand while a live user-pnl-api call
+// raced it, but Polymarket retired that host (HTTP 410 since 2026-10-16), and
+// nothing either source held past SZ_PM_BOOK_SEAM reached the page anyway:
+// szPmBookExtend walks that stretch off the breakdown history. The file is
+// frozen at 2026-10-20, its refresh workflow retired with the host.
 async function pmFetchPnlSnapshot() {
   try {
     const j = await window.szJson('data/polymarket-pnl.json');
     if (!j || !Array.isArray(j.rows) || !j.rows.length) return null;
-    return { rows: j.rows, source: 'snapshot', generatedAt: j.generatedAt || null };
+    return { rows: j.rows, generatedAt: j.generatedAt || null };
   } catch { return null; }
 }
-
-// What pmBuild reads for the series. `pending` is about the *live* call only —
-// a snapshot can be on screen while the live series is still in flight.
-const PM_PNL_PENDING = { rows: [], source: null, generatedAt: null, pending: true };
-const PM_PNL_NONE = { rows: [], source: null, generatedAt: null, pending: false };
-const pmPnlSettled = (p) => (p ? { ...p, pending: false } : PM_PNL_NONE);
 
 // Merge same-market positions across wallets: sum shares/value/pnl, weight-avg
 // the entry price. Key is slug+outcome since the same market+side at different
@@ -204,53 +197,18 @@ function pmMergePositions(lists) {
     .sort((a, b) => (b.currentValue || 0) - (a.currentValue || 0));
 }
 
-// Cumulative-PnL series can start at different times per wallet. Union the
-// timestamps, carry forward each wallet's last known value (0 before its first
-// point), sum at each timestamp.
-function pmSumPnlSeries(seriesList) {
-  const sorted = seriesList.map(s => [...(s || [])].sort((a, b) => a.t - b.t));
-  const tSet = new Set();
-  for (const s of sorted) for (const r of s) tSet.add(r.t);
-  const allTs = [...tSet].sort((a, b) => a - b);
-  const cursors = new Array(sorted.length).fill(0);
-  const last = new Array(sorted.length).fill(0);
-  const out = [];
-  for (const t of allTs) {
-    for (let i = 0; i < sorted.length; i++) {
-      while (cursors[i] < sorted[i].length && sorted[i][cursors[i]].t <= t) {
-        last[i] = sorted[i][cursors[i]].p;
-        cursors[i]++;
-      }
-    }
-    let sum = 0;
-    for (const v of last) sum += v;
-    out.push({ t, p: sum });
-  }
-  return out;
-}
-
 function pmMergeActivity(lists) {
   const all = [];
   for (const l of lists) if (l && l.length) for (const a of l) if (a) all.push(a);
   return all.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
-// The wallet calls, all issued on one tick, split by what the view needs to
-// draw. positions/activity answer in ~0.3s. The pnl series does not: it is a
-// cold-cache computation on user-pnl-api, measured at 2-8s on the first call for
-// a wallet and ~0.08s on every call after, so gating the whole view on it meant
-// staring at a spinner while the positions sat fetched and idle.
-//
-// It also can't take the page down any more. pnl used to share the 10s abort
-// and reject into the same Promise.all as everything else, so a cold call
-// crossing that budget — 7.8s measured, uncomfortably close — put the view on
-// "couldn't reach polymarket" with nothing wrong but one slow endpoint.
+// The wallet calls, all issued on one tick. positions/activity answer in ~0.3s.
 function pmFetchStreams() {
   const timeout = (ms) => AbortSignal.timeout(ms);
-  // The breakdown snapshot is independent of the live wallet calls, so it goes
-  // out on the same tick rather than queueing behind them — one round trip of
-  // overlap instead of one appended to the end. Same for the pnl snapshot,
-  // which is what the P&L figures draw until the live series lands.
+  // The breakdown and pnl snapshots are independent of the live wallet calls,
+  // so they go out on the same tick rather than queueing behind them — one
+  // round trip of overlap instead of one appended to the end.
   const breakdownP = pmFetchBreakdown();
   const snapshotP = pmFetchPnlSnapshot();
 
@@ -265,46 +223,12 @@ function pmFetchStreams() {
     return { positions, activity };
   }));
 
-  // Best-effort, and on a budget sized for the cold path rather than the warm
-  // one — user-pnl-api answers in ~0.08s per wallet warm and ~3s cold.
-  //
-  // All-or-nothing across wallets. A wallet that failed used to resolve `[]`,
-  // which pmSumPnlSeries then carried forward as a flat zero for the whole
-  // series: the surviving wallet's book rendered as the lifetime figure, with
-  // nothing on screen saying so. The two wallets currently sit at roughly
-  // -$34k and +$34k, so losing either one moves every P&L figure and the whole
-  // chart by tens of thousands of dollars in the confident direction. And the
-  // failure correlates with the cold path, so the wrong number arrived exactly
-  // when the wait had been longest. A partial answer is discarded instead, and
-  // the snapshot — which is summed across both wallets or not written at all —
-  // stands.
-  //
-  // `null` means the call failed; a 200 carrying `[]` is a real answer (a
-  // wallet with no history) and sums as zero legitimately.
-  const pnlP = Promise.all(PM_WALLETS.map(async (w) => {
-    try {
-      const r = await fetch(pmPnlUrl(w), { signal: timeout(25000) });
-      if (!r.ok) return null;
-      const j = await r.json();
-      return Array.isArray(j) ? j : null;
-    } catch { return null; }
-  })).then(lists => lists.some(l => l == null)
-    ? null
-    : { rows: pmSumPnlSeries(lists), source: 'live', generatedAt: null });
-
-  return { breakdownP, coreP, pnlP, snapshotP };
+  return { breakdownP, coreP, snapshotP };
 }
 
-// `onPartial` gets the view as soon as positions and the snapshot land — which
-// is one same-origin round trip, not the live series' cold path. The three P&L
-// figures that need a series draw the snapshot's, labeled as such; only when
-// there is no snapshot at all do they hold on `pnlPending`. What they must never
-// do is print the open-position fallback (realized-on-open + unrealized, off by
-// thousands) as though it were the lifetime figure.
-// The cache holds the two slow live halves and nothing else: data-api's
-// per-wallet positions, and user-pnl-api's series (~0.08s/wallet warm, ~3.1s
-// cold — the reason any of this is cached). The daily same-origin files are
-// refetched on every load instead of riding along inside the cached payload.
+// The cache holds the live half and nothing else: data-api's per-wallet
+// positions and activity. The same-origin files are refetched on every load
+// instead of riding along inside the cached payload.
 //
 // Caching them together meant a freshly published breakdown stayed invisible
 // for the whole TTL, and localStorage survives a hard refresh — so the one
@@ -313,62 +237,44 @@ function pmFetchStreams() {
 function pmReadCache({ ignoreAge = false } = {}) {
   try {
     const entry = JSON.parse(localStorage.getItem(PM_CACHE_KEY));
-    if (!entry || !entry.perWallet || !entry.pnl) return null;
+    if (!entry || !entry.perWallet) return null;
     if (!ignoreAge && Date.now() - entry.t >= PM_CACHE_TTL_MS) return null;
     return entry;
   } catch { return null; }
 }
 
-// Cached live halves + a breakdown fetched now, never the cached one.
+// Cached live half + the files fetched now, never cached ones.
 async function pmViewFromCache(entry) {
-  return pmBuild(entry.perWallet, pmPnlSettled(entry.pnl), await pmFetchBreakdown());
+  const [breakdown, snapshot] = await Promise.all([pmFetchBreakdown(), pmFetchPnlSnapshot()]);
+  return pmBuild(entry.perWallet, snapshot, breakdown);
 }
 
 async function pmFetchAll(onPartial) {
   const cached = pmReadCache();
-  const { breakdownP, coreP, pnlP, snapshotP } = pmFetchStreams();
+  const { breakdownP, coreP, snapshotP } = pmFetchStreams();
 
-  // Stale-while-revalidate. A cache hit paints immediately but no longer *ends*
-  // the load — the live calls go out on the same tick either way, so a reload
-  // always converges on current figures. Returning the cached view and stopping
-  // there replayed the same numbers for the rest of the TTL, which is what made
-  // refreshing look broken to anyone watching an intraday move.
+  // Stale-while-revalidate. A cache hit paints as soon as the files land but no
+  // longer *ends* the load — the live calls go out on the same tick either
+  // way, so a reload always converges on current figures. Returning the cached
+  // view and stopping there replayed the same numbers for the rest of the TTL,
+  // which is what made refreshing look broken to anyone watching an intraday
+  // move.
   if (cached && onPartial) {
-    breakdownP
-      .then(bd => onPartial(pmBuild(cached.perWallet, pmPnlSettled(cached.pnl), bd)))
+    Promise.all([breakdownP, snapshotP])
+      .then(([bd, snap]) => onPartial(pmBuild(cached.perWallet, snap, bd)))
       .catch(() => {});
   }
 
   // pmFetchBreakdown and pmFetchPnlSnapshot resolve to null on any failure, so
   // awaiting them alongside a fan-out that can throw never strands a rejection.
   const [perWallet, breakdown, snapshot] = await Promise.all([coreP, breakdownP, snapshotP]);
-  if (onPartial) {
-    // With a cached live series in hand, hold it through this paint rather than
-    // downgrading to the snapshot and back again while the live call lands.
-    const interim = cached
-      ? pmPnlSettled(cached.pnl)
-      : (snapshot ? { ...snapshot, pending: true } : PM_PNL_PENDING);
-    onPartial(pmBuild(perWallet, interim, breakdown));
-  }
-
-  // Live wins when it is complete; otherwise the snapshot keeps standing rather
-  // than being replaced by a half-summed live series or by nothing.
-  const settled = pmPnlSettled((await pnlP) || snapshot);
-  const data = pmBuild(perWallet, settled, breakdown);
-  // Only cache a complete live series. A snapshot-backed one would pin
-  // yesterday's close for the whole TTL on every reload, and a pnl-less one
-  // would suppress the chart for the same window.
-  if (data.pnlSource === 'live' && data.pnlSeries.length) {
-    try {
-      localStorage.setItem(PM_CACHE_KEY,
-        JSON.stringify({ t: Date.now(), perWallet, pnl: settled }));
-    } catch {}
-  }
-  return data;
+  try {
+    localStorage.setItem(PM_CACHE_KEY, JSON.stringify({ t: Date.now(), perWallet }));
+  } catch {}
+  return pmBuild(perWallet, snapshot, breakdown);
 }
 
-// `pnl` is the shape above: rows already summed across wallets, plus where they
-// came from and whether the live call is still out.
+// `pnl` is the snapshot above (rows already summed across wallets), or null.
 function pmBuild(perWallet, pnl, breakdown) {
   // Drop positions Polymarket has resolved — they still come back from the
   // positions endpoint with currentValue:0 but cashPnl carrying the loss, so
@@ -462,12 +368,6 @@ function pmBuild(perWallet, pnl, breakdown) {
     breakdown,
     positions,
     pnlSeries,
-    // Two independent facts: where the series on screen came from, and whether
-    // a better one is still coming. A snapshot renders while live is in flight,
-    // so "pending" no longer implies "nothing to draw".
-    pnlSource: (pnl && pnl.source) || null,
-    pnlAsOf: (pnl && pnl.generatedAt) || null,
-    pnlPending: !!(pnl && pnl.pending),
     activity,
   };
 }
@@ -1980,10 +1880,8 @@ function pmDayLabel(d) {
     .toLowerCase();
 }
 
-function pmPnlKicker(base, hasPnl, stale, pending) {
-  if (!hasPnl) return pending ? 'loading pnl series' : 'pnl series unavailable';
-  if (!stale) return base;
-  return pending ? `${base} · daily snapshot, refreshing` : `${base} · daily snapshot`;
+function pmPnlKicker(base, hasPnl) {
+  return hasPnl ? base : 'pnl series unavailable';
 }
 
 // ---------- main view ----------
@@ -2125,15 +2023,8 @@ function Polymarket() {
   // the raw feed and quietly disagreeing with the rest.
   const pnlSeries = window.szPmBookExtend(
     data.pnlSeries, hist && hist.rows, pmTransfers);
-  // Whether there is a series to draw at all, and whether the one being drawn is
-  // the daily snapshot with the live call still out. Only the first gates the
-  // P&L figures — the second just labels them, since a snapshot is the same
-  // quantity from the same feed, hours old rather than absent.
+  // Whether there is a series to draw at all; it gates the P&L figures.
   const hasPnl = !!(pnlSeries && pnlSeries.length);
-  const pnlStale = data.pnlSource === 'snapshot';
-  const pnlPending = !!data.pnlPending;
-  // Nothing to draw yet: the live series is still out and no snapshot answered.
-  const pnlHolding = !hasPnl && pnlPending;
   // Show the second wallet in the header pill (matches the profile/betmoar links below).
   const displayWallet = (profile.wallets && profile.wallets[1]) || profile.wallet;
   const updated = new Date(data.generatedAt);
@@ -2239,30 +2130,16 @@ function Polymarket() {
         <PmStat label="lifetime pnl"
           value={pmUSD(totalPnl)}
           tone={totalPnl == null ? null : totalPnl >= 0 ? 'pos' : 'neg'}
-          kicker={pmPnlKicker('all sources', hasPnl, pnlStale, pnlPending)}/>
+          kicker={pmPnlKicker('all sources', hasPnl)}/>
         <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'} kicker="open positions"/>
         <PmStat label="realized pnl"
           value={pmUSD(realizedTotal)}
           tone={realizedTotal == null ? null : realizedTotal >= 0 ? 'pos' : 'neg'}
-          kicker={pmPnlKicker('settled · all markets', hasPnl, pnlStale, pnlPending)}/>
+          kicker={pmPnlKicker('settled · all markets', hasPnl)}/>
         <PmStat label="open positions" value={String(summary.openPositions)}/>
       </div>
 
       <PmBreakdown bd={breakdown} tradingPnl={lifetimePnl} />
-
-      {/* Held open at the chart's own aspect ratio while the series is in
-          flight, so the panels below don't shift down when it lands. Only
-          reached when the snapshot is missing too — otherwise the chart is
-          already drawn and the live series just refines it in place. */}
-      {pnlHolding && (
-        <div className="pf-panel">
-          <div className="pf-panel-head">
-            <span className="pf-panel-title">cumulative pnl</span>
-            <span className="pf-panel-meta">fetching series<Cursor /></span>
-          </div>
-          <div className="pm-chart-pending"/>
-        </div>
-      )}
 
       {pnlSeries && pnlSeries.length > 1 && (
         <div className="pf-panel">
@@ -2282,9 +2159,6 @@ function Polymarket() {
                   : !bdExtra ? 'trading only · USDC'
                   : rewardsSeam ? `all sources · rewards dated from ${pmAxisLabel(rewardsSeam, 'day').toLowerCase()}`
                   : 'all sources · rewards spread linearly'}
-                {pnlStale && (pnlPending
-                  ? <> · <span className="sz-dim">daily snapshot, refreshing<Cursor /></span></>
-                  : <> · <span className="sz-dim">daily snapshot</span></>)}
               </span>
               <div className="pf-range">
                 <SzToggle options={shownRanges} value={range} onChange={setRange}

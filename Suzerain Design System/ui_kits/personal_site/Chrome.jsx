@@ -339,7 +339,7 @@ function szPmSnapshotDay(iso) {
 //     arrived (the boundary is the exact close, so the later point is the one to
 //     keep), and
 //   - the likelier case: two wallets whose tails stopped at different hours, which
-//     szPm/pmSumPnlSeries unions into two intraday points on the same day.
+//     the snapshot's per-wallet sum unions into two intraday points on the same day.
 //
 // The book view already gets this for free — cmbSampleDaily walks a day axis and
 // keeps the last value at or before each day. This puts the polymarket chart on the
