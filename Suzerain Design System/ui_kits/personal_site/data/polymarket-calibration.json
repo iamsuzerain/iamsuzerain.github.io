@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T13:31:20Z",
+  "generatedAt": "2026-10-20T11:48:46Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,12 +58,12 @@
       "calibrationError": 0.0294
     },
     "exit": {
-      "n": 333,
-      "wins": 223,
+      "n": 335,
+      "wins": 225,
       "pushes": 10,
-      "hitRate": 0.6904,
-      "volume": 1613900.79,
-      "realizedPnl": -23320.26,
+      "hitRate": 0.6923,
+      "volume": 1614749.92,
+      "realizedPnl": -23208.29,
       "roi": -0.0144
     }
   },
@@ -374,17 +374,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 66,
-        "wins": 38,
+        "n": 68,
+        "wins": 40,
         "pushes": 3,
-        "winRate": 0.6032,
-        "avgImplied": 0.8506,
-        "volume": 174545.75,
-        "realizedPnl": -12269.44,
-        "grossPnl": 25826.28,
-        "winRateByVolume": 0.6143,
-        "wilsonLo": 0.4798,
-        "wilsonHi": 0.7147
+        "winRate": 0.6154,
+        "avgImplied": 0.8511,
+        "volume": 175396.32,
+        "realizedPnl": -12158.91,
+        "grossPnl": 25936.81,
+        "winRateByVolume": 0.6161,
+        "wilsonLo": 0.4938,
+        "wilsonHi": 0.7241
       },
       {
         "lo": 0.9,
@@ -409,9 +409,9 @@
         "pushes": 0,
         "winRate": 0.8026,
         "avgImplied": 0.9673,
-        "volume": 586339.65,
-        "realizedPnl": -14294.71,
-        "grossPnl": 30247.09,
+        "volume": 586338.21,
+        "realizedPnl": -14293.27,
+        "grossPnl": 30248.53,
         "winRateByVolume": 0.8412,
         "wilsonLo": 0.6996,
         "wilsonHi": 0.8766
@@ -565,12 +565,12 @@
     "geopolitics": {
       "combined": {
         "n": 271,
-        "volume": 2137237.33,
-        "realizedPnl": 54763.41,
+        "volume": 2137235.89,
+        "realizedPnl": 54764.85,
         "roi": 0.0256,
         "hitRate": 0.8165,
         "avgImplied": 0.8227,
-        "edge": -0.0063,
+        "edge": -0.0062,
         "top1Share": 0.198
       },
       "settlement": {
@@ -585,8 +585,8 @@
       },
       "exit": {
         "n": 105,
-        "volume": 743908.11,
-        "realizedPnl": -4573.11,
+        "volume": 743906.67,
+        "realizedPnl": -4571.67,
         "roi": -0.0061,
         "hitRate": 0.7228,
         "avgImplied": 0.7756,
@@ -650,14 +650,14 @@
     },
     "politics": {
       "combined": {
-        "n": 219,
-        "volume": 1043154.13,
-        "realizedPnl": 20945.05,
-        "roi": 0.0201,
-        "hitRate": 0.8411,
-        "avgImplied": 0.8259,
-        "edge": 0.0152,
-        "top1Share": 0.1264
+        "n": 221,
+        "volume": 1044004.7,
+        "realizedPnl": 21055.58,
+        "roi": 0.0202,
+        "hitRate": 0.8426,
+        "avgImplied": 0.8263,
+        "edge": 0.0163,
+        "top1Share": 0.1261
       },
       "settlement": {
         "n": 136,
@@ -670,14 +670,14 @@
         "top1Share": 0.1718
       },
       "exit": {
-        "n": 83,
-        "volume": 203829.54,
-        "realizedPnl": -4162.92,
-        "roi": -0.0204,
-        "hitRate": 0.7051,
-        "avgImplied": 0.6976,
-        "edge": 0.0076,
-        "top1Share": 0.1768
+        "n": 85,
+        "volume": 204680.11,
+        "realizedPnl": -4052.39,
+        "roi": -0.0198,
+        "hitRate": 0.7125,
+        "avgImplied": 0.7016,
+        "edge": 0.0109,
+        "top1Share": 0.1752
       }
     },
     "sports": {
@@ -747,52 +747,52 @@
   },
   "openBook": {
     "n": 142,
-    "cost": 313632.74,
-    "mark": 308685.74,
-    "unrealized": -4947.01
+    "cost": 318041.92,
+    "mark": 314883.19,
+    "unrealized": -3158.74
   },
   "openByCategory": {
     "commodities": {
       "n": 4,
       "cost": 9228.05,
-      "mark": 9480.97,
-      "unrealized": 252.93
+      "mark": 9492.08,
+      "unrealized": 264.04
     },
     "geopolitics": {
       "n": 13,
-      "cost": 40692.77,
-      "mark": 39769.09,
-      "unrealized": -923.69
+      "cost": 42328.88,
+      "mark": 41871.7,
+      "unrealized": -457.18
     },
     "macro": {
       "n": 3,
       "cost": 17217.52,
-      "mark": 5135.91,
-      "unrealized": -12081.62
+      "mark": 5479.0,
+      "unrealized": -11738.53
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 271.8,
-      "unrealized": -66.6
+      "mark": 279.0,
+      "unrealized": -59.4
     },
     "politics": {
       "n": 113,
-      "cost": 239476.49,
-      "mark": 246896.73,
-      "unrealized": 7420.23
+      "cost": 242249.55,
+      "mark": 250572.19,
+      "unrealized": 8322.63
     },
     "sports": {
       "n": 6,
       "cost": 2982.34,
-      "mark": 3429.72,
-      "unrealized": 447.38
+      "mark": 3486.32,
+      "unrealized": 503.97
     },
     "tech": {
       "n": 2,
       "cost": 3697.17,
-      "mark": 3701.53,
-      "unrealized": 4.36
+      "mark": 3702.9,
+      "unrealized": 5.73
     }
   },
   "openCategories": {
@@ -852,7 +852,6 @@
     "0x5ad7756609da59ffb359e37a16cc0b89285f4b823623e22e2900f054a77ed8ed": "politics",
     "0x5db999fad322cea2914535aae5517060c3f80ad6d8c0231cde2124a434d16846": "geopolitics",
     "0x5e95ab3b85ce3e98f7cc841671ddb18807c0819487134925b639402b499f360f": "politics",
-    "0x64b001ee377252b9f1d1c9fec81fabdacfd3bcaeaccd35aa40939852107ed82c": "politics",
     "0x66a2d77bbfe2bdec66760143211da7df6b16a1b5763691c0fbefe5b5752f9260": "politics",
     "0x694595d0a008f10e4701285d071e4b08407495f6f8a6bd8cbdd7de522fa9b463": "politics",
     "0x6956808405979b6becfe48eec5e8c28bd09e20b1d89a7d448820f66c646297ad": "politics",
@@ -934,7 +933,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 535,
+      "events": 536,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2054,7 +2053,6 @@
     ["sports","2026-10-15","s",300.94,52.27,1,0.852,"Shohei Ohtani: Home Runs O/U 0.5","Under","Milwaukee Brewers vs. Los Angeles Dodgers - Player Props"],
     ["geopolitics","2026-10-16","e",48444.64,811.51,1,0.7855,"Will the U.S. invade Iran before 2027?","No",null],
     ["geopolitics","2026-10-16","s",4.97,0.03,1,0.9933,"Lula flips Bolsonaro for Brazil president by October 15?","No","Lula flips Bolsonaro for Brazil president by...?"],
-    ["politics","2026-10-16","e",0.9,0.1,1,0.8959,"Republican Senate odds hit 55% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-10-16","s",2911.7,1645.64,1,0.6389,"Will the Los Angeles Dodgers win the 2026 World Series?","No","MLB World Series Champion 2026"],
     ["sports","2026-10-16","s",286.38,-286.38,0,0.86,"Shohei Ohtani: Home Runs O/U 0.5","Under","Milwaukee Brewers vs. Los Angeles Dodgers - Player Props"],
     ["politics","2026-10-17","e",2311.32,136.51,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
@@ -2067,7 +2065,10 @@
     ["politics","2026-10-18","e",499.83,100.17,1,0.05,"Will the Republican Party hold exactly 53 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-10-18","e",184.88,12.17,1,0.9326,"Will the Republican Party win the OH-13 House seat?","No","OH-13 House Election Winner"],
     ["sports","2026-10-18","s",3506.71,100.27,1,0.9722,"Florida State vs. Miami (FL)","Miami (FL)",null],
-    ["geopolitics","2026-10-19","e",12179.82,136.16,1,0.984,"France declares state of siege (martial law) by October 31, 2026?","No","France declares state of siege (martial law) by...?"],
+    ["geopolitics","2026-10-19","e",12178.38,137.6,1,0.9839,"France declares state of siege (martial law) by October 31, 2026?","No","France declares state of siege (martial law) by...?"],
+    ["politics","2026-10-19","e",43.29,1.04,1,0.8985,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
+    ["politics","2026-10-19","e",31.82,3.52,1,0.8959,"Republican Senate odds hit 55% by October 31?","No","Republican Senate odds hit __ by October 31?"],
+    ["politics","2026-10-19","e",776.36,106.07,1,0.8349,"Will the Sweden Democrats (SD) be in the next Swedish government?","No","Which parties will be in next Swedish Government?"],
     ["tech","2026-10-19","e",54884.35,231.89,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"]
   ]
 }
