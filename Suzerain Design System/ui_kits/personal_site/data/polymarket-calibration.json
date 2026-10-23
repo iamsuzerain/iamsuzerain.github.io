@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-22T12:02:45Z",
+  "generatedAt": "2026-10-23T11:48:46Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -62,8 +62,8 @@
       "wins": 227,
       "pushes": 10,
       "hitRate": 0.6942,
-      "volume": 1637501.96,
-      "realizedPnl": -22499.39,
+      "volume": 1639609.26,
+      "realizedPnl": -22475.13,
       "roi": -0.0137
     }
   },
@@ -348,11 +348,11 @@
         "wins": 10,
         "pushes": 0,
         "winRate": 0.7143,
-        "avgImplied": 0.6602,
-        "volume": 54483.24,
-        "realizedPnl": -1749.21,
-        "grossPnl": 6087.47,
-        "winRateByVolume": 0.8206,
+        "avgImplied": 0.6609,
+        "volume": 56590.54,
+        "realizedPnl": -1724.95,
+        "grossPnl": 6111.73,
+        "winRateByVolume": 0.8272,
         "wilsonLo": 0.4535,
         "wilsonHi": 0.8828
       },
@@ -565,8 +565,8 @@
     "geopolitics": {
       "combined": {
         "n": 273,
-        "volume": 2139705.96,
-        "realizedPnl": 54833.05,
+        "volume": 2141813.26,
+        "realizedPnl": 54857.31,
         "roi": 0.0256,
         "hitRate": 0.8178,
         "avgImplied": 0.8223,
@@ -585,12 +585,12 @@
       },
       "exit": {
         "n": 107,
-        "volume": 746376.74,
-        "realizedPnl": -4503.47,
+        "volume": 748484.04,
+        "realizedPnl": -4479.21,
         "roi": -0.006,
         "hitRate": 0.7282,
-        "avgImplied": 0.7754,
-        "edge": -0.0472,
+        "avgImplied": 0.7755,
+        "edge": -0.0473,
         "top1Share": 0.1876
       }
     },
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 146,
-    "cost": 314950.19,
-    "mark": 310355.61,
-    "unrealized": -4594.59
+    "n": 147,
+    "cost": 317244.88,
+    "mark": 310636.96,
+    "unrealized": -6607.93
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1276.57,
-      "mark": 1312.99,
-      "unrealized": 36.41
+      "mark": 1258.27,
+      "unrealized": -18.3
     },
     "geopolitics": {
       "n": 15,
-      "cost": 52321.24,
-      "mark": 51726.7,
-      "unrealized": -594.54
+      "cost": 54588.17,
+      "mark": 53662.85,
+      "unrealized": -925.32
     },
     "macro": {
       "n": 3,
       "cost": 17217.52,
-      "mark": 3967.55,
-      "unrealized": -13249.97
+      "mark": 2456.1,
+      "unrealized": -14761.42
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 309.6,
-      "unrealized": -28.8
+      "mark": 304.2,
+      "unrealized": -34.2
     },
     "politics": {
-      "n": 117,
-      "cost": 239508.93,
-      "mark": 248261.17,
-      "unrealized": 8752.23
+      "n": 118,
+      "cost": 239536.69,
+      "mark": 248192.41,
+      "unrealized": 8655.72
     },
     "sports": {
       "n": 6,
       "cost": 2982.34,
-      "mark": 3468.99,
-      "unrealized": 486.65
+      "mark": 3465.5,
+      "unrealized": 483.15
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1308.61,
-      "unrealized": 3.44
+      "mark": 1297.62,
+      "unrealized": -7.55
     }
   },
   "openCategories": {
@@ -847,6 +847,7 @@
     "0x4e4f77e7dbf4cab666e9a1943674d7ae66348e862df03ea6f44b11eb95731928": "politics",
     "0x5023397754fdd487b957e203cf55f8ba7cc412a096b6b9d110933e20753c2053": "politics",
     "0x50b78cd83de62d75d504d7a184ba1171436628068b3c3d4dd0384e65d4a40d1b": "politics",
+    "0x50f76a489c33450195fa48d159b75e7cf2bcf215b38183477c6824e5f15f7e11": "politics",
     "0x51c5049c65cf29cc4d8c72e0a4c16c604cfef7a86687dcd45f2987ace0b6fea6": "politics",
     "0x52284e2210068126179495aa36b333b455be2973ada738f6bffad6061bb116a6": "politics",
     "0x53bbdde2bff0255be814d3779de1e2b3cb55383defda7af65a76a171cfd3e64b": "sports",
@@ -2075,9 +2076,9 @@
     ["politics","2026-10-19","e",776.36,106.07,1,0.8349,"Will the Sweden Democrats (SD) be in the next Swedish government?","No","Which parties will be in next Swedish Government?"],
     ["tech","2026-10-20","e",57276.34,258.47,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"],
     ["commodities","2026-10-21","e",25746.11,778.69,1,0.9629,"Will WTI Crude Oil (WTI) hit (LOW) $65 in October?","No","What will WTI Crude Oil (WTI) hit in October 2026?"],
-    ["geopolitics","2026-10-22","e",2236.84,65.79,1,0.68,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"],
     ["geopolitics","2026-10-22","e",233.23,2.41,1,0.8512,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
     ["politics","2026-10-22","e",9982.81,349.93,1,0.8985,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
-    ["sports","2026-10-22","s",15.67,1.0,1,0.94,"Warriors vs. Lakers","Lakers",null]
+    ["sports","2026-10-22","s",15.67,1.0,1,0.94,"Warriors vs. Lakers","Lakers",null],
+    ["geopolitics","2026-10-23","e",4344.14,90.05,1,0.6889,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"]
   ]
 }
