@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-23T11:48:46Z",
+  "generatedAt": "2026-10-24T11:14:17Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -62,9 +62,9 @@
       "wins": 227,
       "pushes": 10,
       "hitRate": 0.6942,
-      "volume": 1639609.26,
-      "realizedPnl": -22475.13,
-      "roi": -0.0137
+      "volume": 1640873.57,
+      "realizedPnl": -22566.82,
+      "roi": -0.0138
     }
   },
   "buckets": {
@@ -349,10 +349,10 @@
         "pushes": 0,
         "winRate": 0.7143,
         "avgImplied": 0.6609,
-        "volume": 56590.54,
-        "realizedPnl": -1724.95,
-        "grossPnl": 6111.73,
-        "winRateByVolume": 0.8272,
+        "volume": 56601.64,
+        "realizedPnl": -1724.61,
+        "grossPnl": 6112.07,
+        "winRateByVolume": 0.8273,
         "wilsonLo": 0.4535,
         "wilsonHi": 0.8828
       },
@@ -374,32 +374,32 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 69,
-        "wins": 41,
+        "n": 68,
+        "wins": 40,
         "pushes": 3,
-        "winRate": 0.6212,
-        "avgImplied": 0.8511,
-        "volume": 185569.07,
-        "realizedPnl": -11807.61,
-        "grossPnl": 26288.11,
-        "winRateByVolume": 0.6372,
-        "wilsonLo": 0.5006,
-        "wilsonHi": 0.7285
+        "winRate": 0.6154,
+        "avgImplied": 0.8504,
+        "volume": 176735.55,
+        "realizedPnl": -12145.65,
+        "grossPnl": 25950.07,
+        "winRateByVolume": 0.619,
+        "wilsonLo": 0.4938,
+        "wilsonHi": 0.7241
       },
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 64,
-        "wins": 46,
+        "n": 65,
+        "wins": 47,
         "pushes": 1,
-        "winRate": 0.7302,
-        "avgImplied": 0.9281,
-        "volume": 367994.09,
-        "realizedPnl": 3678.79,
-        "grossPnl": 23522.95,
-        "winRateByVolume": 0.9222,
-        "wilsonLo": 0.6097,
-        "wilsonHi": 0.8242
+        "winRate": 0.7344,
+        "avgImplied": 0.9278,
+        "volume": 378080.82,
+        "realizedPnl": 3924.8,
+        "grossPnl": 23768.96,
+        "winRateByVolume": 0.9243,
+        "wilsonLo": 0.6152,
+        "wilsonHi": 0.827
       },
       {
         "lo": 0.95,
@@ -565,13 +565,13 @@
     "geopolitics": {
       "combined": {
         "n": 273,
-        "volume": 2141813.26,
-        "realizedPnl": 54857.31,
+        "volume": 2142973.65,
+        "realizedPnl": 54869.54,
         "roi": 0.0256,
         "hitRate": 0.8178,
         "avgImplied": 0.8223,
         "edge": -0.0045,
-        "top1Share": 0.1979
+        "top1Share": 0.1978
       },
       "settlement": {
         "n": 166,
@@ -585,13 +585,13 @@
       },
       "exit": {
         "n": 107,
-        "volume": 748484.04,
-        "realizedPnl": -4479.21,
+        "volume": 749644.43,
+        "realizedPnl": -4466.98,
         "roi": -0.006,
         "hitRate": 0.7282,
         "avgImplied": 0.7755,
         "edge": -0.0473,
-        "top1Share": 0.1876
+        "top1Share": 0.1875
       }
     },
     "macro": {
@@ -651,13 +651,13 @@
     "politics": {
       "combined": {
         "n": 221,
-        "volume": 1053944.22,
-        "realizedPnl": 21404.47,
-        "roi": 0.0203,
+        "volume": 1054048.14,
+        "realizedPnl": 21300.55,
+        "roi": 0.0202,
         "hitRate": 0.8426,
         "avgImplied": 0.8263,
         "edge": 0.0163,
-        "top1Share": 0.1251
+        "top1Share": 0.1254
       },
       "settlement": {
         "n": 136,
@@ -671,13 +671,13 @@
       },
       "exit": {
         "n": 85,
-        "volume": 214619.63,
-        "realizedPnl": -3703.5,
-        "roi": -0.0173,
+        "volume": 214723.55,
+        "realizedPnl": -3807.42,
+        "roi": -0.0177,
         "hitRate": 0.7125,
-        "avgImplied": 0.7016,
-        "edge": 0.0109,
-        "top1Share": 0.1703
+        "avgImplied": 0.7017,
+        "edge": 0.0108,
+        "top1Share": 0.1717
       }
     },
     "sports": {
@@ -746,23 +746,23 @@
     }
   },
   "openBook": {
-    "n": 147,
-    "cost": 317244.88,
-    "mark": 310636.96,
-    "unrealized": -6607.93
+    "n": 148,
+    "cost": 326284.33,
+    "mark": 320021.5,
+    "unrealized": -6262.84
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1276.57,
-      "mark": 1258.27,
-      "unrealized": -18.3
+      "mark": 1285.65,
+      "unrealized": 9.08
     },
     "geopolitics": {
       "n": 15,
-      "cost": 54588.17,
-      "mark": 53662.85,
-      "unrealized": -925.32
+      "cost": 53427.64,
+      "mark": 52565.82,
+      "unrealized": -861.82
     },
     "macro": {
       "n": 3,
@@ -773,26 +773,26 @@
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 304.2,
-      "unrealized": -34.2
+      "mark": 282.6,
+      "unrealized": -55.8
     },
     "politics": {
-      "n": 118,
-      "cost": 239536.69,
-      "mark": 248192.41,
-      "unrealized": 8655.72
+      "n": 119,
+      "cost": 249736.67,
+      "mark": 258571.31,
+      "unrealized": 8834.63
     },
     "sports": {
       "n": 6,
       "cost": 2982.34,
-      "mark": 3465.5,
-      "unrealized": 483.15
+      "mark": 3554.14,
+      "unrealized": 571.8
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1297.62,
-      "unrealized": -7.55
+      "mark": 1305.86,
+      "unrealized": 0.69
     }
   },
   "openCategories": {
@@ -2076,9 +2076,9 @@
     ["politics","2026-10-19","e",776.36,106.07,1,0.8349,"Will the Sweden Democrats (SD) be in the next Swedish government?","No","Which parties will be in next Swedish Government?"],
     ["tech","2026-10-20","e",57276.34,258.47,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"],
     ["commodities","2026-10-21","e",25746.11,778.69,1,0.9629,"Will WTI Crude Oil (WTI) hit (LOW) $65 in October?","No","What will WTI Crude Oil (WTI) hit in October 2026?"],
-    ["geopolitics","2026-10-22","e",233.23,2.41,1,0.8512,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
-    ["politics","2026-10-22","e",9982.81,349.93,1,0.8985,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
     ["sports","2026-10-22","s",15.67,1.0,1,0.94,"Warriors vs. Lakers","Lakers",null],
-    ["geopolitics","2026-10-23","e",4344.14,90.05,1,0.6889,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"]
+    ["geopolitics","2026-10-23","e",4355.24,90.39,1,0.6889,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"],
+    ["politics","2026-10-23","e",10086.73,246.01,1,0.9078,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
+    ["geopolitics","2026-10-24","e",1382.52,14.3,1,0.8512,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"]
   ]
 }
