@@ -1629,9 +1629,8 @@ function PmLotTape({ lots }) {
       <SzChartSvg frame={F} hover={hv} n={n} className="pf-navchart pm-chart-svg"
         label="polymarket book · running realized profit and loss, position by position"
         summary={szChartSummary(
-          'Realized profit and loss on the polymarket book, accumulated one closed position '
-            + 'at a time. The axis counts positions rather than days, so the spacing between '
-            + 'dates is how busy each stretch was',
+          'Realized profit and loss on the polymarket book, one closed position '
+            + 'per step, so the axis counts positions, not days',
           first, last, lots.length, 'closed positions')}
         readout={lot
           ? `${fmtDate(lot.closedOn)}, ${lot.market || lot.category}`
@@ -1813,8 +1812,8 @@ function PmRewardsChart({ rows }) {
       <SzChartSvg frame={F} hover={hv} n={n}
         label="polymarket · rewards earned since tracking began"
         summary={szChartSummary(
-          'Liquidity and rebate rewards on polymarket, each line rebased to zero on the first '
-            + 'tracked day because the source reports lifetime totals',
+          'Liquidity and rebate rewards on polymarket, each line starting at zero '
+            + 'on the first tracked day',
           rows[0].d, rows[n - 1].d, n)}
         readout={hv.i != null && rows[hv.i]
           ? `${rows[hv.i].d}, `

@@ -683,7 +683,7 @@ function Politics({ scope: routeScope }) {
             <span>past sympathies · {past.length}</span>
             <span className="pol-dim">by place, newest first</span>
           </div>
-          <p className="pol-disclaimer">What I believed at the time, which may not be my politics now.</p>
+          <p className="pol-disclaimer">Past beliefs. May not be held now.</p>
           <ul className="pol-list">
             {past.map((p, i) => (
               <li key={`${p.name}-${p.date}-${i}`}>

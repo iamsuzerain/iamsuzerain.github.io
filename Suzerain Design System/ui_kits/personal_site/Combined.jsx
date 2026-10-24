@@ -1384,8 +1384,7 @@ function CmbCorrStrip({ roll }) {
           label={`rolling ${CMB_CORR_ROLL}-session correlation between the ibkr and polymarket books`}
           summary={szChartSummary(
             `How closely the two books moved together over a rolling ${CMB_CORR_ROLL}-session window. `
-              + `Drawn on a fixed band of plus or minus ${dom.toFixed(2)}, so a line sitting on zero `
-              + 'reads as the flat series it is rather than being zoomed into a mountain range',
+              + `Drawn on a fixed scale of plus or minus ${dom.toFixed(2)}`,
             roll[0].d, roll[roll.length - 1].d, roll.length)}
           readout={hovered ? `${cmbFullDate(hovered.d)}, ${fmt(hovered.v)}` : ''}>
           {/* The 'corr' ramp runs left→right — see SZ_GRADIENTS. This series
@@ -1689,9 +1688,8 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
       <SzChartSvg frame={F} hover={hv} n={pts.length} className="pf-navchart pm-chart-svg"
         label="capital by venue · ibkr and polymarket, stacked"
         summary={szChartSummary(
-          'Where the capital sat, as two stacked bands: the ibkr level with the polymarket '
-            + 'level on top of it, so the outer contour is the total. Transfers between the '
-            + 'two show as steps'
+          'Capital in each account, stacked: ibkr on the bottom, polymarket on top, '
+            + 'so the top edge is the total. Transfers between the two show as steps'
             + (split > 0 ? `. The polymarket level is unavailable before ${cmbFullDate(hasPmBand ? pts[split].d : pts[last].d)}`
               + (hasPmBand ? ', so only the ibkr band is drawn there' : '') : ''),
           pts[0].d, pts[last].d, pts.length)}
@@ -2262,8 +2260,9 @@ function Combined({ setView }) {
     ? benchKeys.filter(k => win.series[0][k] != null).map(k => ({ key: k }))
     : [];
   const pos = wTotal >= 0;
-  const rangeSub = range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range);
-  const rangeNote = data.bdExtra ? `${cmbRangeLabel(range)} · trading + rewards` : `${cmbRangeLabel(range)} trading`;
+  // The range is already in the headline, and the toggle sits right under it;
+  // the sub line and the tile notes say only what the number is made of.
+  const pmNote = data.bdExtra ? 'trading + rewards' : 'trading';
   const pct = unit === 'pct' && !!pctSeries;
   const pLast = (pctSeries && pctSeries.length) ? pctSeries[pctSeries.length - 1] : null;
   const shown = pct ? pctSeries : win.series;
@@ -2301,10 +2300,10 @@ function Combined({ setView }) {
           <div className="sz-kicker">◆ book</div>
           <h2 className="sz-h2 pm-headline">
             <span>{pct ? cmbPctFmt(sLast.v) : `${pos ? '+' : ''}${cmbUSD(wTotal)}`}</span>
-            <span className="pf-currency">{range === '1Y' ? 'trailing 12mo pnl' : `${cmbRangeLabel(range)} pnl`}</span>
+            <span className="pf-currency">{cmbRangeLabel(range)} pnl</span>
           </h2>
           <div className="pf-sub">
-            deposit-adjusted <span className="sz-sep">·</span> {rangeSub}
+            deposit-adjusted
             {!data.pmAvailable && <span> <span className="sz-sep">·</span> polymarket unavailable, showing ibkr only</span>}
           </div>
         </div>
@@ -2324,9 +2323,9 @@ function Combined({ setView }) {
             return on the book's own capital would be a different question, and
             one the polymarket page already answers. */}
         <CmbStat label="ibkr" value={fmt(vIbkr)} tone={tone(vIbkr)} onClick={go('ibkr')}
-          note={pct ? 'deposit-adjusted · contribution' : 'deposit-adjusted'}/>
+          note={pct ? 'contribution' : null}/>
         <CmbStat label="polymarket" value={fmt(vPm)} tone={tone(vPm)} onClick={go('polymarket')}
-          note={pct ? `${rangeNote} · contribution` : rangeNote}/>
+          note={pct ? `${pmNote} · contribution` : pmNote}/>
         {/* In % the tile's own value IS the points figure it used to carry as a
             kicker, so the kicker takes the dollars instead of restating it. */}
         {wBenchD != null && (
@@ -2410,7 +2409,7 @@ function Combined({ setView }) {
       {risk && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">risk · {range === '1Y' ? 'trailing 12mo' : cmbRangeLabel(range)}</span>
+            <span className="pf-panel-title">risk · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">combined equity · 365d annualized</span>
           </div>
           <div className={`cmb-risk-grid ${data.corr ? 'cmb-risk-grid-6' : 'cmb-risk-grid-5'}`}>
@@ -2449,7 +2448,7 @@ function Combined({ setView }) {
             <span className="pf-panel-title">capital deployed · {cmbRangeLabel(range)}</span>
             <span className="pf-panel-meta">
               {capK0 < 0 ? 'ibkr nav · polymarket nav unavailable in this range'
-                : `ibkr nav + polymarket nav${capFrom ? ` from ${cmbFullDate(capFrom)}` : ''}`} · diamonds mark money moving in, out or between
+                : `ibkr nav + polymarket nav${capFrom ? ` from ${cmbFullDate(capFrom)}` : ''}`} · ◆ deposits, withdrawals and transfers
               {xferTotal > 0 ? ` · ${cmbUSDk(xferTotal)} net into polymarket overall` : ''}
             </span>
           </div>

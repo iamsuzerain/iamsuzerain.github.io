@@ -1350,7 +1350,7 @@ function TypeBadge({ assetClass, subCategory }) {
 function pfRiskTitle({ bp, dv01, face: notional }) {
   const perBp = dv01 != null ? `${fmtUSD(Math.abs(dv01))}/bp × ${bp}bp` : `${bp}bp move`;
   const face = notional != null ? ` · controls ${pfBillions(notional)} notional, not counted` : '';
-  return `rate risk, not market value: ${perBp}${face}`;
+  return `rate risk: ${perBp}${face}`;
 }
 
 // Notional runs to billions; full digits there are unreadable at a glance.

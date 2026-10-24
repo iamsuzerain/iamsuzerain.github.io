@@ -894,7 +894,7 @@ function Records() {
         <div className="pf-panel-head">
           <span className="pf-panel-title">every day</span>
           <div className="pf-panel-head-right">
-            <span className="pf-panel-meta">weeks run monday to sunday · weekends are polymarket alone</span>
+            <span className="pf-panel-meta">weeks run mon–sun · weekends are polymarket only</span>
             {years.length > 1 && (
               <div className="pf-range" role="group" aria-label="calendar span">
                 <SzToggle options={[['recent', 'past 365 days'], ...years.map(y => [y, String(y)])]}
@@ -913,12 +913,12 @@ function Records() {
       </RecPanel>
 
       {groups.spx && (
-        <RecPanel title="against the s&p 500" meta="differences in percentage points · the index counts 0 on days it was shut">
+        <RecPanel title="against the s&p 500" meta="in percentage points · the s&p counts as flat on market holidays">
           {grid(groups.spx)}
         </RecPanel>
       )}
 
-      <RecPanel title="the two books" meta="each book's share of the day's return, on the whole book's capital">
+      <RecPanel title="the two books" meta="each book's contribution to the combined daily return">
         {grid(groups.books)}
       </RecPanel>
 
@@ -938,7 +938,7 @@ function Records() {
         </div>
       </RecPanel>
 
-      <RecPanel title="odds and ends" meta="weekday averages are a small sample, mostly noise">
+      <RecPanel title="odds and ends" meta="small samples">
         {grid(groups.odds)}
       </RecPanel>
     </section>
