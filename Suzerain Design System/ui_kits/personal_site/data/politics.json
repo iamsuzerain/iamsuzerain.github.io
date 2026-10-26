@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-19",
+  "updated": "2026-10-26",
   "note": "Sympathies, not projections.",
   "_schema": {
     "key": "match a feature by name (as spelled in geo-world.json / geo-us.json) or by its numeric id",
@@ -17,13 +17,12 @@
   },
   "world": {
     "Brazil": {
-      "races": [
+      "past": [
         {
+          "date": "2026-10-25",
           "office": "president",
-          "next": "2026-10-25",
           "pick": "Lula",
-          "enthusiasm": "tactical",
-          "logged": "2026-08-07"
+          "enthusiasm": "tactical"
         }
       ]
     },
@@ -31,9 +30,9 @@
       "races": [
         {
           "office": "president",
-          "next": "2026-10-25",
+          "next": "2026-11-01",
           "pick": "Gyurov",
-          "enthusiasm": "tactical",
+          "enthusiasm": "qualified",
           "logged": "2026-08-26"
         }
       ]
