@@ -73,7 +73,7 @@ TRANSFER_BATCH = "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8
 PRICE_WINDOW = 3600   # seconds either side of a conversion to look for a market price
 CASH_TOL_USD = 25.0   # per-event gap between lots and cash worth logging
 PAGE = 500          # activity page size
-ACTIVITY_RETRIES = 5  # per page, with backoff, before the run dies
+FETCH_RETRIES = 5   # per data-api/gamma request, with backoff, before the run dies
 OFFSET_CEIL = 5000  # /activity rejects offset past ~5500; slide the window before then
 GAMMA_CHUNK = 25    # condition_ids per gamma request (URL-length safe)
 EVENTS_CHUNK = 20   # event ids per gamma /events request
@@ -175,28 +175,35 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
-def get_activity_page(sess, params):
-    """One /activity page, retried; dies rather than return a short history.
+def get_list(sess, url, params, what):
+    """One list-returning data-api/gamma request, retried; dies rather than skip.
 
-    A failed page used to read as "no more pages". On 2026-10-26 the second
-    wallet's very first request failed, the run went on with one wallet's
-    trades, and published a book missing the September Fed win (macro +$90k
-    -> -$106). Offsets never reach the ~5500 ceiling (OFFSET_CEIL stops short),
-    so no legitimate page is a non-200: retry, then exit non-zero so the
-    workflow fails and the last good file stays published.
+    Every request here used to treat a failure as an empty answer. On
+    2026-10-26 the second wallet's first /activity page failed, the run went on
+    with one wallet's trades, and published a book missing the September Fed
+    win (macro +$90k -> -$106). A dropped gamma chunk is the same bug quieter:
+    up to 25 markets lose their resolution (settlements vanish), their category
+    ("other"), or their closed flag (a dead loser reads as an open mark).
+    /activity offsets never reach the ~5500 ceiling (OFFSET_CEIL stops short)
+    and every endpoint answers a no-match with `[]`, so a non-200 or a non-list
+    is never a legitimate answer: retry, then exit non-zero so the workflow
+    fails and the last good file stays published.
     """
-    for attempt in range(ACTIVITY_RETRIES):
+    for attempt in range(FETCH_RETRIES):
         try:
-            r = sess.get(ACTIVITY_URL, params=params, timeout=30)
-            if r.status_code == 200:
-                return r.json()
-            err = f"HTTP {r.status_code}"
+            r = sess.get(url, params=params, timeout=30)
+            if r.status_code != 200:
+                err = f"HTTP {r.status_code}"
+            else:
+                d = r.json()
+                if isinstance(d, list):
+                    return d
+                err = f"non-list body {str(d)[:120]}"
         except Exception as e:
             err = repr(e)
-        log(f"activity page failed ({err}), attempt {attempt + 1}/{ACTIVITY_RETRIES}:",
-            params["user"][:8], "offset", params["offset"])
+        log(f"{what} failed ({err}), attempt {attempt + 1}/{FETCH_RETRIES}")
         time.sleep(5 * 2 ** attempt)
-    sys.exit(f"giving up on /activity for {params['user']} at offset {params['offset']}")
+    sys.exit(f"giving up on {what}")
 
 
 def fetch_activity(sess, wallet):
@@ -227,8 +234,9 @@ def fetch_activity(sess, wallet):
         off = 0
         while True:
             params = {"user": wallet, "limit": PAGE, "offset": off, "end": end}
-            page = get_activity_page(sess, params)
-            if not isinstance(page, list) or not page:
+            page = get_list(sess, ACTIVITY_URL, params,
+                            f"/activity {wallet[:8]} offset {off}")
+            if not page:
                 break
             for a in page:
                 if not isinstance(a, dict):
@@ -577,13 +585,7 @@ def fetch_resolutions(sess, condition_ids):
     for i in range(0, len(ids), GAMMA_CHUNK):
         chunk = ids[i:i + GAMMA_CHUNK]
         params = [("condition_ids", c) for c in chunk] + [("closed", "true"), ("limit", GAMMA_CHUNK)]
-        try:
-            d = sess.get(GAMMA_URL, params=params, timeout=30).json()
-        except Exception as e:
-            log("gamma chunk failed:", e)
-            continue
-        if not isinstance(d, list):
-            continue
+        d = get_list(sess, GAMMA_URL, params, f"gamma resolution chunk {i // GAMMA_CHUNK}")
         for m in d:
             cond = m.get("conditionId")
             if not cond or not m.get("closed"):
@@ -611,13 +613,8 @@ def fetch_market_events(sess, ids, closed):
         chunk = ids[i:i + GAMMA_CHUNK]
         params = ([("condition_ids", c) for c in chunk]
                   + [("closed", closed), ("limit", GAMMA_CHUNK)])
-        try:
-            d = sess.get(GAMMA_URL, params=params, timeout=30).json()
-        except Exception as e:
-            log(f"category markets chunk failed (closed={closed}):", e)
-            continue
-        if not isinstance(d, list):
-            continue
+        d = get_list(sess, GAMMA_URL, params,
+                     f"gamma category chunk {i // GAMMA_CHUNK} (closed={closed})")
         for m in d:
             cond, evs = m.get("conditionId"), (m.get("events") or [])
             if cond and evs and evs[0].get("id"):
@@ -656,13 +653,7 @@ def fetch_categories(sess, condition_ids, titles=None):
     for i in range(0, len(eids), EVENTS_CHUNK):
         chunk = eids[i:i + EVENTS_CHUNK]
         params = [("id", e) for e in chunk] + [("limit", 100)]
-        try:
-            d = sess.get(EVENTS_URL, params=params, timeout=30).json()
-        except Exception as e:
-            log("category events chunk failed:", e)
-            continue
-        if not isinstance(d, list):
-            continue
+        d = get_list(sess, EVENTS_URL, params, f"gamma events chunk {i // EVENTS_CHUNK}")
         for ev in d:
             labels = [t.get("label") for t in (ev.get("tags") or []) if t.get("label")]
             event_cat[str(ev.get("id"))] = categorize(labels)
@@ -700,14 +691,10 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
     for w in WALLETS:
         off = 0
         while True:
-            try:
-                d = sess.get(POSITIONS_URL,
-                             params={"user": w, "limit": 500, "offset": off},
-                             timeout=30).json()
-            except Exception as e:
-                log("positions fetch failed:", e)
-                break
-            if not isinstance(d, list) or not d:
+            d = get_list(sess, POSITIONS_URL,
+                         {"user": w, "limit": 500, "offset": off},
+                         f"/positions {w[:8]} offset {off}")
+            if not d:
                 break
             rows += d
             if len(d) < 500:
@@ -722,12 +709,9 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
         for flag in ("true", "false"):
             params = ([("condition_ids", c) for c in chunk]
                       + [("closed", flag), ("limit", GAMMA_CHUNK)])
-            try:
-                d = sess.get(GAMMA_URL, params=params, timeout=30).json()
-            except Exception as e:
-                log("open-book gamma chunk failed:", e)
-                continue
-            for m in d if isinstance(d, list) else []:
+            d = get_list(sess, GAMMA_URL, params,
+                         f"open-book gamma chunk {i // GAMMA_CHUNK} (closed={flag})")
+            for m in d:
                 if m.get("closed") and m.get("conditionId"):
                     closed.add(m["conditionId"])
 
