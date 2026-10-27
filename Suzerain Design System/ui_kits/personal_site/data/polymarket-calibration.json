@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T05:01:56Z",
+  "generatedAt": "2026-10-27T12:23:35Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -62,8 +62,8 @@
       "wins": 228,
       "pushes": 10,
       "hitRate": 0.6951,
-      "volume": 1646445.0,
-      "realizedPnl": -21759.35,
+      "volume": 1646366.48,
+      "realizedPnl": -21680.82,
       "roi": -0.0132
     }
   },
@@ -299,32 +299,32 @@
       {
         "lo": 0.3,
         "hi": 0.4,
-        "n": 9,
+        "n": 10,
         "wins": 4,
         "pushes": 2,
-        "winRate": 0.5714,
-        "avgImplied": 0.3388,
-        "volume": 4477.36,
-        "realizedPnl": -703.24,
-        "grossPnl": 883.14,
-        "winRateByVolume": 0.4888,
-        "wilsonLo": 0.2505,
-        "wilsonHi": 0.8418
+        "winRate": 0.5,
+        "avgImplied": 0.344,
+        "volume": 5062.38,
+        "realizedPnl": -799.93,
+        "grossPnl": 979.83,
+        "winRateByVolume": 0.4323,
+        "wilsonLo": 0.2152,
+        "wilsonHi": 0.7848
       },
       {
         "lo": 0.4,
         "hi": 0.5,
-        "n": 10,
+        "n": 9,
         "wins": 7,
         "pushes": 0,
-        "winRate": 0.7,
-        "avgImplied": 0.4392,
-        "volume": 8954.85,
-        "realizedPnl": 876.75,
-        "grossPnl": 1442.77,
-        "winRateByVolume": 0.8103,
-        "wilsonLo": 0.3968,
-        "wilsonHi": 0.8922
+        "winRate": 0.7778,
+        "avgImplied": 0.4388,
+        "volume": 8291.31,
+        "realizedPnl": 1009.61,
+        "grossPnl": 1309.91,
+        "winRateByVolume": 0.8751,
+        "wilsonLo": 0.4526,
+        "wilsonHi": 0.9368
       },
       {
         "lo": 0.5,
@@ -380,8 +380,8 @@
         "winRate": 0.6154,
         "avgImplied": 0.8504,
         "volume": 178913.76,
-        "realizedPnl": -12099.32,
-        "grossPnl": 25948.8,
+        "realizedPnl": -12056.96,
+        "grossPnl": 25906.44,
         "winRateByVolume": 0.6237,
         "wilsonLo": 0.4938,
         "wilsonHi": 0.7241
@@ -597,13 +597,13 @@
     "macro": {
       "combined": {
         "n": 36,
-        "volume": 498187.06,
-        "realizedPnl": 90175.78,
-        "roi": 0.181,
+        "volume": 498108.54,
+        "realizedPnl": 90254.31,
+        "roi": 0.1812,
         "hitRate": 0.6389,
-        "avgImplied": 0.6863,
-        "edge": -0.0474,
-        "top1Share": 0.8388
+        "avgImplied": 0.6848,
+        "edge": -0.0459,
+        "top1Share": 0.8394
       },
       "settlement": {
         "n": 19,
@@ -617,13 +617,13 @@
       },
       "exit": {
         "n": 17,
-        "volume": 258121.83,
-        "realizedPnl": -1994.98,
-        "roi": -0.0077,
+        "volume": 258043.31,
+        "realizedPnl": -1916.45,
+        "roi": -0.0074,
         "hitRate": 0.5294,
-        "avgImplied": 0.674,
-        "edge": -0.1446,
-        "top1Share": 0.5531
+        "avgImplied": 0.6709,
+        "edge": -0.1415,
+        "top1Share": 0.5655
       }
     },
     "other": {
@@ -747,28 +747,28 @@
   },
   "openBook": {
     "n": 144,
-    "cost": 312634.85,
-    "mark": 305694.69,
-    "unrealized": -6940.17
+    "cost": 313054.84,
+    "mark": 306448.75,
+    "unrealized": -6606.11
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1276.57,
-      "mark": 1281.08,
-      "unrealized": 4.51
+      "mark": 1264.42,
+      "unrealized": -12.16
     },
     "geopolitics": {
       "n": 11,
       "cost": 14990.67,
-      "mark": 14070.24,
-      "unrealized": -920.43
+      "mark": 14251.63,
+      "unrealized": -739.04
     },
     "macro": {
       "n": 3,
-      "cost": 17417.43,
-      "mark": 2645.89,
-      "unrealized": -14771.54
+      "cost": 17837.42,
+      "mark": 3066.63,
+      "unrealized": -14770.79
     },
     "other": {
       "n": 1,
@@ -779,14 +779,14 @@
     "politics": {
       "n": 121,
       "cost": 274333.54,
-      "mark": 282542.5,
-      "unrealized": 8208.96
+      "mark": 282707.8,
+      "unrealized": 8374.25
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3493.29,
-      "unrealized": 520.22
+      "mark": 3496.58,
+      "unrealized": 523.51
     },
     "tech": {
       "n": 1,
@@ -2015,7 +2015,7 @@
     ["geopolitics","2026-10-05","s",7.9,-7.9,0,0.0005,"Will Aldo Rebelo win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-10-05","s",7.9,-7.9,0,0.0005,"Will Tereza Cristina win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-10-05","s",7.9,-7.9,0,0.0005,"Will Helder Barbalho win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
-    ["macro","2026-10-05","e",1212.0,-242.68,0,0.808,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","No","Fed Decision in October?"],
+    ["macro","2026-10-05","e",1212.0,-200.32,0,0.808,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","No","Fed Decision in October?"],
     ["politics","2026-10-05","e",17.8,0.2,1,0.89,"Will the Republicans win the Minnesota Senate race in 2026?","No","Minnesota Senate Election Winner"],
     ["tech","2026-10-05","e",479.27,7.6,1,0.9519,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
     ["politics","2026-10-07","e",7747.54,122.53,1,0.9717,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
@@ -2084,7 +2084,7 @@
     ["politics","2026-10-26","e",10113.89,218.85,1,0.9103,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
     ["politics","2026-10-26","e",612.42,42.8,1,0.93,"Republican Senate odds hit 60% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-10-26","e",2161.49,29.97,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
-    ["macro","2026-10-27","e",663.54,-132.86,0,0.4424,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
+    ["macro","2026-10-27","e",585.02,-96.69,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
     ["sports","2026-10-27","s",4.41,0.49,1,0.9,"Will Shohei Ohtani win the 2026 World Series MVP?","No","MLB Postseason: World Series MVP"],
     ["sports","2026-10-27","s",966.65,33.4,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
     ["sports","2026-10-27","s",4.87,0.13,1,0.9743,"Will Harry Kane finish in the top 3 of the 2026 Ballon d'Or?","Yes","Ballon d'Or Top 3 Finish 2026"]
