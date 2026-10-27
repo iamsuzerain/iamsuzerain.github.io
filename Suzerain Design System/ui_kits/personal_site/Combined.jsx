@@ -212,7 +212,13 @@ function cmbTransferMarks(series, transfers, paired) {
     // restated scrape files it: the day before.
     const at = t && t.date && (t.amount || 0) < 0
       ? cmbFromEpochDay(cmbEpochDay(t.date) - 1) : t && t.date;
-    const i = at ? cmbPinIndex(days, at) : null;
+    let i = at ? cmbPinIndex(days, at) : null;
+    // A move ledgered past the last column still has its IBKR leg on the chart,
+    // and pairing has already dropped that leg's own diamond. Ride the leg's
+    // column until the polymarket day is plotted, or the move has no mark at
+    // all: 2026-10-27's $48.5k left IBKR on the 26th, the last close then.
+    const leg = paired && paired.get(t);
+    if (i == null && leg && cmbEpochDay(at) > days[days.length - 1]) i = cmbPinIndex(days, leg);
     return i == null ? null
       : { i, date: t.date, amount: t.amount || 0, external: !(paired && paired.has(t)) };
   }).filter(Boolean);
@@ -243,8 +249,8 @@ function cmbTransferMarks(series, transfers, paired) {
 const CMB_FLOW_PAIR_DAYS = 10;
 const CMB_FLOW_PAIR_TOL = 0.25;
 
-// → { flows: IBKR flows with no polymarket leg, paired: Set of ledger entries
-// that have an IBKR one }.
+// → { flows: IBKR flows with no polymarket leg, paired: Map of ledger entries
+// that have an IBKR one, to that leg's date }.
 function cmbPairFlows(flows, transfers) {
   const ledger = (transfers || [])
     .filter(t => t && t.date && t.amount)
@@ -260,14 +266,14 @@ function cmbPairFlows(flows, transfers) {
         ? t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
         : d >= t.day - 1 && d - t.day <= CMB_FLOW_PAIR_DAYS)
       && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * Math.abs(t.amount));
-    if (hit) hit.used = true;
+    if (hit) { hit.used = true; hit.leg = f.d; }
     return !!hit;
   };
   const unpaired = (flows || [])
     .filter(f => f && f.d)
     .slice().sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
     .filter(f => !paired(f));
-  return { flows: unpaired, paired: new Set(ledger.filter(l => l.used).map(l => l.t)) };
+  return { flows: unpaired, paired: new Map(ledger.filter(l => l.used).map(l => [l.t, l.leg])) };
 }
 
 function cmbIbkrFlowMarks(series, flows) {
