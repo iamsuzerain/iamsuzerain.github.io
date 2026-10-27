@@ -45,7 +45,7 @@ Outputs JSON to stdout -> data/polymarket-calibration.json
 Env:
   PM_WALLET - comma-separated wallet addresses (defaults to hardcoded list)
 """
-import ast, json, math, os, sys
+import ast, json, math, os, sys, time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from curl_cffi import requests
@@ -73,6 +73,7 @@ TRANSFER_BATCH = "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8
 PRICE_WINDOW = 3600   # seconds either side of a conversion to look for a market price
 CASH_TOL_USD = 25.0   # per-event gap between lots and cash worth logging
 PAGE = 500          # activity page size
+ACTIVITY_RETRIES = 5  # per page, with backoff, before the run dies
 OFFSET_CEIL = 5000  # /activity rejects offset past ~5500; slide the window before then
 GAMMA_CHUNK = 25    # condition_ids per gamma request (URL-length safe)
 EVENTS_CHUNK = 20   # event ids per gamma /events request
@@ -174,6 +175,30 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
+def get_activity_page(sess, params):
+    """One /activity page, retried; dies rather than return a short history.
+
+    A failed page used to read as "no more pages". On 2026-10-26 the second
+    wallet's very first request failed, the run went on with one wallet's
+    trades, and published a book missing the September Fed win (macro +$90k
+    -> -$106). Offsets never reach the ~5500 ceiling (OFFSET_CEIL stops short),
+    so no legitimate page is a non-200: retry, then exit non-zero so the
+    workflow fails and the last good file stays published.
+    """
+    for attempt in range(ACTIVITY_RETRIES):
+        try:
+            r = sess.get(ACTIVITY_URL, params=params, timeout=30)
+            if r.status_code == 200:
+                return r.json()
+            err = f"HTTP {r.status_code}"
+        except Exception as e:
+            err = repr(e)
+        log(f"activity page failed ({err}), attempt {attempt + 1}/{ACTIVITY_RETRIES}:",
+            params["user"][:8], "offset", params["offset"])
+        time.sleep(5 * 2 ** attempt)
+    sys.exit(f"giving up on /activity for {params['user']} at offset {params['offset']}")
+
+
 def fetch_activity(sess, wallet):
     """Full-history activity via backward time-windowed pagination.
 
@@ -202,10 +227,7 @@ def fetch_activity(sess, wallet):
         off = 0
         while True:
             params = {"user": wallet, "limit": PAGE, "offset": off, "end": end}
-            r = sess.get(ACTIVITY_URL, params=params, timeout=30)
-            if r.status_code != 200:
-                break
-            page = r.json()
+            page = get_activity_page(sess, params)
             if not isinstance(page, list) or not page:
                 break
             for a in page:
@@ -1190,6 +1212,8 @@ def main():
     for w in WALLETS:
         rows = fetch_activity(sess, w)
         log(f"fetched {len(rows)} activity rows for {w[:8]}")
+        if not rows:
+            sys.exit(f"no activity for {w}: refusing to publish a book without it")
         all_rows += rows
 
     pos = aggregate_positions(all_rows)
