@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-27T12:23:35Z",
+  "generatedAt": "2026-10-28T13:08:50Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,12 +58,12 @@
       "calibrationError": 0.0271
     },
     "exit": {
-      "n": 338,
+      "n": 339,
       "wins": 228,
       "pushes": 10,
-      "hitRate": 0.6951,
-      "volume": 1646366.48,
-      "realizedPnl": -21680.82,
+      "hitRate": 0.693,
+      "volume": 1657090.27,
+      "realizedPnl": -21891.76,
       "roi": -0.0132
     }
   },
@@ -304,10 +304,10 @@
         "pushes": 2,
         "winRate": 0.5,
         "avgImplied": 0.344,
-        "volume": 5062.38,
-        "realizedPnl": -799.93,
-        "grossPnl": 979.83,
-        "winRateByVolume": 0.4323,
+        "volume": 5452.39,
+        "realizedPnl": -1129.95,
+        "grossPnl": 1309.85,
+        "winRateByVolume": 0.4014,
         "wilsonLo": 0.2152,
         "wilsonHi": 0.7848
       },
@@ -345,16 +345,16 @@
         "lo": 0.6,
         "hi": 0.7,
         "n": 14,
-        "wins": 10,
+        "wins": 9,
         "pushes": 0,
-        "winRate": 0.7143,
+        "winRate": 0.6429,
         "avgImplied": 0.6609,
-        "volume": 59370.55,
-        "realizedPnl": -1630.58,
-        "grossPnl": 6206.1,
-        "winRateByVolume": 0.8353,
-        "wilsonLo": 0.4535,
-        "wilsonHi": 0.8828
+        "volume": 59963.43,
+        "realizedPnl": -1982.5,
+        "grossPnl": 6189.18,
+        "winRateByVolume": 0.7083,
+        "wilsonLo": 0.3876,
+        "wilsonHi": 0.8366
       },
       {
         "lo": 0.7,
@@ -364,10 +364,10 @@
         "pushes": 0,
         "winRate": 0.8438,
         "avgImplied": 0.7585,
-        "volume": 181387.67,
-        "realizedPnl": 3462.44,
-        "grossPnl": 16911.94,
-        "winRateByVolume": 0.7869,
+        "volume": 182349.55,
+        "realizedPnl": 3552.65,
+        "grossPnl": 17002.15,
+        "winRateByVolume": 0.788,
         "wilsonLo": 0.6825,
         "wilsonHi": 0.9314
       },
@@ -379,10 +379,10 @@
         "pushes": 3,
         "winRate": 0.6154,
         "avgImplied": 0.8504,
-        "volume": 178913.76,
-        "realizedPnl": -12056.96,
-        "grossPnl": 25906.44,
-        "winRateByVolume": 0.6237,
+        "volume": 183365.04,
+        "realizedPnl": -11676.47,
+        "grossPnl": 26286.93,
+        "winRateByVolume": 0.6328,
         "wilsonLo": 0.4938,
         "wilsonHi": 0.7241
       },
@@ -419,51 +419,51 @@
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 16,
-        "wins": 7,
+        "n": 17,
+        "wins": 8,
         "pushes": 2,
-        "winRate": 0.5,
-        "avgImplied": 0.9936,
-        "volume": 104016.26,
-        "realizedPnl": -4141.9,
-        "grossPnl": 4387.26,
-        "winRateByVolume": 0.3447,
-        "wilsonLo": 0.268,
-        "wilsonHi": 0.732
+        "winRate": 0.5333,
+        "avgImplied": 0.9939,
+        "volume": 108344.0,
+        "realizedPnl": -4141.6,
+        "grossPnl": 4387.56,
+        "winRateByVolume": 0.3709,
+        "wilsonLo": 0.3012,
+        "wilsonHi": 0.7519
       }
     ]
   },
   "byCategory": {
     "commodities": {
       "combined": {
-        "n": 136,
-        "volume": 770979.93,
-        "realizedPnl": -84546.59,
-        "roi": -0.1097,
-        "hitRate": 0.8676,
-        "avgImplied": 0.9108,
-        "edge": -0.0431,
-        "top1Share": 0.5506
+        "n": 150,
+        "volume": 981704.71,
+        "realizedPnl": -89139.09,
+        "roi": -0.0908,
+        "hitRate": 0.8533,
+        "avgImplied": 0.9015,
+        "edge": -0.0482,
+        "top1Share": 0.4857
       },
       "settlement": {
-        "n": 94,
-        "volume": 549772.16,
-        "realizedPnl": -84854.24,
-        "roi": -0.1543,
-        "hitRate": 0.9574,
-        "avgImplied": 0.9419,
-        "edge": 0.0156,
-        "top1Share": 0.6479
+        "n": 100,
+        "volume": 674324.61,
+        "realizedPnl": -81554.36,
+        "roi": -0.1209,
+        "hitRate": 0.95,
+        "avgImplied": 0.9418,
+        "edge": 0.0082,
+        "top1Share": 0.6117
       },
       "exit": {
-        "n": 42,
-        "volume": 221207.77,
-        "realizedPnl": 307.65,
-        "roi": 0.0014,
-        "hitRate": 0.6667,
-        "avgImplied": 0.8411,
-        "edge": -0.1744,
-        "top1Share": 0.1675
+        "n": 50,
+        "volume": 307380.1,
+        "realizedPnl": -7584.73,
+        "roi": -0.0247,
+        "hitRate": 0.66,
+        "avgImplied": 0.8209,
+        "edge": -0.1609,
+        "top1Share": 0.2266
       }
     },
     "crypto": {
@@ -564,46 +564,46 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 277,
-        "volume": 2183864.58,
-        "realizedPnl": 55810.15,
-        "roi": 0.0256,
-        "hitRate": 0.8132,
-        "avgImplied": 0.8209,
-        "edge": -0.0077,
-        "top1Share": 0.1887
+        "n": 264,
+        "volume": 1982511.7,
+        "realizedPnl": 60431.52,
+        "roi": 0.0305,
+        "hitRate": 0.8154,
+        "avgImplied": 0.8221,
+        "edge": -0.0067,
+        "top1Share": 0.2143
       },
       "settlement": {
-        "n": 170,
-        "volume": 1429264.79,
-        "realizedPnl": 59508.81,
-        "roi": 0.0416,
-        "hitRate": 0.8647,
-        "avgImplied": 0.8497,
-        "edge": 0.015,
-        "top1Share": 0.3117
+        "n": 164,
+        "volume": 1304712.34,
+        "realizedPnl": 56208.93,
+        "roi": 0.0431,
+        "hitRate": 0.8659,
+        "avgImplied": 0.8464,
+        "edge": 0.0195,
+        "top1Share": 0.3372
       },
       "exit": {
-        "n": 107,
-        "volume": 754599.79,
-        "realizedPnl": -3698.66,
-        "roi": -0.0049,
-        "hitRate": 0.7282,
-        "avgImplied": 0.7752,
-        "edge": -0.047,
-        "top1Share": 0.1892
+        "n": 100,
+        "volume": 677799.36,
+        "realizedPnl": 4222.59,
+        "roi": 0.0062,
+        "hitRate": 0.7292,
+        "avgImplied": 0.7823,
+        "edge": -0.0531,
+        "top1Share": 0.2326
       }
     },
     "macro": {
       "combined": {
         "n": 36,
-        "volume": 498108.54,
-        "realizedPnl": 90254.31,
-        "roi": 0.1812,
+        "volume": 498498.55,
+        "realizedPnl": 89924.29,
+        "roi": 0.1804,
         "hitRate": 0.6389,
         "avgImplied": 0.6848,
         "edge": -0.0459,
-        "top1Share": 0.8394
+        "top1Share": 0.8368
       },
       "settlement": {
         "n": 19,
@@ -617,13 +617,13 @@
       },
       "exit": {
         "n": 17,
-        "volume": 258043.31,
-        "realizedPnl": -1916.45,
-        "roi": -0.0074,
+        "volume": 258433.32,
+        "realizedPnl": -2246.47,
+        "roi": -0.0087,
         "hitRate": 0.5294,
         "avgImplied": 0.6709,
         "edge": -0.1415,
-        "top1Share": 0.5655
+        "top1Share": 0.5166
       }
     },
     "other": {
@@ -651,13 +651,13 @@
     "politics": {
       "combined": {
         "n": 223,
-        "volume": 1055234.61,
-        "realizedPnl": 20769.3,
+        "volume": 1056196.49,
+        "realizedPnl": 20859.51,
         "roi": 0.0197,
         "hitRate": 0.8394,
         "avgImplied": 0.8274,
         "edge": 0.0121,
-        "top1Share": 0.1239
+        "top1Share": 0.1236
       },
       "settlement": {
         "n": 137,
@@ -671,13 +671,13 @@
       },
       "exit": {
         "n": 86,
-        "volume": 215363.13,
-        "realizedPnl": -3791.78,
-        "roi": -0.0176,
+        "volume": 216325.01,
+        "realizedPnl": -3701.57,
+        "roi": -0.0171,
         "hitRate": 0.716,
         "avgImplied": 0.7043,
         "edge": 0.0117,
-        "top1Share": 0.1715
+        "top1Share": 0.1703
       }
     },
     "sports": {
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 144,
-    "cost": 313054.84,
-    "mark": 306448.75,
-    "unrealized": -6606.11
+    "n": 147,
+    "cost": 375396.12,
+    "mark": 368911.98,
+    "unrealized": -6484.15
   },
   "openByCategory": {
     "commodities": {
-      "n": 3,
-      "cost": 1276.57,
-      "mark": 1264.42,
-      "unrealized": -12.16
+      "n": 4,
+      "cost": 2119.7,
+      "mark": 1338.58,
+      "unrealized": -781.13
     },
     "geopolitics": {
-      "n": 11,
-      "cost": 14990.67,
-      "mark": 14251.63,
-      "unrealized": -739.04
+      "n": 13,
+      "cost": 77571.57,
+      "mark": 78096.74,
+      "unrealized": 525.17
     },
     "macro": {
       "n": 3,
-      "cost": 17837.42,
-      "mark": 3066.63,
-      "unrealized": -14770.79
+      "cost": 17333.49,
+      "mark": 2266.22,
+      "unrealized": -15067.28
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 336.6,
-      "unrealized": -1.8
+      "mark": 341.82,
+      "unrealized": 3.42
     },
     "politics": {
       "n": 121,
-      "cost": 274333.54,
-      "mark": 282707.8,
-      "unrealized": 8374.25
+      "cost": 273754.71,
+      "mark": 282051.37,
+      "unrealized": 8296.65
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3496.58,
-      "unrealized": 523.51
+      "mark": 3485.98,
+      "unrealized": 512.91
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1325.1,
-      "unrealized": 19.92
+      "mark": 1331.28,
+      "unrealized": 26.1
     }
   },
   "openCategories": {
@@ -877,10 +877,10 @@
     "0x8ec41042f49bdea4e3a1d42dbc63b12d4086471a0f4b7a59356bbc120add72d0": "politics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0x94521176f57d2ce81dde01e0b7699ca4279423042d37ed53908f0c8bfefe7e14": "politics",
+    "0x9563c2a292cfd52c83ee1f094ce27dc89a6aa499a2b726a77c521c4af04d1302": "geopolitics",
     "0x968a1a79e001d49fa3ee1429e3b95eb01797587740f86d4e6becf3ab1b275bfb": "politics",
     "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
     "0x9c76ad6476f3d09545596d3c2b916a4e24814e8200dfb763e07baf30a5b8e184": "politics",
-    "0x9ed0ecc8b8589e67967d44c4420944a41b6a6806419019a1581d514174eee9b1": "geopolitics",
     "0xa03e53c8b4bfbe4492f127e007c78c661b3638d5c515a10345c4cc93b9cd67f1": "politics",
     "0xa0af1b2ca6a3251cad3845f8172febb2182cd7a60744cc9cb685c626e595d0da": "politics",
     "0xa31d5d95f8c7c96de1194e7023c028380b5d4a00b6faef2fdaf62bc6f71af4f6": "politics",
@@ -901,7 +901,7 @@
     "0xc5eae79d1ffe716572353962eb926b1e3964c500a4880a7a94f58408218ee76b": "politics",
     "0xcace1894a70b121e0172815c9a3b8d565ad015bdf75996963ea00969d91e5722": "politics",
     "0xcd953913ecd5bf5387092bf447fe13190871b2bc9436c85b0918b4767c3fa58a": "politics",
-    "0xcee04ba47d02f6c64642369b34193c355f64de1b9ae425c71ea4efef1989d271": "geopolitics",
+    "0xcee04ba47d02f6c64642369b34193c355f64de1b9ae425c71ea4efef1989d271": "commodities",
     "0xcf74254eb635dae1db5d96da6582146510fcbbd7e2645b482756ae04ad566237": "politics",
     "0xd02e25c7ab3266bd0f56bfa7ae754f0c045f4334a8e6a6259a6c98319b281286": "politics",
     "0xd103195d48bf6183e28c4140bd374dd3e907e8f8d411374cb4d2d124ec4c216d": "politics",
@@ -921,6 +921,7 @@
     "0xf9b68b99b3ca714f63e49c5a595ade99bf65585e00bfa0e2ebd112cdc090456c": "politics",
     "0xfbd0a65112e26d9a2a68dc47f8a95c6c14d22650cb4837c5429b546726661b71": "politics",
     "0xfc5c740e4617eb9908ceada7c91bfbe1cd41f172d703ef811d544e60a7a70bb5": "politics",
+    "0xfd908b03dd866c16e17cb004c88963b92f264cc112d77b253ae2de761c6984a6": "geopolitics",
     "0xfec01e9fd6757ee5b2b9a0f13f0262fd92c5166041ab12333786b25f7d610434": "politics"
   },
   "excluded": {
@@ -935,7 +936,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 546,
+      "events": 548,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1165,13 +1166,13 @@
     ["equities","2026-03-31","e",78.23,10.06,1,0.77,"Will S&P 500 (SPX) hit $6,200 (LOW) in March 2026?","No","What will S&P 500 (SPX) hit by end of March?"],
     ["equities","2026-03-31","s",335.34,17.65,1,0.95,"Will the S&P 500 Index gain at least 5% on any day in Q1?","No","S&P 500 Single-Day Gains and Losses (%) in Q1"],
     ["geopolitics","2026-03-31","e",7769.62,177.19,1,0.9582," Iran agrees to end enrichment of uranium by March 31?","No",null],
+    ["commodities","2026-04-01","s",21535.2,1528.91,1,0.9337,"Kharg Island no longer under Iranian control by March 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["equities","2026-04-01","s",24975.0,0.0,1,0.999,"S&P 500 (SPX) Opens Up or Down on April 1?","Up",null],
     ["equities","2026-04-01","s",193.58,57.82,1,0.77,"Will S&P 500 (SPX) hit $6,200 (LOW) in March 2026?","No","What will S&P 500 (SPX) hit by end of March?"],
     ["equities","2026-04-01","s",900.84,163.26,1,0.8466,"Will S&P 500 (SPX) hit $6,000 (LOW) in March 2026?","No","What will S&P 500 (SPX) hit by end of March?"],
     ["geopolitics","2026-04-01","s",4232.01,184.75,1,0.9582," Iran agrees to end enrichment of uranium by March 31?","No",null],
-    ["geopolitics","2026-04-01","s",21535.2,1528.91,1,0.9337,"Kharg Island no longer under Iranian control by March 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["sports","2026-04-01","s",49.88,-49.88,0,0.29,"Cleveland Guardians vs. Los Angeles Dodgers","Cleveland Guardians",null],
-    ["geopolitics","2026-04-02","e",1050.0,16.66,1,0.21,"Kharg Island no longer under Iranian control by April 30?","Yes","Kharg Island no longer under Iranian control by...?"],
+    ["commodities","2026-04-02","e",1050.0,16.66,1,0.21,"Kharg Island no longer under Iranian control by April 30?","Yes","Kharg Island no longer under Iranian control by...?"],
     ["politics","2026-04-02","e",1739.31,307.7,1,0.81,"SCOTUS strikes down Trump's Birthright Citizenship EO?","Yes",null],
     ["politics","2026-04-02","s",1174.53,47.86,1,0.9599,"Will Trump say \"Crypto\" or \"Bitcoin\" during Address to the Nation?","No","What will Trump say during Address to the Nation on April 1? "],
     ["equities","2026-04-03","s",18.2,16.8,1,0.52,"S&P 500 breaks its losing streak this week?","Yes",null],
@@ -1309,10 +1310,10 @@
     ["geopolitics","2026-05-31","e",3773.36,42.99,1,0.9208,"US x Cuba diplomatic meeting by May 31?","Yes","US x Cuba diplomatic meeting by...?"],
     ["sports","2026-05-31","s",1338.84,12.16,1,0.991,"New York Yankees vs. Athletics","New York Yankees",null],
     ["sports","2026-05-31","s",1493.67,714.75,1,0.6764,"Spurs vs. Thunder","Spurs",null],
+    ["commodities","2026-06-01","s",42383.51,1945.84,1,0.9561,"Kharg Island no longer under Iranian control by May 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["crypto","2026-06-01","s",25739.19,50.12,1,0.9981,"MicroStrategy sells any Bitcoin by June 30, 2026?","Yes","MicroStrategy sells any Bitcoin by ___ ?"],
     ["geopolitics","2026-06-01","s",995.03,4.0,1,0.996,"US x Iran diplomatic meeting by May 31, 2026?","No","US x Iran diplomatic meeting by...?"],
     ["geopolitics","2026-06-01","s",5040.5,310.49,1,0.942,"Iran closes its airspace by May 31?","No","Iran closes its airspace by...?"],
-    ["geopolitics","2026-06-01","s",42383.51,1945.84,1,0.9561,"Kharg Island no longer under Iranian control by May 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["geopolitics","2026-06-01","s",132.86,10.0,1,0.93,"Will Trump agree to Iranian transit fees in the Strait of Hormuz by May 31?","No","What Iranian demands will Trump agree to by May 31?"],
     ["geopolitics","2026-06-01","s",10040.08,1500.24,1,0.87,"Iran leadership change by May 31?","No","Iran leadership change by...?"],
     ["sports","2026-06-01","s",572.26,2.28,1,0.996,"Minnesota Twins vs. Pittsburgh Pirates","Pittsburgh Pirates",null],
@@ -1386,7 +1387,7 @@
     ["sports","2026-06-10","s",141.29,-141.29,0,0.9977,"Washington Nationals vs. San Francisco Giants","Washington Nationals",null],
     ["sports","2026-06-10","e",1026.72,-351.25,0,0.76,"New York Yankees vs. Cleveland Guardians","New York Yankees",null],
     ["sports","2026-06-10","s",48.0,-48.0,0,0.48,"Los Angeles Dodgers vs. Pittsburgh Pirates","Pittsburgh Pirates",null],
-    ["geopolitics","2026-06-11","e",12325.42,674.53,1,0.9108,"Kharg Island no longer under Iranian control by June 30?","No","Kharg Island no longer under Iranian control by...?"],
+    ["commodities","2026-06-11","e",12325.42,674.53,1,0.9108,"Kharg Island no longer under Iranian control by June 30?","No","Kharg Island no longer under Iranian control by...?"],
     ["geopolitics","2026-06-11","s",2425.04,276.95,1,0.8975,"Israel closes its airspace by June 10?","No","Israel closes its airspace by...?"],
     ["politics","2026-06-11","e",26129.82,426.88,1,0.965,"Will Rebecca Shepherd win the 2026 Makerfield by-election?","No","Makerfield by-election Winner"],
     ["sports","2026-06-11","s",1313.17,37.83,1,0.972,"Spread: South Africa (-1.5)","Mexico","Mexico vs. South Africa - More Markets"],
@@ -1725,6 +1726,7 @@
     ["macro","2026-07-30","e",880.59,-19.55,0,0.4925,"Will the Fed increase interest rates by 25 bps after the September 2026 meeting?","No","Fed Decision in September?"],
     ["politics","2026-07-30","e",690.0,-682.0,0,0.69,"Will Donald Trump publicly insult Vladimir Putin by July 31, 2026?","Yes","Who will Trump publicly insult by July 31?"],
     ["sports","2026-07-30","e",31.65,-29.13,0,0.0619,"Will the New York Mets win the 2026 World Series?","Yes","MLB World Series Champion 2026"],
+    ["commodities","2026-07-31","s",16036.81,461.67,1,0.971,"Kharg Island no longer under Iranian control by July 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["commodities","2026-07-31","e",940.94,-234.43,0,0.9409,"Will WTI Crude Oil (WTI) hit (HIGH) $95 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
     ["commodities","2026-07-31","s",719.02,45.13,1,0.9409,"Will WTI Crude Oil (WTI) hit (HIGH) $95 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
     ["commodities","2026-07-31","s",2857.76,13.11,1,0.9954,"Will WTI Crude Oil (WTI) hit (HIGH) $105 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
@@ -1735,7 +1737,6 @@
     ["commodities","2026-07-31","s",82.97,4.93,1,0.9439,"Will WTI Crude Oil (WTI) hit (HIGH) $100 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
     ["commodities","2026-07-31","s",23129.36,889.43,1,0.963,"Will WTI Crude Oil (WTI) hit (LOW) $55 in July?","No","What will WTI Crude Oil (WTI) hit in July 2026?"],
     ["geopolitics","2026-07-31","s",2923.39,221.06,1,0.9288,"Israel withdraws from Lebanon by July 31, 2026?","No","Israel withdraws from Lebanon by...?"],
-    ["geopolitics","2026-07-31","s",16036.81,461.67,1,0.971,"Kharg Island no longer under Iranian control by July 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["macro","2026-07-31","e",956.25,95.79,1,0.7272,"Will Apple be the largest company in the world by market cap on July 31?","No","Largest Company end of July?"],
     ["macro","2026-07-31","s",843.45,316.48,1,0.7272,"Will Apple be the largest company in the world by market cap on July 31?","No","Largest Company end of July?"],
     ["macro","2026-07-31","e",32.04,2.88,1,0.734,"Will NVIDIA be the largest company in the world by market cap on July 31?","Yes","Largest Company end of July?"],
@@ -1834,8 +1835,8 @@
     ["politics","2026-08-21","s",3731.73,4.68,1,0.9987,"Will Melissa Hernandez win the CA-14 special election?","No","CA-14 Special Election Winner?"],
     ["politics","2026-08-23","e",1316.53,16.66,1,0.79,"Will the Democrats win the Wisconsin governor race in 2026?","Yes","Wisconsin Governor Election Winner"],
     ["macro","2026-08-26","e",1892.33,-0.85,0,0.9952,"Will Apple be the largest company in the world by market cap on August 31?","No","Largest Company end of August?"],
+    ["commodities","2026-08-27","e",3713.18,-2297.36,0,0.724,"US announces end of Iranian blockade by August 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["commodities","2026-08-27","e",1392.39,93.16,1,0.8842,"Will WTI Crude Oil (WTI) hit (HIGH) $90 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
-    ["geopolitics","2026-08-27","e",3713.18,-2297.36,0,0.724,"US announces end of Iranian blockade by August 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["commodities","2026-08-28","e",910.38,-13.98,0,0.9425,"Will WTI Crude Oil (WTI) hit (LOW) $65 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-28","e",12693.26,523.47,1,0.9416,"Will WTI Crude Oil (WTI) hit (LOW) $60 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-28","e",10313.87,19.06,1,0.9962,"Will WTI Crude Oil (WTI) hit (LOW) $55 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
@@ -1846,17 +1847,17 @@
     ["macro","2026-08-29","e",12153.91,51.6,1,0.9928,"Will NVIDIA be the largest company in the world by market cap on August 31?","Yes","Largest Company end of August?"],
     ["geopolitics","2026-08-30","e",29876.03,208.83,1,0.98,"US ceasefire against Iran continues through September 15?","No","US-Iran ceasefire continues through...?"],
     ["geopolitics","2026-08-30","s",6240.15,-6240.15,0,0.9087,"US ceasefire against Iran continues through August 31?","Yes","US-Iran ceasefire continues through...?"],
+    ["commodities","2026-08-31","e",49344.5,1145.45,1,0.9719,"Kharg Island no longer under Iranian control by August 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["commodities","2026-08-31","s",22738.91,1386.94,1,0.9425,"Will WTI Crude Oil (WTI) hit (LOW) $65 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-31","s",15298.57,949.15,1,0.9416,"Will WTI Crude Oil (WTI) hit (LOW) $60 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-31","s",19941.69,199.22,1,0.9901,"Will WTI Crude Oil (WTI) hit (HIGH) $100 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-31","s",17708.28,375.62,1,0.9792,"Will WTI Crude Oil (WTI) hit (LOW) $70 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-31","s",77.18,10.11,1,0.8842,"Will WTI Crude Oil (WTI) hit (HIGH) $90 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
     ["commodities","2026-08-31","s",1556.89,15.1,1,0.9904,"Will WTI Crude Oil (WTI) hit (HIGH) $105 in August?","No","What will WTI Crude Oil (WTI) hit in August 2026?"],
-    ["geopolitics","2026-08-31","e",49344.5,1145.45,1,0.9719,"Kharg Island no longer under Iranian control by August 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["macro","2026-08-31","s",11261.13,81.21,1,0.9928,"Will NVIDIA be the largest company in the world by market cap on August 31?","Yes","Largest Company end of August?"],
     ["commodities","2026-09-01","s",104.56,6.44,1,0.942,"Will WTI Crude Oil (WTI) hit (HIGH) $90 in September?","Yes","What will WTI Crude Oil (WTI) hit in September 2026?"],
     ["commodities","2026-09-01","s",2958.33,64.85,1,0.9785,"Will WTI Crude Oil (WTI) hit (HIGH) $85 in September?","Yes","What will WTI Crude Oil (WTI) hit in September 2026?"],
-    ["geopolitics","2026-09-01","s",15080.68,435.66,1,0.9719,"Kharg Island no longer under Iranian control by August 31?","No","Kharg Island no longer under Iranian control by...?"],
+    ["commodities","2026-09-01","s",15080.68,435.66,1,0.9719,"Kharg Island no longer under Iranian control by August 31?","No","Kharg Island no longer under Iranian control by...?"],
     ["geopolitics","2026-09-01","e",15163.97,251.27,1,0.9602,"Will Augusto Cury win the 2026 Brazilian presidential election?","No","Brazil Presidential Election"],
     ["geopolitics","2026-09-01","s",23.69,-22.81,0,0.0015,"Will Pablo Mar\u00e7al win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-09-01","s",1025.14,40.49,1,0.962,"US-Iran Final Nuclear Deal by August 31, 2026?","No","US-Iran Final Nuclear Deal by\u2026?"],
@@ -1872,6 +1873,7 @@
     ["sports","2026-09-02","s",20220.55,19.46,1,0.999,"Will OFI win on 2026-09-02?","No","AEK vs. OFI"],
     ["geopolitics","2026-09-03","e",18.47,3.42,1,0.0031,"Will Ronaldo Caiado win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-09-03","s",3.95,1.05,1,0.79,"Israel x Iran ceasefire continues through August 31?","Yes","Israel x Iran ceasefire continues through...?"],
+    ["commodities","2026-09-04","e",12411.62,-7480.15,0,0.84,"US announces end of Iranian blockade by September 30, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["commodities","2026-09-04","s",375.23,3.73,1,0.9901,"Will WTI Crude Oil (WTI) hit (LOW) $75 Week of August 31 2026?","No","What will WTI Crude Oil (WTI) hit Week of August 31 2026?"],
     ["equities","2026-09-04","s",227.78,0.22,1,0.999,"S&P 500 (SPY) closes above $790 on September 4?","No","S&P 500 (SPY) closes above ___ on September 4?"],
     ["equities","2026-09-04","s",104.9,0.1,1,0.999,"S&P 500 (SPY) closes above $745 on September 4?","Yes","S&P 500 (SPY) closes above ___ on September 4?"],
@@ -1880,7 +1882,6 @@
     ["equities","2026-09-04","s",2147.64,3.0,1,0.9986,"Will S&P 500 (SPY) hit (HIGH) $790 Week of August 31 2026?","No","What will S&P 500 (SPY) hit Week of August 31 2026?"],
     ["equities","2026-09-04","s",1489.53,83.0,1,0.9472,"Will S&P 500 (SPY) hit (HIGH) $785 Week of August 31 2026?","No","What will S&P 500 (SPY) hit Week of August 31 2026?"],
     ["geopolitics","2026-09-04","e",889.99,-300.0,0,0.89,"Israel closes its airspace by September 30?","No","Israel closes its airspace by...?"],
-    ["geopolitics","2026-09-04","e",12411.62,-7480.15,0,0.84,"US announces end of Iranian blockade by September 30, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["sports","2026-09-05","s",1158.88,10.02,1,0.9914,"Boise State vs. Oregon","Oregon",null],
     ["sports","2026-09-05","s",930.0,70.0,1,0.93,"Fresno State vs. USC","USC",null],
     ["macro","2026-09-06","e",72286.98,-1971.12,0,0.5234,"Will there be no change in Fed interest rates after the September 2026 meeting?","Yes","Fed Decision in September?"],
@@ -1901,7 +1902,7 @@
     ["sports","2026-09-13","s",680.44,26.27,1,0.9628,"Louisiana Tech vs. LSU","LSU",null],
     ["sports","2026-09-13","s",97.6,-97.6,0,0.3491,"Buccaneers vs. Bengals","Buccaneers",null],
     ["sports","2026-09-13","s",1714.57,53.03,1,0.97,"Louisiana vs. USC","USC",null],
-    ["geopolitics","2026-09-14","e",760.0,60.0,1,0.76,"Iran-Oman Hormuz Agreement by September 30?","No","Iran-Oman Hormuz Management Agreement by...?"],
+    ["commodities","2026-09-14","e",760.0,60.0,1,0.76,"Iran-Oman Hormuz Agreement by September 30?","No","Iran-Oman Hormuz Management Agreement by...?"],
     ["politics","2026-09-14","s",3574.04,39.75,1,0.989,"Will the Sweden Democrats (SD) win the most seats in the 2026 Swedish parliamentary election?","No","Sweden Parliamentary Election Winner"],
     ["politics","2026-09-14","s",2416.43,26.88,1,0.989,"Will the Swedish Social Democratic Party (S) win the most seats in the 2026 Swedish parliamentary election?","Yes","Sweden Parliamentary Election Winner"],
     ["sports","2026-09-14","s",2571.29,75.55,1,0.9715,"Cowboys vs. Giants","Giants",null],
@@ -1924,7 +1925,7 @@
     ["sports","2026-09-19","s",9728.13,19.5,1,0.998,"Kent State vs. Ohio State","Ohio State",null],
     ["sports","2026-09-19","s",750.27,0.74,1,0.999,"San Francisco Giants vs. Los Angeles Dodgers","Los Angeles Dodgers",null],
     ["sports","2026-09-19","s",10945.28,115.24,1,0.9896,"Miami (FL) vs. Wake Forest","Miami (FL)",null],
-    ["geopolitics","2026-09-20","e",5677.0,-66.6,0,0.9709,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
+    ["commodities","2026-09-20","e",5677.0,-66.6,0,0.9709,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
     ["geopolitics","2026-09-20","s",12763.8,1866.72,1,0.8724,"Israel closes its airspace by September 30?","Yes","Israel closes its airspace by...?"],
     ["sports","2026-09-20","s",1091.4,8.6,1,0.9922,"San Francisco Giants vs. Los Angeles Dodgers","Los Angeles Dodgers",null],
     ["sports","2026-09-20","e",2969.85,-569.99,0,0.81,"LSU vs. Ole Miss","Ole Miss",null],
@@ -1932,7 +1933,7 @@
     ["sports","2026-09-20","s",674.4,27.37,1,0.961,"Michigan State vs. Notre Dame","Notre Dame",null],
     ["geopolitics","2026-09-21","s",7.9,7.26,0,0.0005,"Will Geraldo Alckmin win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-09-21","s",23.17,-8.01,0,0.0015,"Will Romeu Zema win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
-    ["geopolitics","2026-09-22","e",890.61,55.09,1,0.3296,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
+    ["commodities","2026-09-22","e",890.61,55.09,1,0.3296,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["geopolitics","2026-09-22","s",193.35,10.18,1,0.95,"Trump x Greenland deal signed by September 23?","Yes","Trump x Greenland deal signed by...?"],
     ["geopolitics","2026-09-22","s",4.3,-4.3,0,0.86,"Trump x Greenland deal signed by December 31?","No","Trump x Greenland deal signed by...?"],
     ["politics","2026-09-22","e",4666.98,275.73,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
@@ -1975,11 +1976,11 @@
     ["commodities","2026-10-01","s",3003.5,286.54,1,0.9129,"Will WTI Crude Oil (WTI) hit (HIGH) $110 in September?","No","What will WTI Crude Oil (WTI) hit in September 2026?"],
     ["commodities","2026-10-01","s",28808.23,407.42,1,0.9861,"Will WTI Crude Oil (WTI) hit (LOW) $70 in September?","No","What will WTI Crude Oil (WTI) hit in September 2026?"],
     ["commodities","2026-10-01","s",5428.45,90.72,1,0.9836,"Will WTI Crude Oil (WTI) hit (HIGH) $130 in September?","No","What will WTI Crude Oil (WTI) hit in September 2026?"],
+    ["commodities","2026-10-01","s",27616.03,828.02,1,0.9709,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
     ["commodities","2026-10-01","s",1711.72,48.93,1,0.9722,"Will WTI Crude Oil (WTI) hit (LOW) $65 in September?","No","What will WTI Crude Oil (WTI) hit in September 2026?"],
-    ["geopolitics","2026-10-01","s",27616.03,828.02,1,0.9709,"Kharg Island no longer under Iranian control by September 30?","No","Kharg Island no longer under Iranian control by...?"],
+    ["commodities","2026-10-01","s",1900.22,-1900.22,0,0.84,"US announces end of Iranian blockade by September 30, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["geopolitics","2026-10-01","s",3660.15,202.93,1,0.9475,"Friedrich Merz out as Chancellor of Germany before September 30, 2026","No","Friedrich Merz out as Chancellor of Germany by...?"],
     ["geopolitics","2026-10-01","s",835.62,103.28,1,0.89,"Iran full airspace closure by September 30?","No","Iran full airspace closure by...?"],
-    ["geopolitics","2026-10-01","s",1900.22,-1900.22,0,0.84,"US announces end of Iranian blockade by September 30, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["geopolitics","2026-10-01","s",891.99,158.0,1,0.8495,"Will Iran target Ukraine by September 30, 2026?","No","Will Iran target Ukraine by...?"],
     ["politics","2026-10-01","s",9266.1,194.03,1,0.9795,"Andrew Tate Extradited to UK by Sep 30?","No","Andrew Tate Extradited to UK by...?"],
     ["politics","2026-10-01","e",193.76,-7.13,0,0.08,"Will Indiana enact a data center moratorium by December 31, 2026?","Yes","Indiana enacts data center moratorium by...?"],
@@ -2041,7 +2042,6 @@
     ["politics","2026-10-11","e",313.25,139.28,1,0.0309,"Will the Republican Party hold exactly 54 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-10-11","e",122.56,33.01,1,0.0225,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["sports","2026-10-11","s",3303.0,30.0,1,0.991,"USC vs. Penn State","USC",null],
-    ["politics","2026-10-12","e",4399.67,238.68,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
     ["politics","2026-10-13","e",735.81,29.45,1,0.9519,"Will the Republican Party win the NM-01 House seat?","No","NM-01 House Election Winner"],
     ["sports","2026-10-13","s",95.46,126.54,1,0.43,"Bills vs. Rams","Bills",null],
     ["geopolitics","2026-10-14","e",959.2,40.53,1,0.71,"Will Benjamin Netanyahu be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
@@ -2069,12 +2069,10 @@
     ["tech","2026-10-20","e",57276.34,258.47,1,0.9,"Will Anthropic announce bankruptcy by December 31, 2027?","No","Anthropic announces bankruptcy by...?"],
     ["commodities","2026-10-21","e",25746.11,778.69,1,0.9629,"Will WTI Crude Oil (WTI) hit (LOW) $65 in October?","No","What will WTI Crude Oil (WTI) hit in October 2026?"],
     ["sports","2026-10-22","s",15.67,1.0,1,0.94,"Warriors vs. Lakers","Lakers",null],
-    ["geopolitics","2026-10-24","e",3560.73,36.83,1,0.8512,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
     ["sports","2026-10-24","s",1807.98,1.83,1,0.999,"Kansas State vs. Arizona State","Arizona State",null],
     ["sports","2026-10-24","s",2251.19,15.88,1,0.993,"Oklahoma vs. Mississippi State","Oklahoma",null],
     ["sports","2026-10-24","s",1767.67,13.24,1,0.9926,"Oregon vs. Illinois","Illinois",null],
     ["geopolitics","2026-10-25","e",8786.18,-1967.45,0,0.5232,"Will Luiz In\u00e1cio Lula da Silva win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
-    ["geopolitics","2026-10-25","e",7124.15,184.42,1,0.6889,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"],
     ["sports","2026-10-25","s",5842.27,5.85,1,0.999,"USC vs. Wisconsin","Wisconsin",null],
     ["geopolitics","2026-10-26","s",28715.69,816.5,1,0.9724,"Will Fl\u00e1vio Bolsonaro win the second round of the 2026 Brazilian presidential election by at least 12%?","No","Brazil Presidential Election Second Round: Margin of Victory"],
     ["geopolitics","2026-10-26","s",1941.41,-1941.41,0,0.5689,"Will Fl\u00e1vio Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
@@ -2084,9 +2082,13 @@
     ["politics","2026-10-26","e",10113.89,218.85,1,0.9103,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
     ["politics","2026-10-26","e",612.42,42.8,1,0.93,"Republican Senate odds hit 60% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-10-26","e",2161.49,29.97,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
-    ["macro","2026-10-27","e",585.02,-96.69,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
+    ["geopolitics","2026-10-27","e",8012.01,417.32,1,0.8564,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
+    ["geopolitics","2026-10-27","e",7717.03,-167.5,0,0.6889,"Will Likud win the most seats in the 2026 Israeli legislative election?","No","Israeli Legislative Election Winner"],
+    ["macro","2026-10-27","e",975.03,-426.71,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
     ["sports","2026-10-27","s",4.41,0.49,1,0.9,"Will Shohei Ohtani win the 2026 World Series MVP?","No","MLB Postseason: World Series MVP"],
     ["sports","2026-10-27","s",966.65,33.4,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
-    ["sports","2026-10-27","s",4.87,0.13,1,0.9743,"Will Harry Kane finish in the top 3 of the 2026 Ballon d'Or?","Yes","Ballon d'Or Top 3 Finish 2026"]
+    ["sports","2026-10-27","s",4.87,0.13,1,0.9743,"Will Harry Kane finish in the top 3 of the 2026 Ballon d'Or?","Yes","Ballon d'Or Top 3 Finish 2026"],
+    ["geopolitics","2026-10-28","e",4327.74,0.3,1,0.9989,"Will Likud win fewer than 20 seats in the 2026 Israeli legislative election?","No","Israel Election: Likud # of seats?"],
+    ["politics","2026-10-28","e",5361.55,328.89,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"]
   ]
 }
