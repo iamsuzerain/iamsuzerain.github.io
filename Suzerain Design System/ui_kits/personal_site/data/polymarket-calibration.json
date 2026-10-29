@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-28T13:08:50Z",
+  "generatedAt": "2026-10-29T13:15:06Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,25 +45,25 @@
   },
   "headline": {
     "settlement": {
-      "n": 791,
+      "n": 793,
       "wins": 706,
       "pushes": 0,
-      "hitRate": 0.8925,
-      "volume": 4421546.92,
-      "realizedPnl": 110506.11,
-      "roi": 0.025,
-      "brier": 0.0449,
-      "avgImplied": 0.8739,
-      "edge": 0.0187,
-      "calibrationError": 0.0271
+      "hitRate": 0.8903,
+      "volume": 4438889.57,
+      "realizedPnl": 93163.46,
+      "roi": 0.021,
+      "brier": 0.045,
+      "avgImplied": 0.8724,
+      "edge": 0.0179,
+      "calibrationError": 0.0268
     },
     "exit": {
       "n": 339,
       "wins": 228,
       "pushes": 10,
       "hitRate": 0.693,
-      "volume": 1657090.27,
-      "realizedPnl": -21891.76,
+      "volume": 1657578.71,
+      "realizedPnl": -21874.15,
       "roi": -0.0132
     }
   },
@@ -102,32 +102,32 @@
       {
         "lo": 0.2,
         "hi": 0.3,
-        "n": 9,
+        "n": 10,
         "wins": 1,
         "pushes": 0,
-        "winRate": 0.1111,
-        "avgImplied": 0.2601,
-        "volume": 2641.81,
-        "realizedPnl": -2419.81,
-        "grossPnl": 2732.31,
-        "winRateByVolume": 0.0249,
-        "wilsonLo": 0.0199,
-        "wilsonHi": 0.435
+        "winRate": 0.1,
+        "avgImplied": 0.2551,
+        "volume": 3372.02,
+        "realizedPnl": -3150.02,
+        "grossPnl": 3462.52,
+        "winRateByVolume": 0.0195,
+        "wilsonLo": 0.0179,
+        "wilsonHi": 0.4042
       },
       {
         "lo": 0.3,
         "hi": 0.4,
-        "n": 17,
+        "n": 18,
         "wins": 7,
         "pushes": 0,
-        "winRate": 0.4118,
-        "avgImplied": 0.3516,
-        "volume": 1130.9,
-        "realizedPnl": -69.89,
-        "grossPnl": 1449.33,
-        "winRateByVolume": 0.3283,
-        "wilsonLo": 0.2161,
-        "wilsonHi": 0.6399
+        "winRate": 0.3889,
+        "avgImplied": 0.3538,
+        "volume": 17743.34,
+        "realizedPnl": -16682.33,
+        "grossPnl": 18061.77,
+        "winRateByVolume": 0.0209,
+        "wilsonLo": 0.203,
+        "wilsonHi": 0.6138
       },
       {
         "lo": 0.4,
@@ -364,10 +364,10 @@
         "pushes": 0,
         "winRate": 0.8438,
         "avgImplied": 0.7585,
-        "volume": 182349.55,
-        "realizedPnl": 3552.65,
-        "grossPnl": 17002.15,
-        "winRateByVolume": 0.788,
+        "volume": 182450.11,
+        "realizedPnl": 3562.08,
+        "grossPnl": 17011.58,
+        "winRateByVolume": 0.7881,
         "wilsonLo": 0.6825,
         "wilsonHi": 0.9314
       },
@@ -379,10 +379,10 @@
         "pushes": 3,
         "winRate": 0.6154,
         "avgImplied": 0.8504,
-        "volume": 183365.04,
-        "realizedPnl": -11676.47,
-        "grossPnl": 26286.93,
-        "winRateByVolume": 0.6328,
+        "volume": 183752.92,
+        "realizedPnl": -11668.29,
+        "grossPnl": 26295.11,
+        "winRateByVolume": 0.6336,
         "wilsonLo": 0.4938,
         "wilsonHi": 0.7241
       },
@@ -596,24 +596,24 @@
     },
     "macro": {
       "combined": {
-        "n": 36,
-        "volume": 498498.55,
-        "realizedPnl": 89924.29,
-        "roi": 0.1804,
-        "hitRate": 0.6389,
-        "avgImplied": 0.6848,
-        "edge": -0.0459,
-        "top1Share": 0.8368
+        "n": 38,
+        "volume": 515841.2,
+        "realizedPnl": 72581.64,
+        "roi": 0.1407,
+        "hitRate": 0.6053,
+        "avgImplied": 0.6646,
+        "edge": -0.0593,
+        "top1Share": 0.7181
       },
       "settlement": {
-        "n": 19,
-        "volume": 240065.23,
-        "realizedPnl": 92170.76,
-        "roi": 0.3839,
-        "hitRate": 0.7368,
-        "avgImplied": 0.6973,
-        "edge": 0.0396,
-        "top1Share": 0.8683
+        "n": 21,
+        "volume": 257407.88,
+        "realizedPnl": 74828.11,
+        "roi": 0.2907,
+        "hitRate": 0.6667,
+        "avgImplied": 0.6594,
+        "edge": 0.0072,
+        "top1Share": 0.7412
       },
       "exit": {
         "n": 17,
@@ -651,9 +651,9 @@
     "politics": {
       "combined": {
         "n": 223,
-        "volume": 1056196.49,
-        "realizedPnl": 20859.51,
-        "roi": 0.0197,
+        "volume": 1056684.93,
+        "realizedPnl": 20877.12,
+        "roi": 0.0198,
         "hitRate": 0.8394,
         "avgImplied": 0.8274,
         "edge": 0.0121,
@@ -671,13 +671,13 @@
       },
       "exit": {
         "n": 86,
-        "volume": 216325.01,
-        "realizedPnl": -3701.57,
-        "roi": -0.0171,
+        "volume": 216813.45,
+        "realizedPnl": -3683.96,
+        "roi": -0.017,
         "hitRate": 0.716,
         "avgImplied": 0.7043,
         "edge": 0.0117,
-        "top1Share": 0.1703
+        "top1Share": 0.17
       }
     },
     "sports": {
@@ -746,53 +746,47 @@
     }
   },
   "openBook": {
-    "n": 147,
-    "cost": 375396.12,
-    "mark": 368911.98,
-    "unrealized": -6484.15
+    "n": 144,
+    "cost": 358059.89,
+    "mark": 368941.9,
+    "unrealized": 10882.0
   },
   "openByCategory": {
     "commodities": {
       "n": 4,
       "cost": 2119.7,
-      "mark": 1338.58,
-      "unrealized": -781.13
+      "mark": 1322.15,
+      "unrealized": -797.55
     },
     "geopolitics": {
       "n": 13,
-      "cost": 77571.57,
-      "mark": 78096.74,
-      "unrealized": 525.17
-    },
-    "macro": {
-      "n": 3,
-      "cost": 17333.49,
-      "mark": 2266.22,
-      "unrealized": -15067.28
+      "cost": 77681.57,
+      "mark": 78434.66,
+      "unrealized": 753.09
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 341.82,
-      "unrealized": 3.42
+      "mark": 340.02,
+      "unrealized": 1.62
     },
     "politics": {
       "n": 121,
-      "cost": 273754.71,
-      "mark": 282051.37,
-      "unrealized": 8296.65
+      "cost": 273641.98,
+      "mark": 283991.86,
+      "unrealized": 10349.87
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3485.98,
-      "unrealized": 512.91
+      "mark": 3503.39,
+      "unrealized": 530.32
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1331.28,
-      "unrealized": 26.1
+      "mark": 1349.83,
+      "unrealized": 44.65
     }
   },
   "openCategories": {
@@ -800,7 +794,6 @@
     "0x0e9912f3887ec934c932ecb71276e8eac6cad831e9797c8a53ff3a4263944872": "commodities",
     "0x0f49db97f71c68b1e42a6d16e3de93d85dbf7d4148e3f018eb79e88554be9f75": "politics",
     "0x119b6b3b744ac3239c7a71100165d254234eaecea401abde5a3d303bef21d19e": "politics",
-    "0x12aa13b3da17ceae1b0a59b5d5b77121e91bb79b4bb0b52bf6543ed3f8d0953b": "macro",
     "0x12ab600156edbfd74f7c342f24a7171af2e09d10ba04669f5a98a75b84e1145f": "politics",
     "0x12b727031b38130d945b3e164386874360d9a32fdd7e3d00ed2adb13857e089b": "politics",
     "0x13a3e12dd8cbecd31882d2a0841e3ab3670e5162841c4076d22288491654a4de": "politics",
@@ -909,7 +902,6 @@
     "0xd5e44002d2fe404c9bdf2404b5e3636d2898c6dcff556b7092d0b9f4df323d20": "politics",
     "0xd7e7300ecc03a88948a89186d7f06b1000750a7f4a0778e40566d50af9ef3147": "politics",
     "0xd870cdb7b5cca67a39f2ec1d272786859609a176cd7c76119e4b70cc096297e0": "politics",
-    "0xdf9bf27ee5757c55b44b8b9826ddc9ec3a8809aa3278634c45edbb7fc8f1a3e3": "macro",
     "0xe52419acfb3e5da37bc53c6341cb23857b429c3b60d61f3136f0c9244d888d8d": "politics",
     "0xe6eb7e8722b986c8d34bbc7d27e4f25a2cbdd758c742f713c6702d4f39b00419": "politics",
     "0xe83e55ee7c9cfda40e828fd11aef8b0261773a49553827376d3aac63b28d88dd": "politics",
@@ -936,7 +928,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 548,
+      "events": 549,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1843,7 +1835,6 @@
     ["macro","2026-08-28","s",3259.58,131.89,1,0.96,"Will Alphabet be the largest company in the world by market cap on August 31?","No","Largest Company end of August?"],
     ["macro","2026-08-28","s",23652.13,33.43,1,0.9968,"Will the Fed decrease interest rates by 50+ bps after the September 2026 meeting?","No","Fed Decision in September?"],
     ["macro","2026-08-28","e",64.8,4.63,1,0.014,"Will the Fed decrease interest rates by 25 bps after the September 2026 meeting?","Yes","Fed Decision in September?"],
-    ["politics","2026-08-28","e",1587.11,100.55,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"],
     ["macro","2026-08-29","e",12153.91,51.6,1,0.9928,"Will NVIDIA be the largest company in the world by market cap on August 31?","Yes","Largest Company end of August?"],
     ["geopolitics","2026-08-30","e",29876.03,208.83,1,0.98,"US ceasefire against Iran continues through September 15?","No","US-Iran ceasefire continues through...?"],
     ["geopolitics","2026-08-30","s",6240.15,-6240.15,0,0.9087,"US ceasefire against Iran continues through August 31?","Yes","US-Iran ceasefire continues through...?"],
@@ -2054,7 +2045,6 @@
     ["geopolitics","2026-10-16","s",4.97,0.03,1,0.9933,"Lula flips Bolsonaro for Brazil president by October 15?","No","Lula flips Bolsonaro for Brazil president by...?"],
     ["sports","2026-10-16","s",2911.7,1645.64,1,0.6389,"Will the Los Angeles Dodgers win the 2026 World Series?","No","MLB World Series Champion 2026"],
     ["sports","2026-10-16","s",286.38,-286.38,0,0.86,"Shohei Ohtani: Home Runs O/U 0.5","Under","Milwaukee Brewers vs. Los Angeles Dodgers - Player Props"],
-    ["politics","2026-10-17","e",2311.32,136.51,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
     ["sports","2026-10-17","s",6197.9,13.57,1,0.9978,"Alabama vs. Tennessee","Tennessee",null],
     ["sports","2026-10-17","e",163.04,4.71,1,0.97,"Mississippi State vs. LSU","LSU",null],
     ["sports","2026-10-17","s",6267.35,193.84,1,0.97,"Mississippi State vs. LSU","LSU",null],
@@ -2089,6 +2079,10 @@
     ["sports","2026-10-27","s",966.65,33.4,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
     ["sports","2026-10-27","s",4.87,0.13,1,0.9743,"Will Harry Kane finish in the top 3 of the 2026 Ballon d'Or?","Yes","Ballon d'Or Top 3 Finish 2026"],
     ["geopolitics","2026-10-28","e",4327.74,0.3,1,0.9989,"Will Likud win fewer than 20 seats in the 2026 Israeli legislative election?","No","Israel Election: Likud # of seats?"],
-    ["politics","2026-10-28","e",5361.55,328.89,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"]
+    ["macro","2026-10-28","s",16612.44,-16612.44,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
+    ["macro","2026-10-28","s",730.21,-730.21,0,0.21,"Will there be no change in Fed interest rates after the October 2026 meeting?","No","Fed Decision in October?"],
+    ["politics","2026-10-28","e",1639.46,101.61,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"],
+    ["politics","2026-10-28","e",5462.11,338.32,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
+    ["politics","2026-10-29","e",2646.85,143.63,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"]
   ]
 }
