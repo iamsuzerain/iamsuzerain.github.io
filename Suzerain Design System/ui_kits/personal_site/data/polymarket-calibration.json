@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-29T13:15:06Z",
+  "generatedAt": "2026-10-30T13:08:24Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,13 +58,13 @@
       "calibrationError": 0.0268
     },
     "exit": {
-      "n": 339,
-      "wins": 228,
+      "n": 341,
+      "wins": 230,
       "pushes": 10,
-      "hitRate": 0.693,
-      "volume": 1657578.71,
-      "realizedPnl": -21874.15,
-      "roi": -0.0132
+      "hitRate": 0.6949,
+      "volume": 1688265.72,
+      "realizedPnl": -21228.5,
+      "roi": -0.0126
     }
   },
   "buckets": {
@@ -364,10 +364,10 @@
         "pushes": 0,
         "winRate": 0.8438,
         "avgImplied": 0.7585,
-        "volume": 182450.11,
-        "realizedPnl": 3562.08,
-        "grossPnl": 17011.58,
-        "winRateByVolume": 0.7881,
+        "volume": 187147.25,
+        "realizedPnl": 3940.69,
+        "grossPnl": 17390.19,
+        "winRateByVolume": 0.7934,
         "wilsonLo": 0.6825,
         "wilsonHi": 0.9314
       },
@@ -378,43 +378,43 @@
         "wins": 40,
         "pushes": 3,
         "winRate": 0.6154,
-        "avgImplied": 0.8504,
-        "volume": 183752.92,
-        "realizedPnl": -11668.29,
-        "grossPnl": 26295.11,
-        "winRateByVolume": 0.6336,
+        "avgImplied": 0.8505,
+        "volume": 183797.7,
+        "realizedPnl": -11667.47,
+        "grossPnl": 26295.93,
+        "winRateByVolume": 0.6337,
         "wilsonLo": 0.4938,
         "wilsonHi": 0.7241
       },
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 66,
-        "wins": 48,
+        "n": 67,
+        "wins": 49,
         "pushes": 1,
-        "winRate": 0.7385,
-        "avgImplied": 0.9279,
-        "volume": 378720.4,
-        "realizedPnl": 3940.44,
-        "grossPnl": 23784.6,
-        "winRateByVolume": 0.9244,
-        "wilsonLo": 0.6205,
-        "wilsonHi": 0.8298
+        "winRate": 0.7424,
+        "avgImplied": 0.9282,
+        "volume": 379900.5,
+        "realizedPnl": 3900.25,
+        "grossPnl": 23744.41,
+        "winRateByVolume": 0.9246,
+        "wilsonLo": 0.6257,
+        "wilsonHi": 0.8325
       },
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 76,
-        "wins": 61,
+        "n": 77,
+        "wins": 62,
         "pushes": 0,
-        "winRate": 0.8026,
-        "avgImplied": 0.9675,
-        "volume": 594312.37,
-        "realizedPnl": -14051.74,
-        "grossPnl": 30490.06,
-        "winRateByVolume": 0.8434,
-        "wilsonLo": 0.6996,
-        "wilsonHi": 0.8766
+        "winRate": 0.8052,
+        "avgImplied": 0.9677,
+        "volume": 619077.36,
+        "realizedPnl": -13745.33,
+        "grossPnl": 30796.47,
+        "winRateByVolume": 0.8496,
+        "wilsonLo": 0.7031,
+        "wilsonHi": 0.8782
       },
       {
         "lo": 0.99,
@@ -564,14 +564,14 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 264,
-        "volume": 1982511.7,
-        "realizedPnl": 60431.52,
-        "roi": 0.0305,
-        "hitRate": 0.8154,
-        "avgImplied": 0.8221,
-        "edge": -0.0067,
-        "top1Share": 0.2143
+        "n": 266,
+        "volume": 2008348.07,
+        "realizedPnl": 60806.46,
+        "roi": 0.0303,
+        "hitRate": 0.8168,
+        "avgImplied": 0.8231,
+        "edge": -0.0063,
+        "top1Share": 0.2137
       },
       "settlement": {
         "n": 164,
@@ -584,14 +584,14 @@
         "top1Share": 0.3372
       },
       "exit": {
-        "n": 100,
-        "volume": 677799.36,
-        "realizedPnl": 4222.59,
-        "roi": 0.0062,
-        "hitRate": 0.7292,
-        "avgImplied": 0.7823,
-        "edge": -0.0531,
-        "top1Share": 0.2326
+        "n": 102,
+        "volume": 703635.73,
+        "realizedPnl": 4597.53,
+        "roi": 0.0065,
+        "hitRate": 0.7347,
+        "avgImplied": 0.7858,
+        "edge": -0.0511,
+        "top1Share": 0.2308
       }
     },
     "macro": {
@@ -651,13 +651,13 @@
     "politics": {
       "combined": {
         "n": 223,
-        "volume": 1056684.93,
-        "realizedPnl": 20877.12,
-        "roi": 0.0198,
+        "volume": 1061535.57,
+        "realizedPnl": 21147.83,
+        "roi": 0.0199,
         "hitRate": 0.8394,
         "avgImplied": 0.8274,
-        "edge": 0.0121,
-        "top1Share": 0.1236
+        "edge": 0.012,
+        "top1Share": 0.1229
       },
       "settlement": {
         "n": 137,
@@ -671,13 +671,13 @@
       },
       "exit": {
         "n": 86,
-        "volume": 216813.45,
-        "realizedPnl": -3683.96,
-        "roi": -0.017,
+        "volume": 221664.09,
+        "realizedPnl": -3413.25,
+        "roi": -0.0154,
         "hitRate": 0.716,
-        "avgImplied": 0.7043,
-        "edge": 0.0117,
-        "top1Share": 0.17
+        "avgImplied": 0.7045,
+        "edge": 0.0115,
+        "top1Share": 0.1664
       }
     },
     "sports": {
@@ -746,47 +746,47 @@
     }
   },
   "openBook": {
-    "n": 144,
-    "cost": 358059.89,
-    "mark": 368941.9,
-    "unrealized": 10882.0
+    "n": 143,
+    "cost": 358558.88,
+    "mark": 369041.94,
+    "unrealized": 10483.05
   },
   "openByCategory": {
     "commodities": {
       "n": 4,
       "cost": 2119.7,
-      "mark": 1322.15,
-      "unrealized": -797.55
+      "mark": 1354.33,
+      "unrealized": -765.37
     },
     "geopolitics": {
       "n": 13,
-      "cost": 77681.57,
-      "mark": 78434.66,
-      "unrealized": 753.09
+      "cost": 51806.69,
+      "mark": 52532.82,
+      "unrealized": 726.13
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 340.02,
-      "unrealized": 1.62
+      "mark": 336.78,
+      "unrealized": -1.62
     },
     "politics": {
-      "n": 121,
-      "cost": 273641.98,
-      "mark": 283991.86,
-      "unrealized": 10349.87
+      "n": 120,
+      "cost": 300015.84,
+      "mark": 309990.66,
+      "unrealized": 9974.81
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3503.39,
-      "unrealized": 530.32
+      "mark": 3480.27,
+      "unrealized": 507.2
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1349.83,
-      "unrealized": 44.65
+      "mark": 1347.08,
+      "unrealized": 41.9
     }
   },
   "openCategories": {
@@ -872,7 +872,6 @@
     "0x94521176f57d2ce81dde01e0b7699ca4279423042d37ed53908f0c8bfefe7e14": "politics",
     "0x9563c2a292cfd52c83ee1f094ce27dc89a6aa499a2b726a77c521c4af04d1302": "geopolitics",
     "0x968a1a79e001d49fa3ee1429e3b95eb01797587740f86d4e6becf3ab1b275bfb": "politics",
-    "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
     "0x9c76ad6476f3d09545596d3c2b916a4e24814e8200dfb763e07baf30a5b8e184": "politics",
     "0xa03e53c8b4bfbe4492f127e007c78c661b3638d5c515a10345c4cc93b9cd67f1": "politics",
     "0xa0af1b2ca6a3251cad3845f8172febb2182cd7a60744cc9cb685c626e595d0da": "politics",
@@ -928,7 +927,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 549,
+      "events": 550,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2008,7 +2007,6 @@
     ["geopolitics","2026-10-05","s",7.9,-7.9,0,0.0005,"Will Tereza Cristina win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["geopolitics","2026-10-05","s",7.9,-7.9,0,0.0005,"Will Helder Barbalho win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["macro","2026-10-05","e",1212.0,-200.32,0,0.808,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","No","Fed Decision in October?"],
-    ["politics","2026-10-05","e",17.8,0.2,1,0.89,"Will the Republicans win the Minnesota Senate race in 2026?","No","Minnesota Senate Election Winner"],
     ["tech","2026-10-05","e",479.27,7.6,1,0.9519,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
     ["politics","2026-10-07","e",7747.54,122.53,1,0.9717,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","No","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-10-07","e",332.37,-34.7,0,0.8155,"Will the Democrats win the Vermont governor race in 2026?","No","Vermont Governor Election Winner"],
@@ -2069,7 +2067,6 @@
     ["geopolitics","2026-10-26","s",1837.76,-1837.76,0,0.86,"Will Luiz In\u00e1cio Lula da Silva win the 2026 Brazilian presidential election?","No","Brazil Presidential Election"],
     ["geopolitics","2026-10-26","s",3440.71,3134.96,1,0.5232,"Will Luiz In\u00e1cio Lula da Silva win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
     ["politics","2026-10-26","s",546.89,-546.89,0,0.95,"Will Flavio Bolsonaro win the most votes in the second round of the Brazil presidential election in the city of Rio de Janeiro?","Yes","Brazil Presidential Election Second Round: Winner in Rio de Janeiro City"],
-    ["politics","2026-10-26","e",10113.89,218.85,1,0.9103,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
     ["politics","2026-10-26","e",612.42,42.8,1,0.93,"Republican Senate odds hit 60% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-10-26","e",2161.49,29.97,1,0.9666,"Will Lionel Messi win the 2026 Ballon d'Or?","No","Ballon d'Or Winner 2026"],
     ["geopolitics","2026-10-27","e",8012.01,417.32,1,0.8564,"Will Naftali Bennett be the next Prime Minister of Israel?","No","Prime Minister of Israel after the next election?"],
@@ -2081,8 +2078,12 @@
     ["geopolitics","2026-10-28","e",4327.74,0.3,1,0.9989,"Will Likud win fewer than 20 seats in the 2026 Israeli legislative election?","No","Israel Election: Likud # of seats?"],
     ["macro","2026-10-28","s",16612.44,-16612.44,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
     ["macro","2026-10-28","s",730.21,-730.21,0,0.21,"Will there be no change in Fed interest rates after the October 2026 meeting?","No","Fed Decision in October?"],
-    ["politics","2026-10-28","e",1639.46,101.61,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"],
-    ["politics","2026-10-28","e",5462.11,338.32,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
-    ["politics","2026-10-29","e",2646.85,143.63,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"]
+    ["geopolitics","2026-10-30","e",1071.38,68.53,1,0.9379,"Israel Election: Any Coalition Wins a Majority?","No",null],
+    ["geopolitics","2026-10-30","e",24764.99,306.41,1,0.9829,"Will Likud win the most seats in the 2026 Israeli legislative election?","Yes","Israeli Legislative Election Winner"],
+    ["politics","2026-10-30","e",10222.61,110.13,1,0.92,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
+    ["politics","2026-10-30","e",10159.25,716.93,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
+    ["politics","2026-10-30","e",17.91,0.09,1,0.8955,"Will the Republicans win the Minnesota Senate race in 2026?","No","Minnesota Senate Election Winner"],
+    ["politics","2026-10-30","e",2674.08,144.21,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
+    ["politics","2026-10-30","e",1656.9,101.96,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"]
   ]
 }
