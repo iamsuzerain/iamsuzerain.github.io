@@ -1,6 +1,12 @@
 {
   "posts": [
     {
+      "slug": "october-update",
+      "title": "October Update",
+      "date": "2026-10-31",
+      "summary": "Monthly Summary - Smaller /ZQ arb, a decent SPX month against falling tech and gold longs, and selling Israel positions at a discount to roll into the House"
+    },
+    {
       "slug": "q3-retrospective",
       "title": "Q3 Retrospective",
       "date": "2026-09-30",

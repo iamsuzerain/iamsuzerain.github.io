@@ -1,0 +1,5 @@
+We put on a smaller version of the /ZQ arb from last month and made about 3k. The adverse impact on Polymarket this month was around 12k, so it corrected a small part of the P&L distortion from the previous month, since Warsh bowed to Trump and decided not to hike.
+
+Didn't get offside trading SPX (+23k) even as long-term longs in tech and gold fell (-12k), so I view it as a generally acceptable trading month on IBKR, even though the P&L is mediocre since SPX ultimately fell as well.
+
+Poly was positive if we strip out the /ZQ arb, but obviously the main event is going to happen on November 3rd. I'm very annoyed about both the Netanyahu election fraud allegations and the UMA terrorists who are holding up market resolution because of them, which will likely force me to sell all my Israel-related positions for 0.5-1% less than I would've otherwise gotten to roll into the US. I deposited 50k into Poly to bet on House control, but played Israel first, and now the Dems are up to 94c from 91.5c earlier in the week. Very annoying.
