@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-01T13:36:16Z",
+  "generatedAt": "2026-11-02T16:10:50Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 806,
-      "wins": 718,
+      "n": 807,
+      "wins": 719,
       "pushes": 0,
-      "hitRate": 0.8908,
-      "volume": 4479615.88,
-      "realizedPnl": 94546.17,
+      "hitRate": 0.891,
+      "volume": 4479778.05,
+      "realizedPnl": 94594.61,
       "roi": 0.0211,
       "brier": 0.0445,
-      "avgImplied": 0.8729,
-      "edge": 0.0179,
-      "calibrationError": 0.0267
+      "avgImplied": 0.8728,
+      "edge": 0.0182,
+      "calibrationError": 0.0269
     },
     "exit": {
-      "n": 340,
-      "wins": 227,
+      "n": 341,
+      "wins": 228,
       "pushes": 10,
-      "hitRate": 0.6879,
-      "volume": 1729780.35,
-      "realizedPnl": -19960.7,
-      "roi": -0.0115
+      "hitRate": 0.6888,
+      "volume": 1750586.86,
+      "realizedPnl": -19467.92,
+      "roi": -0.0111
     }
   },
   "buckets": {
@@ -177,17 +177,17 @@
       {
         "lo": 0.7,
         "hi": 0.8,
-        "n": 25,
-        "wins": 24,
+        "n": 26,
+        "wins": 25,
         "pushes": 0,
-        "winRate": 0.96,
-        "avgImplied": 0.7593,
-        "volume": 130385.53,
-        "realizedPnl": 35211.74,
-        "grossPnl": 37386.88,
+        "winRate": 0.9615,
+        "avgImplied": 0.7597,
+        "volume": 130547.7,
+        "realizedPnl": 35260.18,
+        "grossPnl": 37435.32,
         "winRateByVolume": 0.9917,
-        "wilsonLo": 0.8046,
-        "wilsonHi": 0.9929
+        "wilsonLo": 0.8111,
+        "wilsonHi": 0.9932
       },
       {
         "lo": 0.8,
@@ -344,32 +344,32 @@
       {
         "lo": 0.6,
         "hi": 0.7,
-        "n": 15,
-        "wins": 10,
+        "n": 14,
+        "wins": 9,
         "pushes": 0,
-        "winRate": 0.6667,
-        "avgImplied": 0.6619,
-        "volume": 64085.51,
-        "realizedPnl": -1900.62,
-        "grossPnl": 6271.06,
-        "winRateByVolume": 0.727,
-        "wilsonLo": 0.4171,
-        "wilsonHi": 0.8482
+        "winRate": 0.6429,
+        "avgImplied": 0.6644,
+        "volume": 64709.7,
+        "realizedPnl": -1795.92,
+        "grossPnl": 6375.76,
+        "winRateByVolume": 0.7297,
+        "wilsonLo": 0.3876,
+        "wilsonHi": 0.8366
       },
       {
         "lo": 0.7,
         "hi": 0.8,
-        "n": 32,
-        "wins": 27,
+        "n": 33,
+        "wins": 28,
         "pushes": 0,
-        "winRate": 0.8438,
-        "avgImplied": 0.7585,
-        "volume": 187147.25,
-        "realizedPnl": 3940.69,
-        "grossPnl": 17390.19,
-        "winRateByVolume": 0.7934,
-        "wilsonLo": 0.6825,
-        "wilsonHi": 0.9314
+        "winRate": 0.8485,
+        "avgImplied": 0.7577,
+        "volume": 204893.07,
+        "realizedPnl": 4277.59,
+        "grossPnl": 17727.09,
+        "winRateByVolume": 0.8113,
+        "wilsonLo": 0.6908,
+        "wilsonHi": 0.9335
       },
       {
         "lo": 0.8,
@@ -379,27 +379,27 @@
         "pushes": 3,
         "winRate": 0.6032,
         "avgImplied": 0.8493,
-        "volume": 185340.36,
-        "realizedPnl": -11644.79,
-        "grossPnl": 26318.61,
-        "winRateByVolume": 0.6367,
+        "volume": 187088.74,
+        "realizedPnl": -11609.5,
+        "grossPnl": 26353.9,
+        "winRateByVolume": 0.6401,
         "wilsonLo": 0.4798,
         "wilsonHi": 0.7147
       },
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 69,
-        "wins": 49,
+        "n": 70,
+        "wins": 50,
         "pushes": 1,
-        "winRate": 0.7206,
-        "avgImplied": 0.9277,
-        "volume": 395250.66,
-        "realizedPnl": 4812.04,
-        "grossPnl": 24656.92,
-        "winRateByVolume": 0.9275,
-        "wilsonLo": 0.6044,
-        "wilsonHi": 0.8132
+        "winRate": 0.7246,
+        "avgImplied": 0.9274,
+        "volume": 395938.78,
+        "realizedPnl": 4827.93,
+        "grossPnl": 24672.81,
+        "winRateByVolume": 0.9276,
+        "wilsonLo": 0.6095,
+        "wilsonHi": 0.8161
       },
       {
         "lo": 0.95,
@@ -564,24 +564,24 @@
     },
     "geopolitics": {
       "combined": {
-        "n": 268,
-        "volume": 2051898.22,
-        "realizedPnl": 62049.91,
-        "roi": 0.0302,
-        "hitRate": 0.8182,
-        "avgImplied": 0.8242,
-        "edge": -0.006,
-        "top1Share": 0.2118
+        "n": 269,
+        "volume": 2052060.39,
+        "realizedPnl": 62098.35,
+        "roi": 0.0303,
+        "hitRate": 0.8189,
+        "avgImplied": 0.824,
+        "edge": -0.0051,
+        "top1Share": 0.2117
       },
       "settlement": {
-        "n": 167,
-        "volume": 1310788.8,
-        "realizedPnl": 56240.23,
+        "n": 168,
+        "volume": 1310950.97,
+        "realizedPnl": 56288.67,
         "roi": 0.0429,
-        "hitRate": 0.8683,
-        "avgImplied": 0.8487,
-        "edge": 0.0196,
-        "top1Share": 0.337
+        "hitRate": 0.869,
+        "avgImplied": 0.8482,
+        "edge": 0.0208,
+        "top1Share": 0.3369
       },
       "exit": {
         "n": 101,
@@ -650,14 +650,14 @@
     },
     "politics": {
       "combined": {
-        "n": 227,
-        "volume": 1083294.95,
-        "realizedPnl": 22575.74,
-        "roi": 0.0208,
-        "hitRate": 0.8288,
-        "avgImplied": 0.8296,
-        "edge": -0.0007,
-        "top1Share": 0.1192
+        "n": 228,
+        "volume": 1104101.46,
+        "realizedPnl": 23068.52,
+        "roi": 0.0209,
+        "hitRate": 0.8296,
+        "avgImplied": 0.8304,
+        "edge": -0.0008,
+        "top1Share": 0.118
       },
       "settlement": {
         "n": 141,
@@ -670,14 +670,14 @@
         "top1Share": 0.1622
       },
       "exit": {
-        "n": 86,
-        "volume": 225754.71,
-        "realizedPnl": -3396.25,
-        "roi": -0.015,
-        "hitRate": 0.679,
-        "avgImplied": 0.7059,
-        "edge": -0.0269,
-        "top1Share": 0.166
+        "n": 87,
+        "volume": 246561.22,
+        "realizedPnl": -2903.47,
+        "roi": -0.0118,
+        "hitRate": 0.6829,
+        "avgImplied": 0.7094,
+        "edge": -0.0265,
+        "top1Share": 0.1599
       }
     },
     "sports": {
@@ -747,46 +747,46 @@
   },
   "openBook": {
     "n": 131,
-    "cost": 331457.97,
-    "mark": 342937.94,
-    "unrealized": 11479.96
+    "cost": 344586.61,
+    "mark": 355335.38,
+    "unrealized": 10748.76
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1089.81,
-      "unrealized": -116.69
+      "mark": 1178.33,
+      "unrealized": -28.17
     },
     "geopolitics": {
-      "n": 7,
-      "cost": 8296.75,
-      "mark": 7603.92,
-      "unrealized": -692.83
+      "n": 6,
+      "cost": 8134.58,
+      "mark": 7282.32,
+      "unrealized": -852.26
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 318.78,
-      "unrealized": -19.62
+      "mark": 328.32,
+      "unrealized": -10.08
     },
     "politics": {
-      "n": 116,
-      "cost": 317338.08,
-      "mark": 329081.63,
-      "unrealized": 11743.54
+      "n": 117,
+      "cost": 330628.89,
+      "mark": 341760.98,
+      "unrealized": 11132.08
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3500.17,
-      "unrealized": 527.1
+      "mark": 3440.42,
+      "unrealized": 467.35
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1343.64,
-      "unrealized": 38.47
+      "mark": 1345.02,
+      "unrealized": 39.84
     }
   },
   "openCategories": {
@@ -797,7 +797,6 @@
     "0x12b727031b38130d945b3e164386874360d9a32fdd7e3d00ed2adb13857e089b": "politics",
     "0x150996aafc2a3bd49f3b4f453e56c9b770977b063fc2c1e9708154bcc1760af5": "politics",
     "0x17d8c697aa69e53ef8062fc4b42ff6f8f7983ec569a021aab6d707d6f797780a": "politics",
-    "0x190aad2ac982a1580aa8898eff5b5145bea98410efb1c27fa48b9855b0816816": "politics",
     "0x196a834f36c3238f96bf046e9529587224479caf37ae255c2a4fd8fc49eea837": "politics",
     "0x1b616d85ecd00125704a59ca4ff4d397e0006dd087dab815780ee16539da94af": "politics",
     "0x1c017cbb38a9d0ab233ebb265b25c78290317e6a2470657ca18a73a112397b55": "politics",
@@ -879,8 +878,8 @@
     "0xb2ce24bdd043abf35f09428cad5e67ffc5d6cae16b7a3556dec55fb539dd1253": "politics",
     "0xb40b0cd531184a1e436d23ca898e1590418187b116f387158753d1adb9853e47": "other",
     "0xbd72208a4ceea9fde59f3a42d2f4c5c78bd7cc05c4fada7fe60f877d2fee6dc9": "politics",
+    "0xbfeb6d4cf3eab6071e204219b0647c8224d63a12778df467311b5f2a4b3a5bd4": "politics",
     "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
-    "0xc3d5708780de5528998aeb53ca90e7ade64804f9f2386392a681435d5c42b44d": "geopolitics",
     "0xc49565671d203fc09f1a600d596c07dbb43a2a66886b7d001df8ce318ea7a264": "politics",
     "0xc528b5c384832a754585eeb005f96efd2842db3db1ebfd574bc3c8235a6dbae0": "politics",
     "0xc5eae79d1ffe716572353962eb926b1e3964c500a4880a7a94f58408218ee76b": "politics",
@@ -916,7 +915,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 561,
+      "events": 562,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -1913,7 +1912,6 @@
     ["commodities","2026-09-22","e",890.61,55.09,1,0.3296,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["geopolitics","2026-09-22","s",193.35,10.18,1,0.95,"Trump x Greenland deal signed by September 23?","Yes","Trump x Greenland deal signed by...?"],
     ["geopolitics","2026-09-22","s",4.3,-4.3,0,0.86,"Trump x Greenland deal signed by December 31?","No","Trump x Greenland deal signed by...?"],
-    ["politics","2026-09-22","e",4666.98,275.73,1,0.6056,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
     ["sports","2026-09-22","s",760.0,40.0,1,0.95,"Giants vs. Rams: O/U 69.5","Under","Giants vs. Rams"],
     ["sports","2026-09-22","s",26.0,-26.0,0,0.26,"Giants vs. Rams","Giants",null],
     ["geopolitics","2026-09-23","s",8.81,-4.18,0,0.0006,"Will Jair Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
@@ -2070,21 +2068,24 @@
     ["geopolitics","2026-10-31","e",51248.12,606.71,1,0.9829,"Will Likud win the most seats in the 2026 Israeli legislative election?","Yes","Israeli Legislative Election Winner"],
     ["politics","2026-10-31","e",13.67,-0.17,0,0.9112,"Will the Democrats win the Minnesota Senate race in 2026?","Yes","Minnesota Senate Election Winner"],
     ["politics","2026-10-31","e",18.19,-0.19,0,0.9095,"Will the Republicans win the Minnesota Senate race in 2026?","No","Minnesota Senate Election Winner"],
-    ["politics","2026-10-31","e",4122.08,81.88,1,0.6762,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"],
     ["politics","2026-10-31","e",945.32,51.6,1,0.8534,"Will the Democrats win the New Hampshire Senate race in 2026?","Yes","New Hampshire Senate Election Winner"],
     ["sports","2026-10-31","s",8236.94,163.06,1,0.9806,"Florida vs. Georgia","Georgia",null],
     ["sports","2026-10-31","s",2.71,0.01,1,0.996,"Notre Dame vs. Navy","Notre Dame",null],
     ["commodities","2026-11-01","s",830.11,-830.11,0,0.3296,"US announces end of Iranian blockade by October 31, 2026?","Yes","US announces end of Iranian blockade by...?"],
     ["geopolitics","2026-11-01","s",49.66,3.17,1,0.94,"Israel election: will Likud lose seats?","Yes",null],
     ["geopolitics","2026-11-01","s",1699.06,27.83,1,0.9839,"France declares state of siege (martial law) by October 31, 2026?","No","France declares state of siege (martial law) by...?"],
+    ["geopolitics","2026-11-01","s",162.17,48.44,1,0.77,"Israel x Iran ceasefire continues through October 31?","Yes","Israel x Iran ceasefire continues through...?"],
+    ["politics","2026-11-01","e",688.12,15.89,1,0.909,"Will the Republicans win the Arizona governor race in 2026?","No","Arizona Governor Election Winner"],
+    ["politics","2026-11-01","e",9413.25,462.31,1,0.655,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
     ["politics","2026-11-01","s",9109.22,752.47,1,0.9237,"Republican House odds hit 15% by October 31?","No","Republican House odds hit __ by October 31?"],
     ["politics","2026-11-01","s",6289.2,439.57,1,0.9347,"Republican House odds hit 20% by October 31?","No","Republican House odds hit __ by October 31?"],
+    ["politics","2026-11-01","e",3537.39,139.92,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"],
     ["politics","2026-11-01","e",172.24,-5.64,0,0.0225,"Will the Republican Party hold exactly 55 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-11-01","e",4105.76,174.6,1,0.8715,"Will the Democratic Party win the NY-03 House seat?","Yes","NY-03 House Election Winner"],
-    ["politics","2026-11-01","e",1789.01,104.63,1,0.8724,"Will the Republican Party win the NY-03 House seat?","No","NY-03 House Election Winner"],
     ["politics","2026-11-01","s",1473.57,126.27,1,0.9211,"Republican House odds dip to 5% by October 31?","No","Republican House odds hit __ by October 31?"],
     ["politics","2026-11-01","s",796.77,92.6,1,0.8959,"Republican Senate odds hit 55% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-11-01","s",6853.01,543.72,1,0.9265,"Ohio State vs. USC","USC",null],
-    ["sports","2026-11-01","s",984.97,60.99,1,0.9417,"Spread: USC (-14.5)","Ohio State","Ohio State vs. USC"]
+    ["sports","2026-11-01","s",984.97,60.99,1,0.9417,"Spread: USC (-14.5)","Ohio State","Ohio State vs. USC"],
+    ["politics","2026-11-02","e",17745.82,336.9,1,0.7312,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"]
   ]
 }
