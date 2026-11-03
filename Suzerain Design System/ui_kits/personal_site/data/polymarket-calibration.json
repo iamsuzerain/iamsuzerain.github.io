@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T16:10:50Z",
+  "generatedAt": "2026-11-03T14:28:05Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 807,
-      "wins": 719,
+      "n": 808,
+      "wins": 720,
       "pushes": 0,
-      "hitRate": 0.891,
-      "volume": 4479778.05,
-      "realizedPnl": 94594.61,
-      "roi": 0.0211,
-      "brier": 0.0445,
-      "avgImplied": 0.8728,
+      "hitRate": 0.8911,
+      "volume": 4488804.02,
+      "realizedPnl": 95165.96,
+      "roi": 0.0212,
+      "brier": 0.0444,
+      "avgImplied": 0.8729,
       "edge": 0.0182,
-      "calibrationError": 0.0269
+      "calibrationError": 0.027
     },
     "exit": {
       "n": 341,
       "wins": 228,
       "pushes": 10,
       "hitRate": 0.6888,
-      "volume": 1750586.86,
-      "realizedPnl": -19467.92,
-      "roi": -0.0111
+      "volume": 1750722.79,
+      "realizedPnl": -19603.85,
+      "roi": -0.0112
     }
   },
   "buckets": {
@@ -207,17 +207,17 @@
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 130,
-        "wins": 125,
+        "n": 131,
+        "wins": 126,
         "pushes": 0,
-        "winRate": 0.9615,
-        "avgImplied": 0.9276,
-        "volume": 610186.5,
-        "realizedPnl": 9373.94,
-        "grossPnl": 74397.28,
-        "winRateByVolume": 0.9467,
-        "wilsonLo": 0.9131,
-        "wilsonHi": 0.9835
+        "winRate": 0.9618,
+        "avgImplied": 0.9277,
+        "volume": 619212.47,
+        "realizedPnl": 9945.29,
+        "grossPnl": 74968.63,
+        "winRateByVolume": 0.9475,
+        "wilsonLo": 0.9138,
+        "wilsonHi": 0.9836
       },
       {
         "lo": 0.95,
@@ -363,11 +363,11 @@
         "wins": 28,
         "pushes": 0,
         "winRate": 0.8485,
-        "avgImplied": 0.7577,
-        "volume": 204893.07,
-        "realizedPnl": 4277.59,
-        "grossPnl": 17727.09,
-        "winRateByVolume": 0.8113,
+        "avgImplied": 0.7579,
+        "volume": 205029.0,
+        "realizedPnl": 4141.66,
+        "grossPnl": 17591.16,
+        "winRateByVolume": 0.8114,
         "wilsonLo": 0.6908,
         "wilsonHi": 0.9335
       },
@@ -650,34 +650,34 @@
     },
     "politics": {
       "combined": {
-        "n": 228,
-        "volume": 1104101.46,
-        "realizedPnl": 23068.52,
-        "roi": 0.0209,
-        "hitRate": 0.8296,
-        "avgImplied": 0.8304,
-        "edge": -0.0008,
-        "top1Share": 0.118
+        "n": 229,
+        "volume": 1113263.36,
+        "realizedPnl": 23503.94,
+        "roi": 0.0211,
+        "hitRate": 0.8304,
+        "avgImplied": 0.8309,
+        "edge": -0.0005,
+        "top1Share": 0.1169
       },
       "settlement": {
-        "n": 141,
-        "volume": 857540.24,
-        "realizedPnl": 25971.99,
-        "roi": 0.0303,
-        "hitRate": 0.9149,
-        "avgImplied": 0.905,
-        "edge": 0.0099,
-        "top1Share": 0.1622
+        "n": 142,
+        "volume": 866566.21,
+        "realizedPnl": 26543.34,
+        "roi": 0.0306,
+        "hitRate": 0.9155,
+        "avgImplied": 0.9052,
+        "edge": 0.0103,
+        "top1Share": 0.1596
       },
       "exit": {
         "n": 87,
-        "volume": 246561.22,
-        "realizedPnl": -2903.47,
-        "roi": -0.0118,
+        "volume": 246697.15,
+        "realizedPnl": -3039.4,
+        "roi": -0.0123,
         "hitRate": 0.6829,
-        "avgImplied": 0.7094,
-        "edge": -0.0265,
-        "top1Share": 0.1599
+        "avgImplied": 0.7095,
+        "edge": -0.0266,
+        "top1Share": 0.1615
       }
     },
     "sports": {
@@ -746,41 +746,41 @@
     }
   },
   "openBook": {
-    "n": 131,
-    "cost": 344586.61,
-    "mark": 355335.38,
-    "unrealized": 10748.76
+    "n": 129,
+    "cost": 341669.13,
+    "mark": 350970.33,
+    "unrealized": 9301.19
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1178.33,
-      "unrealized": -28.17
+      "mark": 1167.58,
+      "unrealized": -38.92
     },
     "geopolitics": {
       "n": 6,
       "cost": 8134.58,
-      "mark": 7282.32,
-      "unrealized": -852.26
+      "mark": 7329.35,
+      "unrealized": -805.23
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 328.32,
-      "unrealized": -10.08
+      "mark": 333.9,
+      "unrealized": -4.5
     },
     "politics": {
-      "n": 117,
-      "cost": 330628.89,
-      "mark": 341760.98,
-      "unrealized": 11132.08
+      "n": 115,
+      "cost": 327711.41,
+      "mark": 337357.04,
+      "unrealized": 9645.62
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3440.42,
-      "unrealized": 467.35
+      "mark": 3437.45,
+      "unrealized": 464.38
     },
     "tech": {
       "n": 1,
@@ -860,7 +860,6 @@
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
     "0x8ccbfc876e2f979a0ab1423589abea04bb71512cc6bd5d9dbeef7f820b8f8e69": "politics",
     "0x8d65ff57f443011c4c10e7aa50aa54b3a3b5e2b940cb3ca97c0357bbcaee0b36": "politics",
-    "0x8ec41042f49bdea4e3a1d42dbc63b12d4086471a0f4b7a59356bbc120add72d0": "politics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0x94521176f57d2ce81dde01e0b7699ca4279423042d37ed53908f0c8bfefe7e14": "politics",
     "0x968a1a79e001d49fa3ee1429e3b95eb01797587740f86d4e6becf3ab1b275bfb": "politics",
@@ -915,7 +914,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 562,
+      "events": 563,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2086,6 +2085,7 @@
     ["politics","2026-11-01","s",796.77,92.6,1,0.8959,"Republican Senate odds hit 55% by October 31?","No","Republican Senate odds hit __ by October 31?"],
     ["sports","2026-11-01","s",6853.01,543.72,1,0.9265,"Ohio State vs. USC","USC",null],
     ["sports","2026-11-01","s",984.97,60.99,1,0.9417,"Spread: USC (-14.5)","Ohio State","Ohio State vs. USC"],
-    ["politics","2026-11-02","e",17745.82,336.9,1,0.7312,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"]
+    ["politics","2026-11-02","e",17881.75,200.97,1,0.7368,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"],
+    ["politics","2026-11-03","s",9025.97,571.35,1,0.9405,"Osborn flips Ricketts for Nebraska Senate by November 2?","No",null]
   ]
 }
