@@ -627,7 +627,7 @@ function recRecordRows(rec) {
   rows.push(w ? {
     id: 'wait', label: 'longest wait for a new high', value: `${w.n} days`,
     when: `${recSpan(w.from, w.to)}${w.open ? ' · still waiting' : ''}`,
-    note: w.open ? 'measured to the latest close' : 'high to next high', set: waitDays,
+    set: waitDays,
   } : recEmpty('wait', 'longest wait for a new high', 'never below a high'));
   return rows;
 }
@@ -808,7 +808,6 @@ function Records() {
       <div className="sz-kicker">◆ records</div>
       <h2 className="sz-h2">couldn't build book feed.</h2>
       <p><code>{err}</code></p>
-      <p className="sz-dim">records read the same build as the book view, which needs <code>data/portfolio.json</code>.</p>
     </section>
   );
   if (!book) return (
@@ -923,7 +922,7 @@ function Records() {
       </RecPanel>
 
       {groups.bets && (
-        <RecPanel title="polymarket bets" meta={`${groups.betCount} closed bets · realized, sold or settled · underdog means entered under 50¢`}>
+        <RecPanel title="polymarket bets" meta={`${groups.betCount} closed bets · underdog means entered under 50¢`}>
           {grid(groups.bets)}
         </RecPanel>
       )}

@@ -1541,7 +1541,7 @@ function PmCalibration({ cal }) {
           kicker={`${h.n} resolved positions${h.pushes ? ` · ${h.pushes} push` : ''}`}/>
         {series === 'settlement' && (
           <>
-            <PmStat label="brier" value={h.brier != null ? h.brier.toFixed(3) : '—'} kicker="lower = sharper · 0 is perfect"/>
+            <PmStat label="brier" value={h.brier != null ? h.brier.toFixed(3) : '—'} kicker="0 is perfect"/>
             <PmStat label="edge · per position"
               value={h.edge != null ? `${h.edge >= 0 ? '+' : ''}${(h.edge * 100).toFixed(1)}pp` : '—'}
               tone={h.edge != null ? (h.edge >= 0 ? 'pos' : 'neg') : undefined}
@@ -1559,7 +1559,7 @@ function PmCalibration({ cal }) {
       {series === 'settlement' && (
         <div className="pf-panel-head" style={{ marginTop: 4 }}>
           <span className="pf-panel-meta">
-            positions whose outcome was determined — held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved
+            held to resolution, or sold at ≥99.8¢/≤0.2¢ into a market that resolved
           </span>
         </div>
       )}
@@ -1740,7 +1740,7 @@ function PmLotTapePanel({ cal }) {
       <div className="pf-panel-head">
         <span className="pf-panel-title">realized pnl · position by position</span>
         <div className="pf-panel-head-right">
-          <span className="pf-panel-meta">{lots.length} positions in closing order · one step each</span>
+          <span className="pf-panel-meta">{lots.length} positions in closing order</span>
           <div className="pf-range">
             <SzToggle options={[...quarters.map(k => [k, qLabel(k)]), ['all', 'all-time']]}
               value={q} onChange={setPicked}/>
@@ -2141,7 +2141,7 @@ function Polymarket() {
           value={pmUSD(totalPnl)}
           tone={totalPnl == null ? null : totalPnl >= 0 ? 'pos' : 'neg'}
           kicker={pmPnlKicker('all sources', hasPnl)}/>
-        <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'} kicker="open positions"/>
+        <PmStat label="unrealized pnl" value={pmUSD(summary.unrealizedPnl)} tone={summary.unrealizedPnl >= 0 ? 'pos' : 'neg'}/>
         <PmStat label="realized pnl"
           value={pmUSD(realizedTotal)}
           tone={realizedTotal == null ? null : realizedTotal >= 0 ? 'pos' : 'neg'}
@@ -2215,7 +2215,7 @@ function Polymarket() {
       {hist && hist.rows && hist.rows.length > 1 && (
         <div className="pf-panel">
           <div className="pf-panel-head">
-            <span className="pf-panel-title">rewards accrual · market-making income</span>
+            <span className="pf-panel-title">rewards accrual</span>
             <span className="pf-panel-meta">lp · rebates · total · since {hist.rows[0].d}</span>
           </div>
           <PmRewardsChart rows={hist.rows}/>

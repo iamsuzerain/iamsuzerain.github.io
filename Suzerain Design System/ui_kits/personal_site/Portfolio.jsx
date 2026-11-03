@@ -1543,7 +1543,6 @@ function Portfolio() {
       <div className="sz-kicker">◆ ibkr</div>
       <h2 className="sz-h2">couldn't load ibkr feed.</h2>
       <p><code>{err}</code></p>
-      <p className="sz-dim">the daily IBKR flex fetch may not have run yet. see <code>scripts/ibkr-flex/README.md</code>.</p>
     </section>
   );
   if (!data) return (
@@ -1691,7 +1690,7 @@ function Portfolio() {
               denominator rather than repeating the rf: the gap between it and
               the vol tile two along is the entire reason this tile is here. */}
           <StatTile label="sortino" value={fmtNum(winRisk.sortino)}         kicker={`downside dev ${fmtPctBare(winRisk.downside)}`}/>
-          <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}         kicker="annualized · twr"/>
+          <StatTile label="ann vol" value={fmtPctBare(winRisk.vol)}/>
           <StatTile label="max dd"  value={fmtPctBare(winRisk.maxDrawdown)}/>
           <StatTile label="beta"    value={betaObj ? fmtNum(betaObj.beta) : '—'}
                     kicker={betaObj ? `vs ${primaryName} · r² ${fmtNum(betaObj.r2)}` : `vs ${primaryName}`}/>
@@ -1767,7 +1766,6 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">benchmark comparison · {pfRangeLabel(range)}</span>
-            <span className="pf-panel-meta">click a row to draw it</span>
           </div>
           <BenchTable rows={benchRows} selected={benchKeys} primary={primary}
             onToggle={toggleBench}/>
@@ -1804,7 +1802,7 @@ function Portfolio() {
       <div className="pf-panel">
         <div className="pf-panel-head">
           <span className="pf-panel-title">return distribution · daily</span>
-          <span className="pf-panel-meta">vs normal, same mean and sd</span>
+          <span className="pf-panel-meta">vs normal</span>
         </div>
         <ReturnDistribution perfSeries={win.perf}/>
       </div>
@@ -1813,7 +1811,6 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">drawdown episodes · {pfRangeLabel(range)}</span>
-            <span className="pf-panel-meta">peak to recovery</span>
           </div>
           <DrawdownTable episodes={episodes}/>
         </div>
@@ -1828,7 +1825,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">attribution · by instrument type · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per asset class</span>
+            <span className="pf-panel-meta">mark-to-market</span>
           </div>
           <AssetClassBars rows={d.byAssetClass}/>
         </div>
@@ -1838,7 +1835,7 @@ function Portfolio() {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">contribution to return · 12mo</span>
-            <span className="pf-panel-meta">mark-to-market p&l per holding</span>
+            <span className="pf-panel-meta">mark-to-market</span>
           </div>
           <ContributionBars rows={d.contribution}/>
         </div>

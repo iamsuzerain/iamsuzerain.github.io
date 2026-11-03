@@ -2200,12 +2200,11 @@ function Combined({ setView }) {
       <div className="sz-kicker">◆ book</div>
       <h2 className="sz-h2">couldn't build book feed.</h2>
       <p><code>{err}</code></p>
-      <p className="sz-dim">needs <code>data/portfolio.json</code> (daily IBKR cron). polymarket reads <code>data/polymarket-pnl.json</code>.</p>
     </section>
   );
   if (!data) return (
     <section className="sz-prose">
-      <div className="sz-kicker">◆ book · live</div>
+      <div className="sz-kicker">◆ book</div>
       <h2 className="sz-h2">merging feeds<Cursor /></h2>
     </section>
   );
@@ -2405,7 +2404,6 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">benchmark comparison · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">click a row to draw it</span>
           </div>
           <SZ.BenchTable rows={cBenchRows} selected={benchKeys} primary={primary}
             onToggle={toggleBench}/>
@@ -2433,7 +2431,7 @@ function Combined({ setView }) {
                 without arithmetic. */}
             <CmbStat label="sortino" value={risk.sortino != null ? risk.sortino.toFixed(2) : '—'}
               note={`downside dev ${risk.downside != null ? pct1(risk.downside) : '—'}`}/>
-            <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'} note="annualized · 365d"/>
+            <CmbStat label="ann vol" value={risk.vol != null ? pct1(risk.vol) : '—'}/>
             <CmbStat label="max dd"  value={pct1(risk.maxDD)} tone={risk.maxDD < 0 ? 'neg' : undefined}/>
             <CmbStat label="beta"    value={risk.beta != null ? risk.beta.toFixed(2) : '—'}
               note={risk.beta != null && risk.r2 != null ? `vs ${primaryName} · r² ${risk.r2.toFixed(2)}` : `vs ${primaryName}`}/>
@@ -2472,9 +2470,7 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">{periodic.period.title} pnl · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">
-              ibkr · {primaryName} · polymarket{pct ? ' · contribution to return' : ''}
-            </span>
+            {pct && <span className="pf-panel-meta">contribution to return</span>}
           </div>
           <CmbPnlBars periodic={periodic} unit={pct ? 'pct' : 'usd'} benchKey={primary}/>
         </div>
@@ -2485,7 +2481,7 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">return distribution · daily</span>
-            <span className="pf-panel-meta">vs normal, same mean and sd</span>
+            <span className="pf-panel-meta">vs normal</span>
           </div>
           <SZ.ReturnDistribution perfSeries={cPerf}/>
         </div>
@@ -2495,7 +2491,6 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">drawdown episodes · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">peak to recovery</span>
           </div>
           <SZ.DrawdownTable episodes={cEpisodes}/>
         </div>
