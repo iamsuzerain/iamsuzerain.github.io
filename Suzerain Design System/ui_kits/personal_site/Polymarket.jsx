@@ -30,9 +30,20 @@ const PM_PROFILE_URL = `https://polymarket.com/profile/${PM_WALLETS[1] || PM_PRI
 // and anything past the cap dropped out of the table — and so out of search —
 // without a word.
 const pmPositionsUrl = (w) =>
-  `https://data-api.polymarket.com/positions?user=${w}&limit=500&sortBy=CURRENT&sortDirection=DESC`;
+  `https://data-api.polymarket.com/v2/positions?user=${w}&limit=500&filter_type=TOKENS&filter_amount=1&sort_by=CURRENT_VALUE&sort_direction=DESC`;
 const pmActivityUrl = (w) =>
-  `https://data-api.polymarket.com/activity?user=${w}&limit=20`;
+  `https://data-api.polymarket.com/v2/activity?user=${w}&limit=20`;
+
+// v2 answers in snake_case inside a { data } envelope; the panel, and any cache
+// already in a visitor's browser, reads v1's names. Same renames in the fetchers.
+const PM_V1_NAMES = {
+  token_id: 'asset', opposite_token_id: 'oppositeAsset', current_size: 'size',
+  total_size: 'totalBought', current_price: 'curPrice', entry_cost_usdc: 'initialValue',
+  total_cost_usdc: 'grossInitialValue', unrealized_pnl: 'cashPnl',
+};
+const pmV1Rows = (body) => body.data.map((x) => Object.fromEntries(Object.entries(x).map(
+  ([k, v]) => [PM_V1_NAMES[k] || k.replace(/_(\w)/g, (_, c) => c.toUpperCase()), v]
+)));
 
 // ---------- formatting helpers ----------
 function pmUSD(n, compact = false) {
@@ -218,8 +229,8 @@ function pmFetchStreams() {
       fetch(pmActivityUrl(w), { signal: timeout(10000) }),
     ]);
     if (!posRes.ok) throw new Error('positions ' + posRes.status + ' (' + w.slice(0, 6) + ')');
-    const positions = await posRes.json();
-    const activity = actRes.ok ? await actRes.json() : [];
+    const positions = pmV1Rows(await posRes.json());
+    const activity = actRes.ok ? pmV1Rows(await actRes.json()) : [];
     return { positions, activity };
   }));
 

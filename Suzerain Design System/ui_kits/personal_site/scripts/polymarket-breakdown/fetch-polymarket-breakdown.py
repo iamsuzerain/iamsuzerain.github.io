@@ -21,7 +21,7 @@ WHERE THE NUMBERS COME FROM NOW
     taker                events in the single /activity pull the cash figure needs.
                          Summing each stream from scratch cost 4 types x 2 wallets of
                          paged calls and hit HTTP 429 on a shared runner IP (2026-10-19)
-  positions            data-api /positions, as before
+  positions            data-api /v2/positions
   cash                 CARRIED FORWARD - nothing public reports a USDC balance
 
 The retired `user-pnl-api.polymarket.com` host names v2/user-pnl as its replacement.
@@ -51,11 +51,10 @@ on-chain balanceOf does not find the collateral. v2/user-pnl's deposits, withdra
 cashflow_net are null across all 52,814 points.
 
 So cash is carried from the previous committed breakdown and advanced by the activity
-since `balances.cashCursor`. A DEPOSIT OR WITHDRAWAL DOES NOT APPEAR IN THE FEED -
-type=DEPOSIT and type=WITHDRAWAL are accepted by data-api (type=TRANSFER and
-type=CONVERT are rejected with 400) but have never returned a row, on an account that
-was plainly funded, because funding Polymarket is an on-chain bridge transaction. After
-moving money, state the balance Polymarket shows in
+since `balances.cashCursor`. A DEPOSIT OR WITHDRAWAL DOES NOT APPEAR IN THE FEED THIS
+READS - v1 never returned one, and v2 drops them unless asked with
+exclude_deposits_withdrawals=false, which this does not pass yet. After moving money, state
+the balance Polymarket shows in
 
     data/polymarket-cash-override.json      {"2026-10-20": 50000}
 
@@ -63,7 +62,7 @@ The newest entry at or before today wins and everything after it is re-derived. 
 derived cash ever goes negative the run fails, because the activity feed cannot spend
 money that was never there - that is proof a flow was missed.
 """
-import json, os, sys, time
+import json, os, re, sys, time
 from datetime import datetime, timezone
 from curl_cffi import requests
 
@@ -76,9 +75,9 @@ PREV_FILE = os.path.join(DATA, "polymarket-breakdown.json")
 OVERRIDE_FILE = os.path.join(DATA, "polymarket-cash-override.json")
 
 PNL = "https://data-api.polymarket.com/v2/user-pnl"
-ACT = "https://data-api.polymarket.com/activity"
-POS = "https://data-api.polymarket.com/positions"
-VAL = "https://data-api.polymarket.com/value"
+ACT = "https://data-api.polymarket.com/v2/activity"
+POS = "https://data-api.polymarket.com/v2/positions"
+VAL = "https://data-api.polymarket.com/v2/value"
 
 # Each reward stream is an activity type carrying a usdcSize, so the cumulative figure
 # advances exactly from the window's own events. REWARD includes what betmoar called
@@ -157,27 +156,39 @@ def user_pnl(wallet):
     return pts[-1]
 
 
+def pages(url, params, timeout=40):
+    """Each page of a v2 list route. Cursor only: `offset` is a 400 on v2."""
+    cursor = None
+    while True:
+        r = get(url, dict(params, cursor=cursor) if cursor else params, timeout=timeout)
+        body = r.json()
+        if not isinstance(body.get("data"), list):
+            raise ValueError(f"unexpected response from {url}: {r.text[:200]}")
+        yield body["data"]
+        cursor = (body.get("pagination") or {}).get("next_cursor")
+        if not cursor:
+            return
+
+
+def v1_activity(x):
+    """A v2 /activity row in the names this script's cash and reward code reads."""
+    return {"asset" if k == "token_id" else re.sub(r"_(\w)", lambda m: m[1].upper(), k): v
+            for k, v in x.items()}
+
+
 def activity(wallet, since=None, kind=None):
-    """Paged /activity, optionally filtered by type and truncated at a timestamp."""
-    out, offset = [], 0
-    while offset <= 5000:
-        params = {"user": wallet, "limit": 500, "offset": offset}
-        if kind:
-            params["type"] = kind
-        r = get(ACT, params)
-        page = r.json()
-        if not isinstance(page, list) or not page:
-            break
-        out += [x for x in page if since is None or x["timestamp"] > since]
-        if len(page) < 500 or (since is not None
-                               and min(x["timestamp"] for x in page) <= since):
-            break
-        offset += 500
-    return out
+    """Paged /activity, optionally filtered by type and truncated at a timestamp.
+
+    An omitted `start` floors to three years back, so "everything" is start=1.
+    """
+    params = {"user": wallet, "limit": 500, "start": 1 if since is None else since + 1}
+    if kind:
+        params["type"] = kind
+    return [v1_activity(x) for page in pages(ACT, params) for x in page]
 
 
 def fetch_positions_value(wallet):
-    """Open-position market value: sum of currentValue over data-api /positions.
+    """Open-position market value: sum of current_value over data-api /positions.
 
     Not data-api /value, which is not a stable read of /positions: on 2026-09-13 it swung
     one wallet between $10.8k and $6.7k within twenty minutes while /positions returned
@@ -185,26 +196,15 @@ def fetch_positions_value(wallet):
     positions out of NAV while counting the cash spent on them. /value is still fetched
     below, as the second source for the agreement check.
     """
-    total, offset, limit = 0.0, 0, 500
-    while True:
-        r = get(POS, {"user": wallet, "sizeThreshold": 0,
-                      "limit": limit, "offset": offset}, timeout=30)
-        page = r.json()
-        if not isinstance(page, list):
-            raise ValueError(f"unexpected /positions response: {r.text[:200]}")
-        total += sum(p.get("currentValue") or 0 for p in page)
-        if len(page) < limit:
-            return total
-        offset += limit
+    params = {"user": wallet, "limit": 500, "filter_type": "TOKENS", "filter_amount": 0}
+    return sum(p.get("current_value") or 0 for page in pages(POS, params, timeout=30)
+               for p in page)
 
 
 def fetch_value(wallet):
     """data-api /value - the figure betmoar's portfolioValue tracked."""
     r = get(VAL, {"user": wallet}, timeout=25)
-    rows = r.json()
-    if isinstance(rows, list) and rows:
-        return rows[0].get("value")
-    return None
+    return (r.json().get("data") or {}).get("value")
 
 
 def positions_agreement(pairs, source):

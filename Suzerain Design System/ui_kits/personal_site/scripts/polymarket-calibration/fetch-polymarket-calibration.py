@@ -45,7 +45,7 @@ Outputs JSON to stdout -> data/polymarket-calibration.json
 Env:
   PM_WALLET - comma-separated wallet addresses (defaults to hardcoded list)
 """
-import ast, json, math, os, sys, time
+import ast, json, math, os, re, sys, time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from curl_cffi import requests
@@ -56,8 +56,8 @@ DEFAULT_WALLETS = [
 ]
 WALLETS = [w.strip() for w in os.environ.get("PM_WALLET", ",".join(DEFAULT_WALLETS)).split(",") if w.strip()]
 
-ACTIVITY_URL = "https://data-api.polymarket.com/activity"
-POSITIONS_URL = "https://data-api.polymarket.com/positions"
+ACTIVITY_URL = "https://data-api.polymarket.com/v2/activity"
+POSITIONS_URL = "https://data-api.polymarket.com/v2/positions"
 GAMMA_URL = "https://gamma-api.polymarket.com/markets"
 EVENTS_URL = "https://gamma-api.polymarket.com/events"
 PRICES_URL = "https://clob.polymarket.com/prices-history"
@@ -74,7 +74,6 @@ PRICE_WINDOW = 3600   # seconds either side of a conversion to look for a market
 CASH_TOL_USD = 25.0   # per-event gap between lots and cash worth logging
 PAGE = 500          # activity page size
 FETCH_RETRIES = 5   # per data-api/gamma request, with backoff, before the run dies
-OFFSET_CEIL = 5000  # /activity rejects offset past ~5500; slide the window before then
 GAMMA_CHUNK = 25    # condition_ids per gamma request (URL-length safe)
 EVENTS_CHUNK = 20   # event ids per gamma /events request
 EPS = 1e-6          # share dust threshold
@@ -176,7 +175,7 @@ def log(*a):
 
 
 def get_list(sess, url, params, what):
-    """One list-returning data-api/gamma request, retried; dies rather than skip.
+    """One list-returning gamma request, retried; dies rather than skip.
 
     Every request here used to treat a failure as an empty answer. On
     2026-10-26 the second wallet's first /activity page failed, the run went on
@@ -184,11 +183,15 @@ def get_list(sess, url, params, what):
     win (macro +$90k -> -$106). A dropped gamma chunk is the same bug quieter:
     up to 25 markets lose their resolution (settlements vanish), their category
     ("other"), or their closed flag (a dead loser reads as an open mark).
-    /activity offsets never reach the ~5500 ceiling (OFFSET_CEIL stops short)
-    and every endpoint answers a no-match with `[]`, so a non-200 or a non-list
-    is never a legitimate answer: retry, then exit non-zero so the workflow
-    fails and the last good file stays published.
+    gamma answers a no-match with `[]`, so a non-200 or a non-list is never a
+    legitimate answer: retry, then exit non-zero so the workflow fails and the
+    last good file stays published.
     """
+    return get_body(sess, url, params, what, lambda d: isinstance(d, list))
+
+
+def get_body(sess, url, params, what, valid):
+    """The JSON body of one request once `valid` accepts it, per get_list's rule."""
     for attempt in range(FETCH_RETRIES):
         try:
             r = sess.get(url, params=params, timeout=30)
@@ -196,9 +199,9 @@ def get_list(sess, url, params, what):
                 err = f"HTTP {r.status_code}"
             else:
                 d = r.json()
-                if isinstance(d, list):
+                if valid(d):
                     return d
-                err = f"non-list body {str(d)[:120]}"
+                err = f"unexpected body {str(d)[:120]}"
         except Exception as e:
             err = repr(e)
         log(f"{what} failed ({err}), attempt {attempt + 1}/{FETCH_RETRIES}")
@@ -206,62 +209,44 @@ def get_list(sess, url, params, what):
     sys.exit(f"giving up on {what}")
 
 
-def fetch_activity(sess, wallet):
-    """Full-history activity via backward time-windowed pagination.
+def v1_row(x):
+    """A v2 data-api row in the field names the rest of this script reads."""
+    renamed = {"token_id": "asset", "opposite_token_id": "oppositeAsset",
+               "current_size": "size", "total_size": "totalBought",
+               "current_price": "curPrice", "entry_cost_usdc": "initialValue",
+               "total_cost_usdc": "grossInitialValue", "unrealized_pnl": "cashPnl"}
+    return {renamed.get(k) or re.sub(r"_(\w)", lambda m: m[1].upper(), k): v
+            for k, v in x.items()}
 
-    The endpoint hard-caps offset at ~5500 (returns 4xx past it), which alone
-    only reaches back a few months for an active wallet. But it accepts an `end`
-    timestamp filter, so we page offset within an end-bounded window (newest
-    first) until we near the ceiling, then move `end` to the oldest event seen
-    and restart offset — sliding the window backward to the account's first
-    trade. We deliberately keep /activity (not /trades) because /trades is
-    taker-only and drops maker fills, which would corrupt entry prices.
 
-    Overlap between windows is removed by multiplicity, not by set membership.
-    One transaction can carry several fills that are identical in every field
-    the feed returns — three 58.07-share buys at 0.87 in one hash on the
-    September Fed 25bp-hike market — and a plain `seen` set kept one of each,
-    silently dropping 16,422 shares ($10.9k) from that position alone. Pages
-    inside one window are disjoint (the first window is pinned to `end=now` so
-    fresh activity can't shift them), so the only overlap is the boundary
-    timestamp shared with the previous window, which the new window returns in
-    full. Keeping each key's larger count across windows is therefore exact."""
-    rows, have = [], Counter()
-    end = int(datetime.now(timezone.utc).timestamp())
-    first = True
+def walk_v2(sess, url, params, what):
+    """Every row of a v2 data-api list route, following its cursor to the end."""
+    rows, cursor, n = [], None, 0
     while True:
-        window, window_oldest = [], None
-        off = 0
-        while True:
-            params = {"user": wallet, "limit": PAGE, "offset": off, "end": end}
-            page = get_list(sess, ACTIVITY_URL, params,
-                            f"/activity {wallet[:8]} offset {off}")
-            if not page:
-                break
-            for a in page:
-                if not isinstance(a, dict):
-                    continue
-                window.append(a)
-                ts = a.get("timestamp")
-                if ts is not None and (window_oldest is None or ts < window_oldest):
-                    window_oldest = ts
-            off += PAGE
-            if len(page) < PAGE or off >= OFFSET_CEIL:
-                break
-        counts, added = Counter(), 0
-        for a in window:
-            key = (a.get("transactionHash"), a.get("asset"),
-                   a.get("timestamp"), a.get("type"), a.get("size"))
-            counts[key] += 1
-            if counts[key] > have[key]:
-                have[key] += 1
-                rows.append(a)
-                added += 1
-        # Stop when a window yields nothing new or can't reach further back.
-        if not added or window_oldest is None or (not first and window_oldest >= end):
-            break
-        end, first = window_oldest, False
-    return rows
+        p = dict(params, cursor=cursor) if cursor else params
+        d = get_body(sess, url, p, f"{what} page {n}",
+                     lambda b: isinstance(b, dict) and isinstance(b.get("data"), list))
+        rows += [v1_row(x) for x in d["data"]]
+        cursor = (d.get("pagination") or {}).get("next_cursor")
+        if not cursor:
+            return rows
+        n += 1
+
+
+def fetch_activity(sess, wallet):
+    """Full-history activity, back to the account's first trade.
+
+    start=1 because an omitted `start` floors to three years back. We
+    deliberately keep /activity (not /trades) because /trades is taker-only and
+    drops maker fills, which would corrupt entry prices.
+
+    v2's keyset pages are disjoint, so nothing here dedupes, and must not: one
+    transaction can carry several fills that are identical in every field the
+    feed returns — three 58.07-share buys at 0.87 in one hash on the September
+    Fed 25bp-hike market — and a plain `seen` set once kept one of each, silently
+    dropping 16,422 shares ($10.9k) from that position alone."""
+    return walk_v2(sess, ACTIVITY_URL, {"user": wallet, "limit": PAGE, "start": 1},
+                   f"/activity {wallet[:8]}")
 
 
 def aggregate_positions(all_rows):
@@ -689,17 +674,11 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
     """
     rows = []
     for w in WALLETS:
-        off = 0
-        while True:
-            d = get_list(sess, POSITIONS_URL,
-                         {"user": w, "limit": 500, "offset": off},
-                         f"/positions {w[:8]} offset {off}")
-            if not d:
-                break
-            rows += d
-            if len(d) < 500:
-                break
-            off += 500
+        # A floor of 1 share is what v1 applied by default; v2's own is 0.1.
+        rows += walk_v2(sess, POSITIONS_URL,
+                        {"user": w, "limit": 500, "filter_type": "TOKENS",
+                         "filter_amount": 1},
+                        f"/positions {w[:8]}")
 
     # gamma's own closed flag for the markets we still hold
     conds = sorted({p.get("conditionId") for p in rows if p.get("conditionId")})
