@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T02:28:27Z",
+  "generatedAt": "2026-11-05T02:50:44Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -746,17 +746,17 @@
     }
   },
   "openBook": {
-    "n": 36,
-    "cost": 242803.3,
-    "mark": 244350.91,
-    "unrealized": 1547.6
+    "n": 32,
+    "cost": 75306.98,
+    "mark": 76912.56,
+    "unrealized": 1605.58
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1267.57,
-      "unrealized": 61.07
+      "mark": 1278.68,
+      "unrealized": 72.18
     },
     "geopolitics": {
       "n": 6,
@@ -767,20 +767,20 @@
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 327.96,
-      "unrealized": -10.44
+      "mark": 328.32,
+      "unrealized": -10.08
     },
     "politics": {
-      "n": 22,
-      "cost": 228845.58,
-      "mark": 230411.91,
-      "unrealized": 1566.33
+      "n": 18,
+      "cost": 61349.26,
+      "mark": 62962.58,
+      "unrealized": 1613.32
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3431.68,
-      "unrealized": 458.61
+      "mark": 3431.19,
+      "unrealized": 458.12
     },
     "tech": {
       "n": 1,
@@ -837,6 +837,10 @@
       "events": 618,
       "offBy": 2,
       "netGap": -453.21
+    },
+    "splitOnly": {
+      "legs": 4,
+      "usd": 167496.32
     },
     "minLotUsd": 1.0
   },
