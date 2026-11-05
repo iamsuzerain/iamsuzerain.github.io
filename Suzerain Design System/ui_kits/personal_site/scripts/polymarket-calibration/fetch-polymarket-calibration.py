@@ -653,7 +653,28 @@ def fetch_categories(sess, condition_ids, titles=None):
     return out
 
 
-def fetch_open_book(sess, resolved_conds, settled_conds):
+def split_only_legs(rows, traded_conds):
+    """(wallet, conditionId) keys holding a matched YES+NO pair that never traded.
+
+    A SPLIT with no trade behind it is cash in another form: the JD Vance pair
+    merges back to USDC at par at any moment, so none of it is at risk. Counting
+    it as open added $167.5k of politics stake on 2026-11-05, while its legs'
+    marks cancelled (+/-$55.8k) and so hid it from every P&L figure.
+
+    Any trade on the market keeps it in the book, as a two-sided position there
+    was a decision rather than a place to hold cash. So does a pair that isn't
+    level, since only the matched shares could merge. Per wallet, because a merge
+    needs both legs in the same wallet.
+    """
+    legs = defaultdict(dict)
+    for p in rows:
+        legs[(p.get("proxyWallet"), p.get("conditionId"))][p.get("outcomeIndex")] = float(p.get("size") or 0)
+    return {k for k, sizes in legs.items()
+            if k[1] not in traded_conds and len(sizes) == 2
+            and max(sizes.values()) - min(sizes.values()) <= SHARE_TOL}
+
+
+def fetch_open_book(sess, resolved_conds, settled_conds, traded_conds):
     """Unrealized mark on positions still genuinely open, per position and in total.
 
     Everything else in this file measures CLOSED lots — settled or exited. That
@@ -671,6 +692,12 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
     flag plus the conds we already booked as settlements — and never test
     openness by summing redeemable currentValue, which is $0 for precisely these
     rows and so cannot detect them.
+
+    Returns the summary, every unresolved position (`live`), the subset that is
+    actually at risk (`book`, which drops split-only pairs) and the raw rows. The
+    summary and the category figures read `book`. `live` still drives the market
+    type lookup, because the positions table lists those legs, and the cash check,
+    because a split's event isn't finished while the pair is held.
     """
     rows = []
     for w in WALLETS:
@@ -696,15 +723,19 @@ def fetch_open_book(sess, resolved_conds, settled_conds):
 
     stale = closed | set(resolved_conds) | set(settled_conds)
     live = [p for p in rows if p.get("conditionId") not in stale]
+    split_only = split_only_legs(live, traded_conds)
+    book = [p for p in live if (p.get("proxyWallet"), p.get("conditionId")) not in split_only]
     ob = {
-        "n": len(live),
-        "cost": round(sum(float(p.get("initialValue") or 0) for p in live), 2),
-        "mark": round(sum(float(p.get("currentValue") or 0) for p in live), 2),
-        "unrealized": round(sum(float(p.get("cashPnl") or 0) for p in live), 2),
+        "n": len(book),
+        "cost": round(sum(float(p.get("initialValue") or 0) for p in book), 2),
+        "mark": round(sum(float(p.get("currentValue") or 0) for p in book), 2),
+        "unrealized": round(sum(float(p.get("cashPnl") or 0) for p in book), 2),
     }
     log(f"open book: {ob['n']}/{len(rows)} positions live "
-        f"({len(rows) - ob['n']} already resolved), unrealized {ob['unrealized']:,.0f}")
-    return ob, live, rows
+        f"({len(rows) - len(live)} already resolved, {len(live) - len(book)} split-only legs "
+        f"worth ${sum(float(p.get('currentValue') or 0) for p in live) - ob['mark']:,.0f}), "
+        f"unrealized {ob['unrealized']:,.0f}")
+    return ob, live, book, rows
 
 
 def open_by_category(live, cats):
@@ -1223,9 +1254,9 @@ def main():
     uncat = sum(1 for r in records if r["category"] == "other")
     log(f"uncategorized records: {uncat}/{len(records)}")
 
-    open_book, live, positions = fetch_open_book(
+    open_book, live, book, positions = fetch_open_book(
         sess, winners.keys(),
-        {r["conditionId"] for r in records if r["resolvedVia"] == "settlement"})
+        {r["conditionId"] for r in records if r["resolvedVia"] == "settlement"}, conds)
 
     # Almost every live position was bought on the trade feed and so is already
     # categorized, but not all: shares delivered by a negRisk CONVERSION arrive
@@ -1236,7 +1267,7 @@ def main():
     if missing:
         cats.update(fetch_categories(sess, missing))
         log(f"open book: categorized {len(missing)} live markets not seen in trades")
-    open_cats = open_by_category(live, cats)
+    open_cats = open_by_category(book, cats)
 
     cash_check = check_event_cash(records, all_rows, positions,
                                   {p.get("conditionId") for p in live})
@@ -1296,6 +1327,8 @@ def main():
         # forecast (kept in byCategory, dropped from the diagram); `conversions`
         # counts any whose receipt couldn't be attributed; `cashCheck` is how
         # many finished events' lots disagree with the cash they moved.
+        # `splitOnly` is the one open-side entry: matched pairs left out of
+        # openBook because they merge back to cash at par.
         "excluded": {
             "hedged": {
                 "markets": len(hedges),
@@ -1308,6 +1341,10 @@ def main():
                 "unattributed": conv_skipped,
             },
             "cashCheck": cash_check,
+            "splitOnly": {
+                "legs": len(live) - len(book),
+                "usd": round(sum(float(p.get("currentValue") or 0) for p in live) - open_book["mark"], 2),
+            },
             "minLotUsd": MIN_LOT_USD,
         },
         # The trimmed per-lot rows the attribution panel windows by date. The
