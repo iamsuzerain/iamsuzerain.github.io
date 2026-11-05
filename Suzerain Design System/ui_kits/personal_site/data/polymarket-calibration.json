@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-05T02:50:44Z",
+  "generatedAt": "2026-11-05T14:46:30Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,16 +45,16 @@
   },
   "headline": {
     "settlement": {
-      "n": 890,
-      "wins": 793,
+      "n": 893,
+      "wins": 796,
       "pushes": 0,
-      "hitRate": 0.891,
-      "volume": 4971528.5,
-      "realizedPnl": 124902.74,
-      "roi": 0.0251,
-      "brier": 0.0426,
-      "avgImplied": 0.8689,
-      "edge": 0.0221,
+      "hitRate": 0.8914,
+      "volume": 4977447.81,
+      "realizedPnl": 125417.34,
+      "roi": 0.0252,
+      "brier": 0.0425,
+      "avgImplied": 0.8691,
+      "edge": 0.0222,
       "calibrationError": 0.0312
     },
     "exit": {
@@ -207,31 +207,31 @@
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 165,
-        "wins": 160,
+        "n": 167,
+        "wins": 162,
         "pushes": 0,
-        "winRate": 0.9697,
+        "winRate": 0.9701,
         "avgImplied": 0.9272,
-        "volume": 826319.83,
-        "realizedPnl": 26025.76,
-        "grossPnl": 91049.1,
-        "winRateByVolume": 0.9607,
-        "wilsonLo": 0.931,
-        "wilsonHi": 0.987
+        "volume": 831973.97,
+        "realizedPnl": 26526.96,
+        "grossPnl": 91550.3,
+        "winRateByVolume": 0.9609,
+        "wilsonLo": 0.9318,
+        "wilsonHi": 0.9871
       },
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 282,
-        "wins": 280,
+        "n": 283,
+        "wins": 281,
         "pushes": 0,
         "winRate": 0.9929,
         "avgImplied": 0.9712,
-        "volume": 2116458.1,
-        "realizedPnl": 58079.86,
-        "grossPnl": 60455.02,
+        "volume": 2116723.27,
+        "realizedPnl": 58093.26,
+        "grossPnl": 60468.42,
         "winRateByVolume": 0.9994,
-        "wilsonLo": 0.9745,
+        "wilsonLo": 0.9746,
         "wilsonHi": 0.9981
       },
       {
@@ -650,24 +650,24 @@
     },
     "politics": {
       "combined": {
-        "n": 318,
-        "volume": 1714675.27,
-        "realizedPnl": 49621.52,
-        "roi": 0.0289,
-        "hitRate": 0.8307,
-        "avgImplied": 0.8327,
-        "edge": -0.002,
-        "top1Share": 0.05
+        "n": 321,
+        "volume": 1720594.58,
+        "realizedPnl": 50136.12,
+        "roi": 0.0291,
+        "hitRate": 0.8323,
+        "avgImplied": 0.8337,
+        "edge": -0.0014,
+        "top1Share": 0.0497
       },
       "settlement": {
-        "n": 225,
-        "volume": 1356919.43,
-        "realizedPnl": 56373.8,
-        "roi": 0.0415,
-        "hitRate": 0.9067,
-        "avgImplied": 0.8782,
-        "edge": 0.0285,
-        "top1Share": 0.0694
+        "n": 228,
+        "volume": 1362838.74,
+        "realizedPnl": 56888.4,
+        "roi": 0.0417,
+        "hitRate": 0.9079,
+        "avgImplied": 0.879,
+        "edge": 0.0289,
+        "top1Share": 0.0689
       },
       "exit": {
         "n": 93,
@@ -746,47 +746,47 @@
     }
   },
   "openBook": {
-    "n": 32,
-    "cost": 75306.98,
-    "mark": 76912.56,
-    "unrealized": 1605.58
+    "n": 31,
+    "cost": 106946.16,
+    "mark": 108252.7,
+    "unrealized": 1306.54
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1278.68,
-      "unrealized": 72.18
+      "mark": 1273.0,
+      "unrealized": 66.5
     },
     "geopolitics": {
       "n": 6,
       "cost": 8134.58,
-      "mark": 7566.09,
-      "unrealized": -568.49
+      "mark": 7583.17,
+      "unrealized": -551.4
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 328.32,
-      "unrealized": -10.08
+      "mark": 325.8,
+      "unrealized": -12.6
     },
     "politics": {
-      "n": 18,
-      "cost": 61349.26,
-      "mark": 62962.58,
-      "unrealized": 1613.32
+      "n": 17,
+      "cost": 92988.44,
+      "mark": 94325.29,
+      "unrealized": 1336.85
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3431.19,
-      "unrealized": 458.12
+      "mark": 3399.04,
+      "unrealized": 425.97
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1345.71,
-      "unrealized": 40.53
+      "mark": 1346.39,
+      "unrealized": 41.22
     }
   },
   "openCategories": {
@@ -800,7 +800,6 @@
     "0x3452bb28983bc33b37ddfd98da2138dfd89782faec65a2607ed5aa86a17c9199": "politics",
     "0x39c80b744a529e3f32bd185307b07cc722bf7dfae566c5bbc99f327fa8ae9825": "politics",
     "0x3e81fd787c83e13826013af0570a318e6b9d0efba02dea1794060877c6ddd644": "politics",
-    "0x401bb0b250f75ae550a95306506fd27b4d784ccd8850c2465a9bfaf3607748ee": "politics",
     "0x48d47eede033257e77d676631e6f805d5e1848c0567589030a3a76a862fa1e47": "sports",
     "0x4915ebe25b6b09c4a5ac8776e9f0c54bbeb4ea33ccadf89b7fd10c9d18d17511": "politics",
     "0x4dc5c13eb9646b10da7d5f079f77ef2480ec5466861ce1cfbc910fabed3d7d0d": "politics",
@@ -814,13 +813,13 @@
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
-    "0x7f45dfc2b4d3a1e844901e1ba60327b95d3003e4c99c20861737d46ca051c435": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
+    "0x8c9b8ad3a64088a06d45e0b296a9a836203bc7f3ef35d134c57abead446a8b72": "politics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0xb40b0cd531184a1e436d23ca898e1590418187b116f387158753d1adb9853e47": "other",
     "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
-    "0xf8864cc923193924f175991ede770984839c7fd8e57386e6cbd9aa32eb62f6d6": "politics"
+    "0xc8c5760c26490b0cd0bedcf1c61aa86c5e09c8b2886b84ff4ea2db81d5f29388": "politics"
   },
   "excluded": {
     "hedged": {
@@ -834,13 +833,13 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 618,
+      "events": 620,
       "offBy": 2,
       "netGap": -453.21
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 167496.32
+      "usd": 173651.65
     },
     "minLotUsd": 1.0
   },
@@ -2099,6 +2098,9 @@
     ["politics","2026-11-04","s",1918.0,-1918.0,0,0.1316,"Will the Republican Party hold exactly 48 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-11-04","s",1948.24,-1948.24,0,0.1337,"Will the Republican Party hold exactly 49 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-11-04","s",1887.54,-1887.54,0,0.1295,"Will the Republican Party hold exactly 50 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
-    ["politics","2026-11-04","s",1645.43,-1645.43,0,0.1129,"Will the Republican Party hold exactly 51 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"]
+    ["politics","2026-11-04","s",1645.43,-1645.43,0,0.1129,"Will the Republican Party hold exactly 51 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
+    ["politics","2026-11-05","s",941.57,52.49,1,0.9472,"Will the Republican Party win the CA-48 House seat?","No","CA-48 House Election Winner"],
+    ["politics","2026-11-05","s",4712.57,448.71,1,0.9131,"Will the Democratic Party win the CA-48 House seat?","Yes","CA-48 House Election Winner"],
+    ["politics","2026-11-05","s",265.17,13.4,1,0.9519,"Will the Democratic Party win the CA-47 House seat?","Yes","CA-47 House Election Winner"]
   ]
 }
