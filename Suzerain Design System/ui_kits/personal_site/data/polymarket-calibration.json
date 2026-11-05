@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T14:43:11Z",
+  "generatedAt": "2026-11-05T02:28:27Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 884,
-      "wins": 787,
+      "n": 890,
+      "wins": 793,
       "pushes": 0,
-      "hitRate": 0.8903,
-      "volume": 4936077.36,
-      "realizedPnl": 121918.31,
-      "roi": 0.0247,
-      "brier": 0.0428,
-      "avgImplied": 0.8685,
-      "edge": 0.0217,
-      "calibrationError": 0.0308
+      "hitRate": 0.891,
+      "volume": 4971528.5,
+      "realizedPnl": 124902.74,
+      "roi": 0.0251,
+      "brier": 0.0426,
+      "avgImplied": 0.8689,
+      "edge": 0.0221,
+      "calibrationError": 0.0312
     },
     "exit": {
-      "n": 347,
-      "wins": 228,
+      "n": 348,
+      "wins": 229,
       "pushes": 10,
-      "hitRate": 0.6766,
-      "volume": 1867202.04,
-      "realizedPnl": -23308.57,
-      "roi": -0.0125
+      "hitRate": 0.6775,
+      "volume": 1869410.22,
+      "realizedPnl": -23223.05,
+      "roi": -0.0124
     }
   },
   "buckets": {
@@ -192,47 +192,47 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 74,
-        "wins": 64,
+        "n": 75,
+        "wins": 65,
         "pushes": 0,
-        "winRate": 0.8649,
-        "avgImplied": 0.8568,
-        "volume": 268734.54,
-        "realizedPnl": -58673.92,
-        "grossPnl": 113876.64,
-        "winRateByVolume": 0.679,
-        "wilsonLo": 0.7688,
-        "wilsonHi": 0.9249
+        "winRate": 0.8667,
+        "avgImplied": 0.8572,
+        "volume": 271682.27,
+        "realizedPnl": -58298.01,
+        "grossPnl": 114252.55,
+        "winRateByVolume": 0.6824,
+        "wilsonLo": 0.7717,
+        "wilsonHi": 0.9259
       },
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 161,
-        "wins": 156,
+        "n": 165,
+        "wins": 160,
         "pushes": 0,
-        "winRate": 0.9689,
+        "winRate": 0.9697,
         "avgImplied": 0.9272,
-        "volume": 794584.69,
-        "realizedPnl": 23444.83,
-        "grossPnl": 88468.17,
-        "winRateByVolume": 0.9591,
-        "wilsonLo": 0.9294,
-        "wilsonHi": 0.9867
+        "volume": 826319.83,
+        "realizedPnl": 26025.76,
+        "grossPnl": 91049.1,
+        "winRateByVolume": 0.9607,
+        "wilsonLo": 0.931,
+        "wilsonHi": 0.987
       },
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 281,
-        "wins": 279,
+        "n": 282,
+        "wins": 280,
         "pushes": 0,
         "winRate": 0.9929,
-        "avgImplied": 0.9713,
-        "volume": 2115689.83,
-        "realizedPnl": 58052.27,
-        "grossPnl": 60427.43,
+        "avgImplied": 0.9712,
+        "volume": 2116458.1,
+        "realizedPnl": 58079.86,
+        "grossPnl": 60455.02,
         "winRateByVolume": 0.9994,
-        "wilsonLo": 0.9744,
-        "wilsonHi": 0.998
+        "wilsonLo": 0.9745,
+        "wilsonHi": 0.9981
       },
       {
         "lo": 0.99,
@@ -374,17 +374,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 70,
-        "wins": 38,
+        "n": 71,
+        "wins": 39,
         "pushes": 3,
-        "winRate": 0.5672,
-        "avgImplied": 0.8508,
-        "volume": 244127.11,
-        "realizedPnl": -17370.85,
-        "grossPnl": 36674.47,
-        "winRateByVolume": 0.5452,
-        "wilsonLo": 0.4481,
-        "wilsonHi": 0.679
+        "winRate": 0.5735,
+        "avgImplied": 0.8514,
+        "volume": 246335.29,
+        "realizedPnl": -17285.33,
+        "grossPnl": 36759.99,
+        "winRateByVolume": 0.5493,
+        "wilsonLo": 0.4552,
+        "wilsonHi": 0.684
       },
       {
         "lo": 0.9,
@@ -650,34 +650,34 @@
     },
     "politics": {
       "combined": {
-        "n": 311,
-        "volume": 1677015.95,
-        "realizedPnl": 46551.57,
-        "roi": 0.0278,
-        "hitRate": 0.8268,
-        "avgImplied": 0.8307,
-        "edge": -0.0039,
-        "top1Share": 0.0513
+        "n": 318,
+        "volume": 1714675.27,
+        "realizedPnl": 49621.52,
+        "roi": 0.0289,
+        "hitRate": 0.8307,
+        "avgImplied": 0.8327,
+        "edge": -0.002,
+        "top1Share": 0.05
       },
       "settlement": {
-        "n": 219,
-        "volume": 1321468.29,
-        "realizedPnl": 53389.37,
-        "roi": 0.0404,
-        "hitRate": 0.9041,
-        "avgImplied": 0.8769,
-        "edge": 0.0272,
-        "top1Share": 0.072
+        "n": 225,
+        "volume": 1356919.43,
+        "realizedPnl": 56373.8,
+        "roi": 0.0415,
+        "hitRate": 0.9067,
+        "avgImplied": 0.8782,
+        "edge": 0.0285,
+        "top1Share": 0.0694
       },
       "exit": {
-        "n": 92,
-        "volume": 355547.66,
-        "realizedPnl": -6837.8,
-        "roi": -0.0192,
-        "hitRate": 0.6322,
-        "avgImplied": 0.7208,
-        "edge": -0.0886,
-        "top1Share": 0.1344
+        "n": 93,
+        "volume": 357755.84,
+        "realizedPnl": -6752.28,
+        "roi": -0.0189,
+        "hitRate": 0.6364,
+        "avgImplied": 0.7227,
+        "edge": -0.0863,
+        "top1Share": 0.134
       }
     },
     "sports": {
@@ -746,41 +746,41 @@
     }
   },
   "openBook": {
-    "n": 42,
-    "cost": 72891.41,
-    "mark": 75856.97,
-    "unrealized": 2965.55
+    "n": 36,
+    "cost": 242803.3,
+    "mark": 244350.91,
+    "unrealized": 1547.6
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1261.41,
-      "unrealized": 54.91
+      "mark": 1267.57,
+      "unrealized": 61.07
     },
     "geopolitics": {
       "n": 6,
       "cost": 8134.58,
-      "mark": 7316.13,
-      "unrealized": -818.45
+      "mark": 7566.09,
+      "unrealized": -568.49
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 303.3,
-      "unrealized": -35.1
+      "mark": 327.96,
+      "unrealized": -10.44
     },
     "politics": {
-      "n": 28,
-      "cost": 58933.69,
-      "mark": 62181.42,
-      "unrealized": 3247.72
+      "n": 22,
+      "cost": 228845.58,
+      "mark": 230411.91,
+      "unrealized": 1566.33
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3449.0,
-      "unrealized": 475.93
+      "mark": 3431.68,
+      "unrealized": 458.61
     },
     "tech": {
       "n": 1,
@@ -790,18 +790,16 @@
     }
   },
   "openCategories": {
+    "0x0c9ada12c527451fbdd43c0397a8a006b8aaf2a01567ae069d37220b51937595": "politics",
     "0x0f49db97f71c68b1e42a6d16e3de93d85dbf7d4148e3f018eb79e88554be9f75": "politics",
     "0x12ab600156edbfd74f7c342f24a7171af2e09d10ba04669f5a98a75b84e1145f": "politics",
     "0x19d2ff72e389d190c183e6b114817301d29eba651d67d75a38ee201a05188fd9": "politics",
     "0x1c4c6a698f0591ddf0c96e1beb56f8c75112ef849331bf3b0388f14830a7421d": "geopolitics",
-    "0x1df56873c9504fb7d14aa1a97be841679ae61f979b3630aa4865ffea0326fdc6": "politics",
     "0x22a05e0e5db73ae5a554eccc37a35e81e258edf487dec05e60bd0aba7e8cadac": "politics",
     "0x29663a900121eee8d9a969a3edb7f8649d5e58f16af2684f01dd877f5ab5fc2d": "sports",
-    "0x2ceb07772252792c439a2cef76f9661da5c96475d939e2f7c5e99e0708186d4c": "politics",
     "0x3452bb28983bc33b37ddfd98da2138dfd89782faec65a2607ed5aa86a17c9199": "politics",
     "0x39c80b744a529e3f32bd185307b07cc722bf7dfae566c5bbc99f327fa8ae9825": "politics",
     "0x3e81fd787c83e13826013af0570a318e6b9d0efba02dea1794060877c6ddd644": "politics",
-    "0x3fb5cd695a1a69d9bdcdc56473fe939b1f5f746fd93d95678c2aacfd02ecc8f1": "politics",
     "0x401bb0b250f75ae550a95306506fd27b4d784ccd8850c2465a9bfaf3607748ee": "politics",
     "0x48d47eede033257e77d676631e6f805d5e1848c0567589030a3a76a862fa1e47": "sports",
     "0x4915ebe25b6b09c4a5ac8776e9f0c54bbeb4ea33ccadf89b7fd10c9d18d17511": "politics",
@@ -815,15 +813,13 @@
     "0x69f5fada6e9083e7e2e4065d16454019a018aa7db8f0461c5695b842d3d29ab5": "commodities",
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
-    "0x7d8ec7081ebac5b628ea2875a02172359e89954e6390a94a306ea8721a4e9940": "politics",
+    "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x7f45dfc2b4d3a1e844901e1ba60327b95d3003e4c99c20861737d46ca051c435": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0xb40b0cd531184a1e436d23ca898e1590418187b116f387158753d1adb9853e47": "other",
     "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
-    "0xd5e44002d2fe404c9bdf2404b5e3636d2898c6dcff556b7092d0b9f4df323d20": "politics",
-    "0xe83e55ee7c9cfda40e828fd11aef8b0261773a49553827376d3aac63b28d88dd": "politics",
     "0xf8864cc923193924f175991ede770984839c7fd8e57386e6cbd9aa32eb62f6d6": "politics"
   },
   "excluded": {
@@ -838,9 +834,9 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 614,
-      "offBy": 3,
-      "netGap": 6946.03
+      "events": 618,
+      "offBy": 2,
+      "netGap": -453.21
     },
     "minLotUsd": 1.0
   },
@@ -2007,15 +2003,20 @@
     ["politics","2026-11-04","e",25374.38,-3041.46,0,0.8857,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"],
     ["politics","2026-11-04","s",40182.43,5184.1,1,0.8857,"Will the Democrats win the Michigan Senate race in 2026?","Yes","Michigan Senate Election Winner"],
     ["politics","2026-11-04","s",3606.95,162.07,1,0.957,"Will the Democrats win the Maine Senate race in 2026?","Yes","Maine Senate Election Winner"],
+    ["politics","2026-11-04","s",768.27,27.59,1,0.9653,"Will the Democrats win Denton County in the Texas Senate race in 2026?","Yes","Texas Senate Election: Denton County Winner"],
     ["politics","2026-11-04","s",34073.11,2757.17,1,0.9251,"Will the Republicans win the Ohio Senate race in 2026?","No","Ohio Senate Election Winner"],
     ["politics","2026-11-04","s",18189.66,577.57,1,0.9692,"Will the Democrats win the Ohio Senate race in 2026?","Yes","Ohio Senate Election Winner"],
+    ["politics","2026-11-04","s",12804.73,1170.57,1,0.9162,"Will the Democratic Party win the CA-22 House seat?","Yes","CA-22 House Election Winner"],
     ["politics","2026-11-04","s",29146.6,283.71,1,0.9893,"Will the Democrats win the South Carolina Senate race in 2026?","Yes","South Carolina Senate Election Winner"],
     ["politics","2026-11-04","s",2900.39,49.17,1,0.9833,"Will the Democrats win the Kansas Senate race in 2026?","Yes","Kansas Senate Election Winner"],
+    ["politics","2026-11-04","s",9611.03,717.31,1,0.9305,"Will the Republican Party win the CA-22 House seat?","No","CA-22 House Election Winner"],
     ["politics","2026-11-04","s",27389.62,1370.68,1,0.9514,"Will the Republicans win the New York governor race in 2026?","No","New York Governor Election Winner"],
     ["politics","2026-11-04","s",1083.58,35.82,1,0.968,"Will the Republicans win the Texas governor race in 2026?","No","Texas Governor Election Winner"],
     ["politics","2026-11-04","e",63852.98,4294.21,1,0.9218,"Will the Republican Party control the House after the 2026 Midterm elections?","No","Which party will win the House in 2026?"],
     ["politics","2026-11-04","s",35.5,14.5,1,0.71,"Will the Democratic Party control the Senate after the 2026 Midterm elections?","Yes","Which party will win the Senate in 2026?"],
     ["politics","2026-11-04","e",578.78,45.58,1,0.9233,"Will the Republican Party win the CA-13 House seat?","No","CA-13 House Election Winner"],
+    ["politics","2026-11-04","s",812.77,67.53,1,0.9233,"Will the Republican Party win the CA-13 House seat?","No","CA-13 House Election Winner"],
+    ["politics","2026-11-04","s",8506.61,625.52,1,0.9315,"Will the Democratic Party win the CA-13 House seat?","Yes","CA-13 House Election Winner"],
     ["politics","2026-11-04","s",21172.06,2119.28,1,0.909,"Will the Republicans win the Arizona governor race in 2026?","No","Arizona Governor Election Winner"],
     ["politics","2026-11-04","e",14645.15,-2400.07,0,0.8716,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
     ["politics","2026-11-04","s",28541.69,4204.02,1,0.8716,"Will the Republicans win the Michigan Senate race in 2026?","No","Michigan Senate Election Winner"],
@@ -2033,6 +2034,7 @@
     ["politics","2026-11-04","s",3304.87,167.0,1,0.9519,"Will the Democratic Party win the CA-42 House seat?","Yes","CA-42 House Election Winner"],
     ["politics","2026-11-04","s",15162.2,2054.48,1,0.8807,"Will the Republicans win the Texas Senate race in 2026?","No","Texas Senate Election Winner"],
     ["politics","2026-11-04","s",529.27,44.22,1,0.9229,"Will the Democrats win the Georgia Senate race in 2026?","Yes","Georgia Senate Election Winner"],
+    ["politics","2026-11-04","e",2208.18,85.52,1,0.8972,"Will the Republican Party win the LA-06 House seat?","Yes","LA-06 House Election Winner"],
     ["politics","2026-11-04","e",535.51,22.65,1,0.9518,"Will the Democratic Party win the CA-39 House seat?","Yes","CA-39 House Election Winner"],
     ["politics","2026-11-04","s",48703.56,1183.31,1,0.9753,"Will the Democrats win the Texas Senate race in 2026?","Yes","Texas Senate Election Winner"],
     ["politics","2026-11-04","e",974.11,41.24,1,0.9519,"Will the Republican Party win the NM-01 House seat?","No","NM-01 House Election Winner"],
@@ -2088,6 +2090,7 @@
     ["politics","2026-11-04","s",332.65,31.59,1,0.9133,"Will the Republican Party win the TX-26 House seat?","Yes","TX-26 House Election Winner"],
     ["politics","2026-11-04","s",69.6,-69.6,0,0.87,"Will the Republicans win the South Carolina Senate race in 2026?","Yes","South Carolina Senate Election Winner"],
     ["politics","2026-11-04","s",1316.54,349.97,1,0.79,"Will the Democrats win the Wisconsin governor race in 2026?","Yes","Wisconsin Governor Election Winner"],
+    ["politics","2026-11-04","s",2947.73,375.91,1,0.8869,"Will the Democratic Party win the WA-03 House seat?","Yes","WA-03 House Election Winner"],
     ["politics","2026-11-04","s",218.58,46.4,1,0.8249,"Will the Republican Party win the CO-08 House seat?","No","CO-08 House Election Winner"],
     ["politics","2026-11-04","s",1918.0,-1918.0,0,0.1316,"Will the Republican Party hold exactly 48 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
     ["politics","2026-11-04","s",1948.24,-1948.24,0,0.1337,"Will the Republican Party hold exactly 49 Senate seats after the 2026 midterm elections?","Yes","Republican Senate seats after the 2026 midterm elections?"],
