@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T06:00:26Z",
+  "generatedAt": "2026-11-05T02:57:24Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -1508,6 +1508,11 @@
     {
       "d": "2026-11-04",
       "nav": 392657.0,
+      "src": "recorded"
+    },
+    {
+      "d": "2026-11-05",
+      "nav": 286998.0,
       "src": "recorded"
     }
   ]

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04",
+  "generatedAt": "2026-11-05",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -11,22 +11,22 @@
     "https://data-api.polymarket.com/v2/positions"
   ],
   "totals": {
-    "trading": 108000,
-    "fees": 3359,
+    "trading": 112187,
+    "fees": 3393,
     "uma": 0,
     "sponsored": 0,
-    "lp": 11750,
-    "maker": 4144,
-    "yield": 176,
+    "lp": 11756,
+    "maker": 4227,
+    "yield": 178,
     "taker": 82
   },
   "totalsBasis": "trading and fees from v2/user-pnl; lp/maker/yield/taker summed from their own activity events; sponsored is folded into lp from 2026-10-19 - no first-party split exists, and the total of the two is unchanged",
   "balances": {
     "positionsSource": "polymarket",
-    "positions": 384285,
-    "cash": 8372,
-    "nav": 392657,
-    "cashBasis": "ANCHORED to a stated balance of 15,816.00 on 2026-11-04, plus 607 activity events since",
-    "cashCursor": 1793771952
+    "positions": 244411,
+    "cash": 42587,
+    "nav": 286998,
+    "cashBasis": "ANCHORED to a stated balance of -100,628.00 on 2026-11-05, plus 168 activity events since",
+    "cashCursor": 1793844058
   }
 }
