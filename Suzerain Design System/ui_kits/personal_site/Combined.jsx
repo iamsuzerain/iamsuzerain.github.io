@@ -250,7 +250,8 @@ const CMB_FLOW_PAIR_DAYS = 10;
 const CMB_FLOW_PAIR_TOL = 0.25;
 
 // → { flows: IBKR flows with no polymarket leg, paired: Map of ledger entries
-// that have an IBKR one, to that leg's date }.
+// that have an IBKR one, to that leg's date, legs: the same keys, to the whole
+// IBKR row }.
 function cmbPairFlows(flows, transfers) {
   const ledger = (transfers || [])
     .filter(t => t && t.date && t.amount)
@@ -266,14 +267,72 @@ function cmbPairFlows(flows, transfers) {
         ? t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
         : d >= t.day - 1 && d - t.day <= CMB_FLOW_PAIR_DAYS)
       && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * Math.abs(t.amount));
-    if (hit) { hit.used = true; hit.leg = f.d; }
+    if (hit) { hit.used = true; hit.leg = f.d; hit.row = f; }
     return !!hit;
   };
   const unpaired = (flows || [])
     .filter(f => f && f.d)
     .slice().sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
     .filter(f => !paired(f));
-  return { flows: unpaired, paired: new Map(ledger.filter(l => l.used).map(l => [l.t, l.leg])) };
+  const used = ledger.filter(l => l.used);
+  return {
+    flows: unpaired,
+    paired: new Map(used.map(l => [l.t, l.leg])),
+    legs: new Map(used.map(l => [l.t, l.row])),
+  };
+}
+
+// Money between the two accounts: off one level feed and not yet on the other.
+// Each feed is right about its own account, so the sum of the two drops by the
+// whole wire for as long as it is in flight, and every percent on this page
+// divides by that sum. The 2026-11-04/05 withdrawals put $200k in that gap at
+// once, a fifth of the book, which scaled 11-05's move by 1/0.9 and would have
+// scaled every day after it by 1/0.8 until IBKR booked the deposit.
+//
+// The gap opens and closes on each feed's own dating, the same days the capital
+// chart steps on:
+//   polymarket → ibkr: leaves the polymarket level the day before its ledger
+//     date (the restated scrape, see pmCapitalAt), lands at the IBKR close the
+//     flow is dated.
+//   ibkr → polymarket: leaves at the IBKR close, lands on the ledger date
+//     (pmCapitalAt backs the restated scrape out to it).
+// Valued at what left, not what arrived; the two differ by fees and rounding.
+//
+// A withdrawal with no leg yet on the other side is presumed in flight until
+// that side's feed has run CMB_FLOW_PAIR_DAYS past it, the window it could
+// still pair in, and reads as money that left the book after that. The day it
+// lapses, the base drops on every day it was carried, which is the right
+// correction for money that went to a bank. Held to the pairing floor, since a
+// leg under it never reaches the flows file and could never close the gap.
+// Deposits with no leg came from outside and opened no gap.
+//
+// → [{ from, to, amount }] in epoch days, inclusive; `to` is Infinity while
+// pending.
+function cmbTransitSpans(flows, transfers, lastIbkrDay, lastPmDay) {
+  const { flows: unpaired, legs } = cmbPairFlows(flows, transfers);
+  const spans = [];
+  for (const t of (transfers || [])) {
+    if (!t || !t.date || !t.amount) continue;
+    const day = cmbEpochDay(t.date);
+    const leg = legs.get(t);
+    if (leg) {
+      const legDay = cmbEpochDay(leg.d);
+      if (t.amount < 0) spans.push({ from: day - 1, to: legDay - 1, amount: -t.amount });
+      else spans.push({ from: legDay, to: day - 1, amount: -leg.amount });
+    } else if (t.amount <= -CMB_FLOW_MARK_MIN
+        && lastIbkrDay != null && lastIbkrDay < day + CMB_FLOW_PAIR_DAYS) {
+      spans.push({ from: day - 1, to: Infinity, amount: -t.amount });
+    }
+  }
+  for (const f of unpaired) {
+    const day = cmbEpochDay(f.d);
+    // The ledger is raw-dated, a day ahead of the restated level feed.
+    if (f.amount <= -CMB_FLOW_MARK_MIN
+        && lastPmDay != null && lastPmDay + 1 < day + CMB_FLOW_PAIR_DAYS) {
+      spans.push({ from: day, to: Infinity, amount: -f.amount });
+    }
+  }
+  return spans.filter(s => s.to >= s.from && s.amount > 0);
 }
 
 function cmbIbkrFlowMarks(series, flows) {
@@ -470,7 +529,7 @@ function cmbBenchDollars(benchSeries, notional, start, end) {
   return closes.map((c, i) => notional * ((i < firstIdx ? base : c) / base - 1));
 }
 
-function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory) {
+function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory, ibkrFlows) {
   const nowDay = Math.floor(Date.now() / CMB_DAY_MS);
 
   const ibkrPts = cmbIbkrPoints(portfolio, pnlHistory);
@@ -738,7 +797,12 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
       : pmEarnedAt(lastPmNavDay);
     return level + (pmEarnedAt(day) - anchor);
   };
-  const baseAt = (day) => ibkrLevelAt(day) + pmLevelAt(day);
+  // Lifetime, like the pairing it is built from, so a window opening mid-wire
+  // still has the money in its notional.
+  const transit = cmbTransitSpans(ibkrFlows, pmTransfers, lastNavDay, lastPmNavDay);
+  const transitAt = (day) => transit
+    .reduce((sum, s) => (day >= s.from && day <= s.to ? sum + s.amount : sum), 0);
+  const baseAt = (day) => ibkrLevelAt(day) + pmLevelAt(day) + transitAt(day);
   const notional = baseAt(start);
 
   // Whether the two level feeds reach far enough to split the base at all. The
@@ -757,13 +821,15 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
   for (let k = 0; k < ibkr.length; k++) {
     const day = start + k;
     const ramp = hasPm ? rewardsAt(day) - rewardsBase : 0;
-    // The two halves of the capital base, kept apart. `base` was their sum from
-    // the day it was written and stays exactly that — hasLevels' two calls — but
-    // only the sum was carried, so the split existed for the latest day alone
-    // and nowhere else. Carrying both is what lets the split be drawn as a
-    // curve instead of asserted as a ratio.
+    // The two halves of the capital base, kept apart. `base` is their sum plus
+    // whatever is between them that day (cmbTransitSpans), but only the sum was
+    // carried at first, so the split existed for the latest day alone and
+    // nowhere else. Carrying both is what lets the split be drawn as a curve
+    // instead of asserted as a ratio. The chart draws the halves only, so a
+    // wire in flight shows as the gap it is.
     const ibkrL = ibkrLevelAt(day);
     const pmL = pmLevelAt(day);
+    const inFlight = transitAt(day);
     const pt = {
       d: cmbFromEpochDay(day),
       v: +((ibkr[k] - ibkrBase) + (pm[k] - pmBase) + ramp).toFixed(2),
@@ -772,9 +838,10 @@ function cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pm
       // Real capital base that day, so a sub-window can read its own base off
       // its first point instead of reconstructing one from returns. Measured
       // wherever the level feeds reach, which is every day but the last few
-      // (see baseAt). Rounded from the unrounded sum, not from the two rounded
-      // halves, so it stays the figure every window's notional has always been.
-      base: +(ibkrL + pmL).toFixed(2),
+      // (see baseAt). Rounded from the unrounded sum, not from the rounded
+      // parts, so it stays the figure every window's notional is.
+      base: +(ibkrL + pmL + inFlight).toFixed(2),
+      transit: inFlight,
       ibkrLevel: +ibkrL.toFixed(2),
       // null, not zero, before polymarket's nav history begins. pmCapitalAt
       // falls back to the transfer ledger there, and the ledger opens on
@@ -891,8 +958,8 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
 
   const hp = hv.i != null ? plot[hv.i] : null;
 
-  // Book NAV at the hovered column — ibkr's real NAV plus polymarket's, carried
-  // per point as `base` (see baseAt). It reads off `series` rather than `plot`
+  // Book NAV at the hovered column — ibkr's real NAV plus polymarket's, plus any
+  // wire between them, carried per point as `base` (see baseAt). It reads off `series` rather than `plot`
   // because the percent copy is a return series with no level in it; the two are
   // index-aligned by construction (cmbPctSeries maps one row to one row). No
   // fallback to notional + p.v: that adds every deposit and transfer back in as
@@ -2161,11 +2228,15 @@ async function cmbLoadBook() {
   const breakdown = await breakdownP;
   const bd = await cmbBdExtra(breakdown, await bdHistP);  // { total, rows } — lifetime net + dated history
 
-  const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory);
-  built.log = log;
-  // IBKR deposits/withdrawals, for capital-chart markers only (cmbIbkrFlowMarks).
+  // IBKR deposits/withdrawals: capital-chart markers (cmbIbkrFlowMarks), and the
+  // other end of each move, for the money in flight between accounts
+  // (cmbTransitSpans).
   const flowsJson = await flowsP;
-  built.ibkrFlows = (flowsJson && flowsJson.rows) || [];
+  const ibkrFlows = (flowsJson && flowsJson.rows) || [];
+
+  const built = cmbBuild(portfolio, pmRows, bd, benchmarks, pmTransfers, pnlHistory, pmNavHistory, ibkrFlows);
+  built.log = log;
+  built.ibkrFlows = ibkrFlows;
   built.benchmarks = benchmarks;  // raw closes, for rebuilding benchmark $ per range
   built.rf = rfRows;              // EFFR rows, for the windowed Sharpe
   return built;

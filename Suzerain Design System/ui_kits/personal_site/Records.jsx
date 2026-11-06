@@ -122,7 +122,7 @@ function recDays(book) {
       rs: hasSpx ? (1 + pct[i].spx) / (1 + pct[i - 1].spx) - 1 : null,
       pnl: s[i].v,          // cumulative since the series opens
       twr: pct[i].v,
-      nav: s[i].base,       // ibkr nav + polymarket nav that day
+      nav: s[i].base,       // ibkr nav + polymarket nav + money between them that day
       high,
     });
   }
