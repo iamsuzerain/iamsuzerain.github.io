@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-06T14:26:10Z",
+  "generatedAt": "2026-11-07T13:15:04Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -746,47 +746,47 @@
     }
   },
   "openBook": {
-    "n": 30,
-    "cost": 67184.32,
-    "mark": 66857.53,
-    "unrealized": -326.79
+    "n": 31,
+    "cost": 87205.87,
+    "mark": 87006.51,
+    "unrealized": -199.36
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1240.03,
-      "unrealized": 33.53
+      "mark": 1250.9,
+      "unrealized": 44.4
     },
     "geopolitics": {
       "n": 6,
       "cost": 8134.58,
-      "mark": 7463.18,
-      "unrealized": -671.4
+      "mark": 6867.98,
+      "unrealized": -1266.6
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 258.66,
-      "unrealized": -79.74
+      "mark": 314.46,
+      "unrealized": -23.94
     },
     "politics": {
-      "n": 16,
-      "cost": 53226.6,
-      "mark": 53099.83,
-      "unrealized": -126.77
+      "n": 17,
+      "cost": 73248.15,
+      "mark": 73749.65,
+      "unrealized": 501.5
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3450.81,
-      "unrealized": 477.74
+      "mark": 3479.87,
+      "unrealized": 506.8
     },
     "tech": {
       "n": 1,
       "cost": 1305.18,
-      "mark": 1345.02,
-      "unrealized": 39.84
+      "mark": 1343.64,
+      "unrealized": 38.47
     }
   },
   "openCategories": {
@@ -809,6 +809,7 @@
     "0x5db999fad322cea2914535aae5517060c3f80ad6d8c0231cde2124a434d16846": "geopolitics",
     "0x69f5fada6e9083e7e2e4065d16454019a018aa7db8f0461c5695b842d3d29ab5": "commodities",
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
+    "0x741bb46008b72234857c5118c8365ab3c2f69dbf28b30b59de04f173b8a778de": "politics",
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
@@ -838,7 +839,7 @@
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 129340.7
+      "usd": 109340.7
     },
     "minLotUsd": 1.0
   },
