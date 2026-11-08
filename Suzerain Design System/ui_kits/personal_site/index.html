@@ -1279,14 +1279,11 @@
   .pm-breakdown-panel { margin-bottom: 16px; }
   .pm-breakdown-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1px;
     background: rgba(167,139,250,0.08);
     border-radius: var(--r-1);
     overflow: hidden;
-  }
-  @media (max-width: 760px) {
-    .pm-breakdown-grid { grid-template-columns: repeat(3, 1fr); }
   }
   .pm-breakdown-cell {
     background: rgba(10,6,18,0.55);
@@ -1304,6 +1301,18 @@
   }
   .pm-breakdown-val.pos { color: var(--pos); }
   .pm-breakdown-val.neg { color: var(--neg); }
+  /* Phones. Below the base rules so it wins on order, not specificity.
+     Five cells don't fill a three-column grid, and the gap's tint would show
+     through the empty sixth: three across, then the last two split the row.
+     A third of a phone is ~80px of text room, and a six-figure "$114,278" at
+     the desktop 22px is ~100px — it ran into the next cell — so the figure
+     steps down and the padding tightens. */
+  @media (max-width: 760px) {
+    .pm-breakdown-grid { grid-template-columns: repeat(6, 1fr); }
+    .pm-breakdown-cell { grid-column: span 2; padding: 12px 10px; }
+    .pm-breakdown-cell:nth-child(n+4) { grid-column: span 3; }
+    .pm-breakdown-val { font-size: 17px; }
+  }
   .pm-breakdown-src {
     color: var(--violet-300); text-decoration: none;
   }

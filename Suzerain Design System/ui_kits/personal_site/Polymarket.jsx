@@ -886,18 +886,21 @@ function PmStat({ label, value, change, kicker, tone }) {
 
 // ---------- earnings breakdown row ----------
 function PmBreakdown({ bd, tradingPnl }) {
-  // maker + taker rebates share a cell rather than taking one each: the grid is
-  // six columns wide (three on mobile), and taker is a two-figure stream next to
-  // a four-figure one — not worth a seventh column and a reflowed layout.
+  // maker + taker rebates share a cell rather than taking one each: taker is a
+  // two-figure stream next to a four-figure one, not worth a column of its own.
   const rebates = bd?.maker != null || bd?.taker != null
     ? (bd.maker || 0) + (bd.taker || 0)
     : null;
+  // No sponsored cell. Polymarket's REWARD stream pays sponsored rewards inside
+  // the same events as lp, with nothing to tell them apart, so since 2026-10-19
+  // the fetch reports all of it as lp and sponsored as 0 (see
+  // fetch-polymarket-breakdown.py). A "$0" tile read as "earned nothing from
+  // sponsors" when the money was sitting in the lp cell beside it.
   const rows = [
     { key: 'trading',   label: 'trading',   val: tradingPnl != null ? Math.round(tradingPnl) : null },
     { key: 'lp',        label: 'lp',        val: bd?.lp        != null ? bd.lp        : null },
     { key: 'rebates',   label: 'rebates',   val: rebates },
     { key: 'yield',     label: 'yield',     val: bd?.yield     != null ? bd.yield     : null },
-    { key: 'sponsored', label: 'sponsored', val: bd?.sponsored != null ? bd.sponsored : null },
     { key: 'fees',      label: 'fees',      val: bd?.fees      != null ? -bd.fees     : null },
   ];
   const source = bd?.source || null;
