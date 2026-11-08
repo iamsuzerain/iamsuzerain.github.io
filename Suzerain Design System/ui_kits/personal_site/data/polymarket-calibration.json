@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T13:15:04Z",
+  "generatedAt": "2026-11-08T13:36:12Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,16 +45,16 @@
   },
   "headline": {
     "settlement": {
-      "n": 897,
-      "wins": 800,
+      "n": 898,
+      "wins": 801,
       "pushes": 0,
-      "hitRate": 0.8919,
-      "volume": 5080622.75,
-      "realizedPnl": 126992.6,
-      "roi": 0.025,
-      "brier": 0.0423,
+      "hitRate": 0.892,
+      "volume": 5083970.67,
+      "realizedPnl": 127394.02,
+      "roi": 0.0251,
+      "brier": 0.0422,
       "avgImplied": 0.8697,
-      "edge": 0.0222,
+      "edge": 0.0223,
       "calibrationError": 0.0312
     },
     "exit": {
@@ -192,17 +192,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 75,
-        "wins": 65,
+        "n": 76,
+        "wins": 66,
         "pushes": 0,
-        "winRate": 0.8667,
-        "avgImplied": 0.8572,
-        "volume": 271682.27,
-        "realizedPnl": -58298.01,
-        "grossPnl": 114252.55,
-        "winRateByVolume": 0.6824,
-        "wilsonLo": 0.7717,
-        "wilsonHi": 0.9259
+        "winRate": 0.8684,
+        "avgImplied": 0.8577,
+        "volume": 275030.19,
+        "realizedPnl": -57896.59,
+        "grossPnl": 114653.97,
+        "winRateByVolume": 0.6863,
+        "wilsonLo": 0.7745,
+        "wilsonHi": 0.9269
       },
       {
         "lo": 0.9,
@@ -682,24 +682,24 @@
     },
     "sports": {
       "combined": {
-        "n": 371,
-        "volume": 1101286.56,
-        "realizedPnl": -3221.17,
-        "roi": -0.0029,
-        "hitRate": 0.8189,
-        "avgImplied": 0.8257,
-        "edge": -0.0068,
-        "top1Share": 0.1102
+        "n": 372,
+        "volume": 1104634.48,
+        "realizedPnl": -2819.75,
+        "roi": -0.0026,
+        "hitRate": 0.8194,
+        "avgImplied": 0.8259,
+        "edge": -0.0065,
+        "top1Share": 0.1096
       },
       "settlement": {
-        "n": 309,
-        "volume": 901958.53,
-        "realizedPnl": 10842.46,
-        "roi": 0.012,
-        "hitRate": 0.8738,
-        "avgImplied": 0.848,
-        "edge": 0.0258,
-        "top1Share": 0.0621
+        "n": 310,
+        "volume": 905306.45,
+        "realizedPnl": 11243.88,
+        "roi": 0.0124,
+        "hitRate": 0.8742,
+        "avgImplied": 0.8481,
+        "edge": 0.0261,
+        "top1Share": 0.0614
       },
       "exit": {
         "n": 62,
@@ -747,40 +747,40 @@
   },
   "openBook": {
     "n": 31,
-    "cost": 87205.87,
-    "mark": 87006.51,
-    "unrealized": -199.36
+    "cost": 94941.82,
+    "mark": 95151.07,
+    "unrealized": 209.25
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1250.9,
-      "unrealized": 44.4
+      "mark": 1251.14,
+      "unrealized": 44.64
     },
     "geopolitics": {
       "n": 6,
       "cost": 8134.58,
-      "mark": 6867.98,
-      "unrealized": -1266.6
+      "mark": 6983.09,
+      "unrealized": -1151.49
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 314.46,
-      "unrealized": -23.94
+      "mark": 311.04,
+      "unrealized": -27.36
     },
     "politics": {
       "n": 17,
-      "cost": 73248.15,
-      "mark": 73749.65,
-      "unrealized": 501.5
+      "cost": 80984.1,
+      "mark": 81788.48,
+      "unrealized": 804.38
     },
     "sports": {
       "n": 4,
       "cost": 2973.07,
-      "mark": 3479.87,
-      "unrealized": 506.8
+      "mark": 3473.67,
+      "unrealized": 500.6
     },
     "tech": {
       "n": 1,
@@ -833,13 +833,13 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 622,
+      "events": 623,
       "offBy": 2,
       "netGap": -453.21
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 109340.7
+      "usd": 84075.48
     },
     "minLotUsd": 1.0
   },
@@ -2105,6 +2105,7 @@
     ["politics","2026-11-06","s",34565.31,513.92,1,0.9853,"Will Karen Bass win the 2026 Los Angeles mayoral election?","No","Los Angeles Mayoral Election"],
     ["politics","2026-11-06","s",27458.72,1020.12,1,0.9642,"Will Nithya Raman win the 2026 Los Angeles mayoral election?","Yes","Los Angeles Mayoral Election"],
     ["sports","2026-11-06","s",41032.81,41.07,1,0.999,"Jaguars vs. Ravens","Jaguars",null],
-    ["sports","2026-11-06","s",118.1,0.15,1,0.9987,"Spread: Jaguars (-3.5)","Jaguars","Jaguars vs. Ravens"]
+    ["sports","2026-11-06","s",118.1,0.15,1,0.9987,"Spread: Jaguars (-3.5)","Jaguars","Jaguars vs. Ravens"],
+    ["sports","2026-11-08","s",3347.92,401.42,1,0.8929,"Miami (FL) vs. Notre Dame","Notre Dame",null]
   ]
 }
