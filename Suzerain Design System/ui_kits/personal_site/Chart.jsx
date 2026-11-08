@@ -446,6 +446,73 @@ function SzAxisZero({ frame, y, children }) {
   );
 }
 
+// ---------- value grid ----------
+// A few round levels across the plot, so a curve can be read against a scale
+// without hovering it. Deliberately few: `target` is the number of intervals
+// asked for, and the 1-2-5 snap lands on two to four lines, which still reads
+// on a phone, where these 220-unit boxes render about 80px tall. Zero is left
+// out of both the lines and the labels — it already has its own stronger rule
+// (SzRule) and its own marker (SzAxisZero), and the grid should sit a step
+// below both.
+function szNiceTicks(y0, y1, target = 3) {
+  const span = y1 - y0;
+  if (!(span > 0)) return { step: 0, values: [] };
+  const raw = span / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const values = [];
+  // Integer multiples rather than repeated addition, so float drift can't put
+  // a line at 0.30000000000000004 or let one slip past the top of the domain.
+  for (let k = Math.ceil(y0 / step); k <= Math.floor(y1 / step); k++) {
+    const v = +(k * step).toPrecision(12);
+    if (v !== 0) values.push(v);
+  }
+  return { step, values };
+}
+
+// Compact axis figure: "$20k", "-$1.5k", "$1m", "12%". Decimals come from the
+// step, not the value, so a $500 step doesn't round two levels to the same
+// "$1k"; trailing zeros are then dropped, so "$1.0m" beside "$500k" reads "$1m".
+function szAxisFmt(v, unit, step) {
+  const dec = (s) => (s > 0 && s < 1 ? Math.min(2, Math.ceil(-Math.log10(s) - 1e-9)) : 0);
+  const num = (x, s) => String(+x.toFixed(dec(s)));
+  if (unit === 'pct') return `${num(v * 100, step * 100)}%`;
+  const a = Math.abs(v);
+  const [d, suf] = a >= 1e6 ? [1e6, 'm'] : a >= 1e3 ? [1e3, 'k'] : [1, ''];
+  return `${v < 0 ? '-' : ''}$${num(a / d, step / d)}${suf}`;
+}
+
+// The lines, inside the svg. Fainter than the zero rule (0.10) on purpose: the
+// grid is a scale to read against, not a reference the series is measured from.
+function SzGrid({ frame, y, ticks }) {
+  return (
+    <g>
+      {ticks.values.map(v => (
+        <line key={v} x1={frame.PAD_L} x2={frame.W - frame.PAD_R} y1={y(v)} y2={y(v)}
+          stroke="rgba(229,225,241,0.07)"/>
+      ))}
+    </g>
+  );
+}
+
+// The labels, as html beside the svg like the other axis overlays. Left gutter,
+// sitting on their line the way the $0 marker does: every curve on these charts
+// starts at its window's origin, so the left edge is the one stretch a label is
+// least likely to land on a line — the right edge is where the newest point is,
+// and a figure there reads as a callout on it.
+function SzAxisY({ frame, y, ticks, unit = 'usd' }) {
+  return (
+    <div className="pf-axis-y">
+      {ticks.values.map(v => (
+        <span key={v} style={{ left: `${(frame.PAD_L / frame.W) * 100}%`, top: `${(y(v) / frame.H) * 100}%` }}>
+          {szAxisFmt(v, unit, ticks.step)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // A reading that tracks the crosshair, pinned to the left of a chart's key.
 //
 // This exists so a level that would otherwise want its own panel — the NAV
@@ -522,6 +589,10 @@ window.SzCrosshairLine = SzCrosshairLine;
 window.SzTooltip = SzTooltip;
 window.SzAxisX = SzAxisX;
 window.SzAxisZero = SzAxisZero;
+window.szNiceTicks = szNiceTicks;
+window.szAxisFmt = szAxisFmt;
+window.SzGrid = SzGrid;
+window.SzAxisY = SzAxisY;
 window.SzKeyReadout = SzKeyReadout;
 window.SzStripHead = SzStripHead;
 window.SzToggle = SzToggle;

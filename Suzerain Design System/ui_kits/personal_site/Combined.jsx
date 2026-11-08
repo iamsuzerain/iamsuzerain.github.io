@@ -15,6 +15,7 @@ const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
   useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair,
   SzTooltip, SzAxisX, SzAxisZero, SzKeyReadout, SzStripHead, SzToggle,
+  szNiceTicks, SzGrid, SzAxisY,
 } = window;
 
 const CMB_DAY_MS = 86400000;
@@ -950,6 +951,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
   const totalPath = linePath('v');
   const areaPath = szAreaPath(totalPath, x(0), x(plot.length - 1), y(0));
   const zeroY = y(0);
+  const grid = szNiceTicks(y0, y1);
 
   const ticks = szTicks(plot, 6);
   const spanDays = plot.length > 1 ? cmbEpochDay(plot[plot.length - 1].d) - cmbEpochDay(plot[0].d) : 0;
@@ -1028,6 +1030,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
           : ''}>
         <SzChartDefs ramp="nav" id="cmb-nav"/>
 
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
 
         {/* component lines — faint, recessed beneath the aggregate */}
@@ -1067,6 +1070,7 @@ function CmbChart({ series, pctSeries, log, bench, benchNotional, ddNotional, un
       </SzChartSvg>
 
       <SzAxisZero frame={F} y={zeroY}>{pct ? '0%' : '$0'}</SzAxisZero>
+      <SzAxisY frame={F} y={y} ticks={grid} unit={pct ? 'pct' : 'usd'}/>
       <SzAxisX frame={F} ticks={ticks} x={x} label={(t) => cmbAxisLabel(t.d, axisMode)}/>
 
       {hp && (
@@ -1707,7 +1711,9 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   const ibkrVals = pts.map(p => p.ibkrLevel);
   const totals = pts.map(p => p.ibkrLevel + (p.pmLevel != null ? p.pmLevel : 0));
   const hi = Math.max(...totals);
-  const { x, y } = szScales(F, pts.length, 0, (hi * 1.08) || 1);
+  const yTop = (hi * 1.08) || 1;
+  const { x, y } = szScales(F, pts.length, 0, yTop);
+  const grid = szNiceTicks(0, yTop);
 
   // Straight segments, not the site's monotone spline. A transfer is a step —
   // $100k left one account and arrived in the other on one day — and a spline
@@ -1776,6 +1782,7 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
             the bar drops its wash: this is a composition, so the reading comes
             from area, and a vertical ramp would make the taller band look like
             it was also worth more per pixel at the top. */}
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <path d={ibkrArea} fill={CMB_C_IBKR} opacity="0.26"/>
         {hasPmBand && <path d={pmArea} fill={CMB_C_PM} opacity="0.26"/>}
 
@@ -1812,6 +1819,7 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
       {/* The floor is a real zero, so it gets the marker every other baseline on
           the site gets rather than being left to look like a cropped axis. */}
       <SzAxisZero frame={F} y={y(0)}>$0</SzAxisZero>
+      <SzAxisY frame={F} y={y} ticks={grid}/>
       <SzAxisX frame={F} ticks={ticks} x={x} label={(t) => cmbAxisLabel(t.d, axisMode)}/>
 
       {hp && (

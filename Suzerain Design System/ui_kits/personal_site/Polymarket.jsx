@@ -14,7 +14,7 @@ const {
 const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
   useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzCrosshairLine,
-  SzTooltip, SzAxisX, SzAxisZero, SzToggle,
+  SzTooltip, SzAxisX, SzAxisZero, SzToggle, szNiceTicks, SzGrid, SzAxisY,
 } = window;
 
 const PM_WALLETS = (window.SZ_ID.wallets && window.SZ_ID.wallets.length)
@@ -614,6 +614,7 @@ function PmSpark({ series, unit }) {
   // the area under the curve rather than as a signed deviation.
   const area = szAreaPath(line, x(0), x(series.length - 1), F.H - F.PAD_B);
   const zeroY = y(0);
+  const grid = szNiceTicks(y0, y1);
 
   const ticks = szTicks(series, 6);
   const spanDays = pmSpanDays(series[0].d, series[series.length - 1].d);
@@ -635,6 +636,7 @@ function PmSpark({ series, unit }) {
         readout={hovered ? `${fmtDate(hovered.d)}, ${fmt(hovered.v)}` : ''}>
         <SzChartDefs ramp="nav" id="pm"/>
 
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <SzRule frame={F} y={zeroY} stroke="rgba(229,225,241,0.1)"/>
         <path d={area} fill="url(#pm-fill)"/>
         <path d={line} fill="none" stroke="url(#pm-stroke)" strokeWidth="1.75"/>
@@ -648,6 +650,7 @@ function PmSpark({ series, unit }) {
       <div className="pm-peak" style={{ left: `${(x(maxIdx) / F.W) * 100}%`, top: `${(y(max) / F.H) * 100}%` }}>peak {fmtCompact(max)}</div>
       <div className="pm-trough" style={{ left: `${(x(minIdx) / F.W) * 100}%`, top: `${(y(min) / F.H) * 100}%` }}>trough {fmtCompact(min)}</div>
       <SzAxisZero frame={F} y={zeroY}>{pct ? '0%' : '$0'}</SzAxisZero>
+      <SzAxisY frame={F} y={y} ticks={grid} unit={pct ? 'pct' : 'usd'}/>
       <SzAxisX frame={F} ticks={ticks} x={x} label={(t) => pmAxisLabel(t.d, axisMode)}/>
 
       {hovered && (
@@ -1594,7 +1597,7 @@ function pmTapeGeometry(F, lots) {
   let line = `M${x(0).toFixed(2)},${y(0).toFixed(2)}`;
   for (let i = 1; i < n; i++) line += ` H${x(i).toFixed(2)} V${y(run[i]).toFixed(2)}`;
   const area = szAreaPath(line, x(0), x(n - 1), F.H - F.PAD_B);
-  return { n, run, min, max, x, y, line, area };
+  return { n, run, min, max, x, y, line, area, grid: szNiceTicks(y0, y1) };
 }
 
 function PmLotTape({ lots }) {
@@ -1602,7 +1605,7 @@ function PmLotTape({ lots }) {
   const hv = useChartHover(F);
   const geo = usePmMemo(() => (lots.length < 2 ? null : pmTapeGeometry(F, lots)), [lots]);
   if (!geo) return null;
-  const { n, run, min, max, x, y, line, area } = geo;
+  const { n, run, min, max, x, y, line, area, grid } = geo;
 
   // The nearest step, plain. This used to snap to the biggest move within a
   // few lots of the pointer so cliffs were easy to land on when a step was
@@ -1650,6 +1653,7 @@ function PmLotTape({ lots }) {
             + `${signed(lot.realizedPnl)}, running ${signed(run[hi])}`
           : ''}>
         <SzChartDefs ramp="nav" id="pm-tape"/>
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.1)"/>
         <path d={area} fill="url(#pm-tape-fill)"/>
         <path d={line} fill="none" stroke="url(#pm-tape-stroke)" strokeWidth="1.25"
@@ -1663,6 +1667,7 @@ function PmLotTape({ lots }) {
       {max > 0 && <div className="pm-peak" style={{ left: `${(x(maxIdx) / F.W) * 100}%`, top: `${(y(max) / F.H) * 100}%` }}>peak {pmUSDCompact(max)}</div>}
       {min < 0 && <div className="pm-trough" style={{ left: `${(x(minIdx) / F.W) * 100}%`, top: `${(y(min) / F.H) * 100}%` }}>trough {pmUSDCompact(min)}</div>}
       <SzAxisZero frame={F} y={y(0)}>$0</SzAxisZero>
+      <SzAxisY frame={F} y={y} ticks={grid}/>
       {/* Not SzAxisX: that pins its last tick's label to end at the tick, which
           is right for a series' final day and wrong here, where the last month
           boundary can sit anywhere — "Sep 26" would read as the stretch before
@@ -1816,6 +1821,7 @@ function PmRewardsChart({ rows }) {
   const y0 = min, y1 = max + ((max - min) * 0.1 || 1);
   const { x, y } = szScales(F, n, y0, y1);
   const path = (s) => smoothPath(s.map((_, i) => x(i)), s.map(p => y(p.v)));
+  const grid = szNiceTicks(y0, y1);
 
   return (
     <React.Fragment>
@@ -1831,6 +1837,7 @@ function PmRewardsChart({ rows }) {
             + ttLines.map(l => `${l.label} +${pmUSD(l.series[hv.i].v)}`).join(', ')
           : ''}>
         <SzChartDefs ramp="rewards" id="pm-rewards"/>
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <SzRule frame={F} y={y(0)} stroke="rgba(229,225,241,0.08)"/>
         {/* Crosshair below the curves and its dots above them, so the hairline
             never cuts across a line it is meant to be reading. */}
@@ -1851,6 +1858,7 @@ function PmRewardsChart({ rows }) {
             fill={l.color} stroke="#f5f0ff" strokeWidth="1"/>
         ))}
       </SzChartSvg>
+      <SzAxisY frame={F} y={y} ticks={grid}/>
       {/* Anchored to the total rather than pinned at a fixed height: the box
           climbs with the curve it leads with, so the figure and the point it
           reads off never drift apart. The total is the topmost curve, so it is

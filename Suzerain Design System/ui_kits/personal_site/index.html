@@ -1343,11 +1343,20 @@
     font-family: var(--font-mono); font-size: 10px;
     color: rgba(229,225,241,0.4); pointer-events: none; white-space: nowrap;
   }
+  /* Value grid labels (SzAxisY): the $0 marker's twin, one step dimmer, with a
+     halo so a label that lands on a filled band still reads. */
   .pf-axis-y { position: absolute; inset: 0; pointer-events: none; }
   .pf-axis-y span {
-    position: absolute; right: 4px; transform: translateY(-100%);
+    position: absolute; transform: translateY(-100%);
     font-family: var(--font-mono); font-size: 10px;
-    color: rgba(229,225,241,0.45); letter-spacing: 0.06em; white-space: nowrap;
+    color: rgba(229,225,241,0.36); white-space: nowrap;
+    text-shadow: 0 0 4px rgba(10,6,18,0.9);
+  }
+  /* On a phone the chart box is ~80px tall and three labels stack into a
+     column of figures. The lines stay; only the topmost level keeps its label
+     (ticks render bottom-up), which with the $0 marker still gives the scale. */
+  @media (max-width: 760px) {
+    .pf-axis-y span:not(:last-child) { display: none; }
   }
   .pm-peak, .pm-trough {
     position: absolute; font-family: var(--font-mono); font-size: 10px;

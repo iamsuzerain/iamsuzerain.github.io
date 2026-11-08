@@ -10,7 +10,7 @@ const { useEffect: usePortEffect, useState: usePortState, useMemo: usePortMemo }
 const {
   szSmoothPath: smoothPath, szFrame, szScales, szDomain, szAreaPath, szTicks,
   useChartHover, SzChartSvg, SzChartDefs, SzRule, SzCrosshair, SzTooltip,
-  SzAxisX, SzKeyReadout, SzStripHead, SzToggle,
+  SzAxisX, SzAxisZero, SzKeyReadout, SzStripHead, SzToggle, szNiceTicks, SzGrid, SzAxisY,
 } = window;
 
 function fmtUSD(n, compact = false) {
@@ -724,7 +724,7 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
   const areaPath = szAreaPath(linePath, x(0), x(plot.length - 1), y(0));
 
   const ticks = szTicks(perf, 5);
-  const gridLines = [y1, (y0 + y1) / 2, y0];
+  const grid = szNiceTicks(y0, y1);
 
   const hovered = hv.i != null ? plot[hv.i] : null;
   const zeroY = y(0);
@@ -759,12 +759,7 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
             + overlays.map(o => `, ${o.label} ${fmtV(ovVals(o)[hv.i])}`).join('')
           : ''}>
         <SzChartDefs ramp="nav" id="pf-nav"/>
-        {gridLines.map((v, i) => (
-          <line key={i}
-            x1={F.PAD_L} x2={F.W - F.PAD_R}
-            y1={y(v)} y2={y(v)}
-            stroke="rgba(167,139,250,0.05)"/>
-        ))}
+        <SzGrid frame={F} y={y} ticks={grid}/>
         <SzRule frame={F} y={zeroY}/>
         <path d={areaPath} fill="url(#pf-nav-fill)"/>
         {overlays.map(o => (
@@ -781,11 +776,8 @@ function NavChart({ series, perfSeries, benchmarks, benchKeys, unit, dollars }) 
             dots={overlays.map(o => ({ key: o.key, cy: y(ovVals(o)[hv.i]), fill: o.color }))}/>
         )}
       </SzChartSvg>
-      <div className="pf-axis-y">
-        {[y1, y0].map((v, i) => (
-          <span key={i} style={{ top: `${(y(v) / F.H) * 100}%` }}>{fmtV(v)}</span>
-        ))}
-      </div>
+      <SzAxisZero frame={F} y={zeroY}>{usd ? '$0' : '0%'}</SzAxisZero>
+      <SzAxisY frame={F} y={y} ticks={grid} unit={usd ? 'usd' : 'pct'}/>
       <SzAxisX frame={F} ticks={ticks} x={x}/>
       {hovered && (
         <SzTooltip frame={F} x={x(hv.i)} y={y(hovered.v)}>
