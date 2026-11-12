@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-11T14:33:14Z",
+  "generatedAt": "2026-11-12T15:24:47Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 904,
-      "wins": 807,
+      "n": 907,
+      "wins": 810,
       "pushes": 0,
-      "hitRate": 0.8927,
-      "volume": 5146250.22,
-      "realizedPnl": 129156.28,
-      "roi": 0.0251,
-      "brier": 0.042,
-      "avgImplied": 0.8701,
+      "hitRate": 0.8931,
+      "volume": 5325992.9,
+      "realizedPnl": 131406.33,
+      "roi": 0.0247,
+      "brier": 0.0419,
+      "avgImplied": 0.8704,
       "edge": 0.0226,
       "calibrationError": 0.0315
     },
     "exit": {
       "n": 352,
-      "wins": 231,
+      "wins": 230,
       "pushes": 10,
-      "hitRate": 0.6754,
-      "volume": 1878213.82,
-      "realizedPnl": -24107.0,
-      "roi": -0.0128
+      "hitRate": 0.6725,
+      "volume": 1880243.78,
+      "realizedPnl": -25874.07,
+      "roi": -0.0138
     }
   },
   "buckets": {
@@ -222,31 +222,31 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 287,
-        "wins": 285,
+        "n": 289,
+        "wins": 287,
         "pushes": 0,
-        "winRate": 0.993,
-        "avgImplied": 0.9712,
-        "volume": 2228960.93,
-        "realizedPnl": 60983.71,
-        "grossPnl": 63358.87,
+        "winRate": 0.9931,
+        "avgImplied": 0.9713,
+        "volume": 2315182.43,
+        "realizedPnl": 62937.15,
+        "grossPnl": 65312.31,
         "winRateByVolume": 0.9995,
-        "wilsonLo": 0.975,
+        "wilsonLo": 0.9751,
         "wilsonHi": 0.9981
       },
       {
         "lo": 0.99,
         "hi": 1.0,
-        "n": 225,
-        "wins": 224,
+        "n": 226,
+        "wins": 225,
         "pushes": 0,
         "winRate": 0.9956,
         "avgImplied": 0.995,
-        "volume": 1509317.15,
-        "realizedPnl": 6942.95,
-        "grossPnl": 7225.53,
+        "volume": 1602838.33,
+        "realizedPnl": 7239.56,
+        "grossPnl": 7522.14,
         "winRateByVolume": 0.9999,
-        "wilsonLo": 0.9753,
+        "wilsonLo": 0.9754,
         "wilsonHi": 0.9992
       }
     ],
@@ -363,11 +363,11 @@
         "wins": 27,
         "pushes": 0,
         "winRate": 0.7941,
-        "avgImplied": 0.7602,
-        "volume": 190673.89,
-        "realizedPnl": 653.92,
-        "grossPnl": 20676.96,
-        "winRateByVolume": 0.7787,
+        "avgImplied": 0.7614,
+        "volume": 191214.21,
+        "realizedPnl": 113.61,
+        "grossPnl": 20136.65,
+        "winRateByVolume": 0.7794,
         "wilsonLo": 0.632,
         "wilsonHi": 0.8965
       },
@@ -375,16 +375,16 @@
         "lo": 0.8,
         "hi": 0.9,
         "n": 73,
-        "wins": 41,
+        "wins": 40,
         "pushes": 3,
-        "winRate": 0.5857,
+        "winRate": 0.5714,
         "avgImplied": 0.8519,
-        "volume": 250096.13,
-        "realizedPnl": -17226.56,
-        "grossPnl": 36818.76,
-        "winRateByVolume": 0.5561,
-        "wilsonLo": 0.4688,
-        "wilsonHi": 0.6937
+        "volume": 251585.77,
+        "realizedPnl": -18453.32,
+        "grossPnl": 37982.3,
+        "winRateByVolume": 0.5475,
+        "wilsonLo": 0.4548,
+        "wilsonHi": 0.6806
       },
       {
         "lo": 0.9,
@@ -650,34 +650,34 @@
     },
     "politics": {
       "combined": {
-        "n": 326,
-        "volume": 1787316.92,
-        "realizedPnl": 51657.51,
-        "roi": 0.0289,
-        "hitRate": 0.8318,
-        "avgImplied": 0.8348,
+        "n": 328,
+        "volume": 1874078.74,
+        "realizedPnl": 53070.64,
+        "roi": 0.0283,
+        "hitRate": 0.8328,
+        "avgImplied": 0.8358,
         "edge": -0.003,
-        "top1Share": 0.0489
+        "top1Share": 0.0483
       },
       "settlement": {
-        "n": 232,
-        "volume": 1426049.21,
-        "realizedPnl": 58659.66,
-        "roi": 0.0411,
-        "hitRate": 0.9095,
-        "avgImplied": 0.8794,
-        "edge": 0.0301,
-        "top1Share": 0.0675
+        "n": 234,
+        "volume": 1512270.71,
+        "realizedPnl": 60613.1,
+        "roi": 0.0401,
+        "hitRate": 0.9103,
+        "avgImplied": 0.8803,
+        "edge": 0.03,
+        "top1Share": 0.066
       },
       "exit": {
         "n": 94,
-        "volume": 361267.71,
-        "realizedPnl": -7002.15,
-        "roi": -0.0194,
+        "volume": 361808.03,
+        "realizedPnl": -7542.46,
+        "roi": -0.0208,
         "hitRate": 0.6292,
-        "avgImplied": 0.7246,
-        "edge": -0.0954,
-        "top1Share": 0.133
+        "avgImplied": 0.725,
+        "edge": -0.0958,
+        "top1Share": 0.1352
       }
     },
     "sports": {
@@ -714,79 +714,79 @@
     },
     "tech": {
       "combined": {
-        "n": 10,
-        "volume": 188905.96,
-        "realizedPnl": 4435.26,
-        "roi": 0.0235,
-        "hitRate": 1.0,
-        "avgImplied": 0.9255,
-        "edge": 0.0745,
-        "top1Share": 0.6006
+        "n": 11,
+        "volume": 283916.78,
+        "realizedPnl": 3505.11,
+        "roi": 0.0123,
+        "hitRate": 0.9091,
+        "avgImplied": 0.932,
+        "edge": -0.0229,
+        "top1Share": 0.4518
       },
       "settlement": {
-        "n": 6,
-        "volume": 125388.07,
-        "realizedPnl": 4021.95,
-        "roi": 0.0321,
+        "n": 7,
+        "volume": 218909.25,
+        "realizedPnl": 4318.56,
+        "roi": 0.0197,
         "hitRate": 1.0,
-        "avgImplied": 0.9623,
-        "edge": 0.0377,
-        "top1Share": 0.6623
+        "avgImplied": 0.9672,
+        "edge": 0.0328,
+        "top1Share": 0.6168
       },
       "exit": {
         "n": 4,
-        "volume": 63517.89,
-        "realizedPnl": 413.31,
-        "roi": 0.0065,
-        "hitRate": 1.0,
+        "volume": 65007.53,
+        "realizedPnl": -813.45,
+        "roi": -0.0125,
+        "hitRate": 0.75,
         "avgImplied": 0.8704,
-        "edge": 0.1296,
-        "top1Share": 0.6254
+        "edge": -0.1204,
+        "top1Share": 0.7579
       }
     }
   },
   "openBook": {
-    "n": 29,
-    "cost": 142003.81,
-    "mark": 143976.17,
-    "unrealized": 1972.36
+    "n": 27,
+    "cost": 71904.41,
+    "mark": 71872.19,
+    "unrealized": -32.22
   },
   "openByCategory": {
     "commodities": {
       "n": 2,
       "cost": 1206.5,
-      "mark": 1240.99,
-      "unrealized": 34.49
+      "mark": 1029.66,
+      "unrealized": -176.84
     },
     "geopolitics": {
       "n": 6,
       "cost": 6603.69,
-      "mark": 6630.5,
-      "unrealized": 26.8
+      "mark": 6415.18,
+      "unrealized": -188.52
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 353.34,
-      "unrealized": 14.94
+      "mark": 355.86,
+      "unrealized": 17.46
     },
     "politics": {
-      "n": 15,
-      "cost": 130017.27,
-      "mark": 131314.68,
-      "unrealized": 1297.41
+      "n": 14,
+      "cost": 61407.52,
+      "mark": 61103.6,
+      "unrealized": -303.91
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1605.96,
-      "unrealized": 562.84
+      "mark": 1608.44,
+      "unrealized": 565.32
     },
     "tech": {
-      "n": 2,
-      "cost": 2794.82,
-      "mark": 2830.71,
-      "unrealized": 35.89
+      "n": 1,
+      "cost": 1305.18,
+      "mark": 1359.44,
+      "unrealized": 54.27
     }
   },
   "openCategories": {
@@ -812,12 +812,10 @@
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
-    "0x8c9b8ad3a64088a06d45e0b296a9a836203bc7f3ef35d134c57abead446a8b72": "politics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
+    "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
     "0xb40b0cd531184a1e436d23ca898e1590418187b116f387158753d1adb9853e47": "other",
-    "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech",
-    "0xc8c5760c26490b0cd0bedcf1c61aa86c5e09c8b2886b84ff4ea2db81d5f29388": "politics",
-    "0xe0881460dcd53df2f8410ff9ec4c151f22c15ad29ff581d8eb8ac9bce5124eef": "tech"
+    "0xc289a877bc155123069739b21d690b3e8dc220b98f6ae3924468bbcbdfaf98dc": "tech"
   },
   "excluded": {
     "hedged": {
@@ -831,13 +829,13 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 630,
+      "events": 631,
       "offBy": 2,
       "netGap": -453.21
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 39849.7
+      "usd": 123701.25
     },
     "minLotUsd": 1.0
   },
@@ -1977,7 +1975,6 @@
     ["geopolitics","2026-10-28","s",4327.74,0.3,1,0.9989,"Will Likud win fewer than 20 seats in the 2026 Israeli legislative election?","No","Israel Election: Likud # of seats?"],
     ["macro","2026-10-28","s",16612.44,-16612.44,0,0.39,"Will the Fed increase interest rates by 25 bps after the October 2026 meeting?","Yes","Fed Decision in October?"],
     ["macro","2026-10-28","s",730.21,-730.21,0,0.21,"Will there be no change in Fed interest rates after the October 2026 meeting?","No","Fed Decision in October?"],
-    ["politics","2026-10-30","e",10159.25,716.93,1,0.7588,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
     ["commodities","2026-10-31","s",73.35,2.83,1,0.9629,"Will WTI Crude Oil (WTI) hit (LOW) $65 in October?","No","What will WTI Crude Oil (WTI) hit in October 2026?"],
     ["geopolitics","2026-10-31","e",16389.68,980.68,1,0.9379,"Israel Election: Any Coalition Wins a Majority?","No",null],
     ["geopolitics","2026-10-31","e",51248.12,606.71,1,0.9829,"Will Likud win the most seats in the 2026 Israeli legislative election?","Yes","Israeli Legislative Election Winner"],
@@ -2108,12 +2105,16 @@
     ["sports","2026-11-08","s",3347.92,401.42,1,0.8929,"Miami (FL) vs. Notre Dame","Notre Dame",null],
     ["sports","2026-11-09","e",2417.45,27.16,1,0.89,"Buccaneers vs. Bears","Bears",null],
     ["sports","2026-11-09","s",8947.39,33.65,1,0.9963,"Packers vs. Patriots","Packers",null],
-    ["tech","2026-11-09","e",1343.39,31.61,1,0.85,"Jensen Huang announced resignation or removal by December 31, 2026?","No","Jensen Huang announced resignation or removal by...?"],
     ["geopolitics","2026-11-10","e",1530.89,-692.85,0,0.943,"Will Ulf Kristersson be the next Prime Minister of Sweden?","No","Next Prime Minister of Sweden"],
     ["politics","2026-11-10","e",3511.87,-249.87,0,0.9043,"Will Chuck Schumer be the next Senate Majority Leader?","Yes","Next Senate Majority Leader?"],
     ["sports","2026-11-10","s",21858.19,479.54,1,0.9785,"Bills vs. Vikings","Bills",null],
     ["sports","2026-11-10","s",1932.09,134.98,1,0.9347,"Will Kevin McGonigle win the 2026 AL Rookie of the Year award?","Yes","MLB: AL Rookie of the Year"],
     ["politics","2026-11-11","s",401.4,76.46,1,0.84,"Will the Democratic Party win the FL-27 House seat?","No","FL-27 House Election Winner"],
-    ["politics","2026-11-11","s",785.04,160.76,1,0.83,"Will the Republican Party win the FL-27 House seat?","Yes","FL-27 House Election Winner"]
+    ["politics","2026-11-11","s",785.04,160.76,1,0.83,"Will the Republican Party win the FL-27 House seat?","Yes","FL-27 House Election Winner"],
+    ["politics","2026-11-12","e",10699.57,176.62,1,0.7992,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
+    ["politics","2026-11-12","s",55475.49,1168.23,1,0.9794,"Will the Republicans win the Mississippi Senate race in 2026?","No","Mississippi Senate Election Winner"],
+    ["politics","2026-11-12","s",30746.01,785.21,1,0.9751,"Will the Democrats win the Mississippi Senate race in 2026?","Yes","Mississippi Senate Election Winner"],
+    ["tech","2026-11-12","s",93521.18,296.61,1,0.9968,"Jensen Huang announced resignation or removal by November 11, 2026?","No","Jensen Huang announced resignation or removal by...?"],
+    ["tech","2026-11-12","e",2833.03,-1195.15,0,0.85,"Jensen Huang announced resignation or removal by December 31, 2026?","No","Jensen Huang announced resignation or removal by...?"]
   ]
 }
