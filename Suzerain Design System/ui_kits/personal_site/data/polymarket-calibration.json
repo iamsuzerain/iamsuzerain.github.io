@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-13T14:43:53Z",
+  "generatedAt": "2026-11-14T13:40:54Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,11 +58,11 @@
       "calibrationError": 0.0323
     },
     "exit": {
-      "n": 353,
+      "n": 354,
       "wins": 231,
-      "pushes": 10,
+      "pushes": 11,
       "hitRate": 0.6735,
-      "volume": 1884275.26,
+      "volume": 1888748.82,
       "realizedPnl": -28132.78,
       "roi": -0.0149
     }
@@ -374,15 +374,15 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 75,
+        "n": 76,
         "wins": 42,
-        "pushes": 3,
+        "pushes": 4,
         "winRate": 0.5833,
-        "avgImplied": 0.8512,
-        "volume": 256457.95,
+        "avgImplied": 0.8516,
+        "volume": 260931.51,
         "realizedPnl": -17890.54,
         "grossPnl": 38545.08,
-        "winRateByVolume": 0.5561,
+        "winRateByVolume": 0.5465,
         "wilsonLo": 0.4681,
         "wilsonHi": 0.6901
       },
@@ -596,13 +596,13 @@
     },
     "macro": {
       "combined": {
-        "n": 38,
-        "volume": 515841.2,
+        "n": 39,
+        "volume": 520314.76,
         "realizedPnl": 72581.64,
-        "roi": 0.1407,
+        "roi": 0.1395,
         "hitRate": 0.6053,
-        "avgImplied": 0.6646,
-        "edge": -0.0593,
+        "avgImplied": 0.6701,
+        "edge": -0.0648,
         "top1Share": 0.7181
       },
       "settlement": {
@@ -616,13 +616,13 @@
         "top1Share": 0.7412
       },
       "exit": {
-        "n": 17,
-        "volume": 258433.32,
+        "n": 18,
+        "volume": 262906.88,
         "realizedPnl": -2246.47,
-        "roi": -0.0087,
+        "roi": -0.0085,
         "hitRate": 0.5294,
-        "avgImplied": 0.6709,
-        "edge": -0.1415,
+        "avgImplied": 0.6825,
+        "edge": -0.1531,
         "top1Share": 0.5166
       }
     },
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 31,
-    "cost": 74647.32,
-    "mark": 74937.77,
-    "unrealized": 290.45
+    "n": 32,
+    "cost": 79127.83,
+    "mark": 79796.0,
+    "unrealized": 668.17
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 1506.41,
-      "unrealized": -82.08
+      "mark": 1517.24,
+      "unrealized": -71.25
     },
     "geopolitics": {
       "n": 7,
       "cost": 8374.35,
-      "mark": 8126.9,
-      "unrealized": -247.45
+      "mark": 8260.79,
+      "unrealized": -113.56
     },
     "macro": {
-      "n": 1,
-      "cost": 175.02,
-      "mark": 182.92,
-      "unrealized": 7.9
+      "n": 2,
+      "cost": 4655.53,
+      "mark": 4637.6,
+      "unrealized": -17.93
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 353.16,
-      "unrealized": 14.76
+      "mark": 355.14,
+      "unrealized": 16.74
     },
     "politics": {
       "n": 14,
       "cost": 61407.52,
-      "mark": 61371.4,
-      "unrealized": -36.12
+      "mark": 61616.8,
+      "unrealized": 209.29
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1607.01,
-      "unrealized": 563.88
+      "mark": 1600.52,
+      "unrealized": 557.4
     },
     "tech": {
       "n": 2,
       "cost": 1720.42,
-      "mark": 1789.97,
-      "unrealized": 69.56
+      "mark": 1807.9,
+      "unrealized": 87.49
     }
   },
   "openCategories": {
@@ -818,6 +818,7 @@
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
+    "0x8a4196617dcb703e49d9bb36d3847bf6a75fd364dbd19f8d408ac944bf1a03d8": "macro",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
@@ -2128,6 +2129,7 @@
     ["sports","2026-11-13","e",4825.49,5696.82,1,0.4033,"Will Shohei Ohtani win the 2026 National League MVP Award?","No","MLB: 2026 NL MVP"],
     ["sports","2026-11-13","s",1395.41,2064.92,1,0.4033,"Will Shohei Ohtani win the 2026 National League MVP Award?","No","MLB: 2026 NL MVP"],
     ["sports","2026-11-13","e",3101.54,560.64,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"],
-    ["sports","2026-11-13","s",913.64,200.37,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"]
+    ["sports","2026-11-13","s",913.64,200.37,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"],
+    ["macro","2026-11-14","e",4473.56,-0.0,null,0.88,"Will the Fed increase interest rates by 25 bps after the December 2026 meeting?","Yes","Fed Decision in December?"]
   ]
 }
