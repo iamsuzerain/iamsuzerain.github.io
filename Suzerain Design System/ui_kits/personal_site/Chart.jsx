@@ -121,9 +121,13 @@ function szTicks(series, count) {
 // hold their readings side by side while you compare them, instead of one
 // figure at a time under a finger.
 //
-// It settles the mouse case too: track the cursor, fall back to the pin on the
-// way out. A pinned column is a deliberate act, so nothing incidental clears it
-// — not the pointer leaving, not focus moving on to the next chart.
+// A pinned column is a deliberate act, so nothing incidental clears it — not
+// the pointer leaving, not focus moving on to the next chart.
+//
+// A mouse click does not pin. The mouse already has hover, so a click pin only
+// ever showed up as a stray click leaving a tooltip parked after the cursor
+// had gone, sitting over the strip's own toggles, and releasing it took a
+// second click on that exact column, one of several hundred.
 //
 // Keyboard is the other half of the same reading. The svg takes focus (see
 // SzChartSvg) and the arrow keys walk the series a column at a time, which is
@@ -182,7 +186,6 @@ function useChartHover(f) {
         onMouseMove: track,
         // Only the transient reading goes; the pinned column is the reader's.
         onMouseLeave: () => setHover(null),
-        onClick: (e) => togglePin(indexAt(e, n)),
         onTouchStart: (e) => {
           const t = e.touches[0];
           touchFrom.current = t ? { x: t.clientX, y: t.clientY } : null;
@@ -196,9 +199,8 @@ function useChartHover(f) {
           touchFrom.current = null;
           if (!scrolling && hover != null) {
             togglePin(hover);
-            // Suppresses the compatibility click the browser fires after a tap,
-            // which would otherwise reach onClick and toggle the pin straight
-            // back off — a tap that did nothing at all.
+            // Suppresses the compatibility mouse events the browser fires after
+            // a tap, so the tap doesn't also read as a hover that lingers.
             e.preventDefault();
           }
           setHover(null);
