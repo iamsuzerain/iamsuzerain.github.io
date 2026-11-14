@@ -742,6 +742,9 @@
   /* The tick IS the swatch: it carries the line's color when on and an empty
      rule when off, so the menu reads as the chart's legend before you commit */
   .pf-bench-tick { display: inline-flex; align-items: center; gap: 8px; }
+  /* select all / clear all sits above the first group head, which already
+     draws the rule under it */
+  .pf-bench-all { color: var(--fg-2); }
   /* combined-view risk panel: flat divided columns, not nested stat cards */
   .cmb-risk-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
   .cmb-risk-grid .pf-stat {

@@ -956,6 +956,11 @@ function BenchPicker({ value, onChange, available }) {
   // already spells out which lines are drawn, in the colors they're drawn in,
   // so repeating them here would be the same list twice. It only counts.
   const count = items.filter(b => sel.has(b.key)).length;
+  // One row that ticks every line the feed carries, and turns into "clear all"
+  // once they're all on, so the same spot undoes it. Clearing leaves the chart
+  // bare; the statistics still fall back to spx (szBenchPrimary).
+  const all = count === items.length;
+  const toggleAll = () => onChange(all ? [] : szBenchSort(items.map(b => b.key)));
   // Lit only once the reader has moved off the default. Lighting it whenever a
   // benchmark is drawn would mean lighting it on every page load, next to a
   // range strip where the lit button is the one telling you what's selected.
@@ -976,6 +981,9 @@ function BenchPicker({ value, onChange, available }) {
       </button>
       {open && (
         <div className="pf-range-menu pf-bench-menu" role="listbox" aria-multiselectable="true">
+          <button type="button" className="pf-range-menu-item pf-bench-all" onClick={toggleAll}>
+            {all ? 'clear all' : 'select all'}
+          </button>
           {groups.map(g => (
             <React.Fragment key={g.name}>
               <div className="pf-range-menu-head">{g.name}</div>
