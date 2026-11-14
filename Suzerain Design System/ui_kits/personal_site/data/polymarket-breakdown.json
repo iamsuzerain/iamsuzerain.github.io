@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-13",
+  "generatedAt": "2026-11-14",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -11,22 +11,22 @@
     "https://data-api.polymarket.com/v2/positions"
   ],
   "totals": {
-    "trading": 115614,
+    "trading": 115994,
     "fees": 3428,
     "uma": 0,
     "sponsored": 0,
-    "lp": 11786,
-    "maker": 4290,
-    "yield": 244,
+    "lp": 11793,
+    "maker": 4312,
+    "yield": 255,
     "taker": 82
   },
   "totalsBasis": "trading and fees from v2/user-pnl; lp/maker/yield/taker summed from their own activity events; sponsored is folded into lp from 2026-10-19 - no first-party split exists, and the total of the two is unchanged",
   "balances": {
     "positionsSource": "polymarket",
-    "positions": 195789,
-    "cash": 3391,
-    "nav": 199180,
-    "cashBasis": "DERIVED: 2026-11-13 cash plus 1 activity events; no public endpoint reports the USDC balance, and a transfer does NOT appear in the feed - state it in data/polymarket-cash-override.json",
-    "cashCursor": 1794549027
+    "positions": 195079,
+    "cash": 4545,
+    "nav": 199624,
+    "cashBasis": "DERIVED: 2026-11-13 cash plus 9 activity events; no public endpoint reports the USDC balance, and a transfer does NOT appear in the feed - state it in data/polymarket-cash-override.json",
+    "cashCursor": 1794617125
   }
 }
