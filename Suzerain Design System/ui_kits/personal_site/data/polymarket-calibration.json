@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T14:04:45Z",
+  "generatedAt": "2026-11-16T16:00:26Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,26 +45,26 @@
   },
   "headline": {
     "settlement": {
-      "n": 911,
-      "wins": 814,
+      "n": 915,
+      "wins": 817,
       "pushes": 0,
-      "hitRate": 0.8935,
-      "volume": 5329522.33,
-      "realizedPnl": 133680.12,
+      "hitRate": 0.8929,
+      "volume": 5342476.63,
+      "realizedPnl": 133846.1,
       "roi": 0.0251,
       "brier": 0.0421,
-      "avgImplied": 0.8701,
-      "edge": 0.0234,
-      "calibrationError": 0.0322
+      "avgImplied": 0.8699,
+      "edge": 0.023,
+      "calibrationError": 0.0318
     },
     "exit": {
       "n": 354,
       "wins": 232,
       "pushes": 10,
       "hitRate": 0.6744,
-      "volume": 1892035.58,
-      "realizedPnl": -28098.1,
-      "roi": -0.0149
+      "volume": 1896474.37,
+      "realizedPnl": -28056.43,
+      "roi": -0.0148
     }
   },
   "buckets": {
@@ -117,17 +117,17 @@
       {
         "lo": 0.3,
         "hi": 0.4,
-        "n": 20,
+        "n": 21,
         "wins": 8,
         "pushes": 0,
-        "winRate": 0.4,
-        "avgImplied": 0.3537,
-        "volume": 20302.16,
-        "realizedPnl": -14657.84,
-        "grossPnl": 21746.48,
-        "winRateByVolume": 0.1034,
-        "wilsonLo": 0.2188,
-        "wilsonHi": 0.6134
+        "winRate": 0.381,
+        "avgImplied": 0.3535,
+        "volume": 20393.16,
+        "realizedPnl": -14748.84,
+        "grossPnl": 21837.48,
+        "winRateByVolume": 0.103,
+        "wilsonLo": 0.2075,
+        "wilsonHi": 0.5912
       },
       {
         "lo": 0.4,
@@ -222,16 +222,16 @@
       {
         "lo": 0.95,
         "hi": 0.99,
-        "n": 290,
-        "wins": 288,
+        "n": 293,
+        "wins": 291,
         "pushes": 0,
-        "winRate": 0.9931,
-        "avgImplied": 0.9712,
-        "volume": 2315309.15,
-        "realizedPnl": 62942.43,
-        "grossPnl": 65317.59,
+        "winRate": 0.9932,
+        "avgImplied": 0.9713,
+        "volume": 2328172.45,
+        "realizedPnl": 63199.41,
+        "grossPnl": 65574.57,
         "winRateByVolume": 0.9995,
-        "wilsonLo": 0.9752,
+        "wilsonLo": 0.9755,
         "wilsonHi": 0.9981
       },
       {
@@ -379,10 +379,10 @@
         "pushes": 3,
         "winRate": 0.589,
         "avgImplied": 0.8515,
-        "volume": 264218.27,
-        "realizedPnl": -17855.86,
-        "grossPnl": 38579.76,
-        "winRateByVolume": 0.5691,
+        "volume": 268657.06,
+        "realizedPnl": -17814.19,
+        "grossPnl": 38621.43,
+        "winRateByVolume": 0.5762,
         "wilsonLo": 0.4745,
         "wilsonHi": 0.6947
       },
@@ -597,13 +597,13 @@
     "macro": {
       "combined": {
         "n": 39,
-        "volume": 523601.52,
-        "realizedPnl": 72616.32,
-        "roi": 0.1387,
+        "volume": 528040.31,
+        "realizedPnl": 72657.99,
+        "roi": 0.1376,
         "hitRate": 0.6154,
         "avgImplied": 0.6699,
         "edge": -0.0545,
-        "top1Share": 0.7179
+        "top1Share": 0.7176
       },
       "settlement": {
         "n": 21,
@@ -617,13 +617,13 @@
       },
       "exit": {
         "n": 18,
-        "volume": 266193.64,
-        "realizedPnl": -2211.79,
-        "roi": -0.0083,
+        "volume": 270632.43,
+        "realizedPnl": -2170.12,
+        "roi": -0.008,
         "hitRate": 0.5556,
         "avgImplied": 0.6821,
         "edge": -0.1265,
-        "top1Share": 0.512
+        "top1Share": 0.5065
       }
     },
     "other": {
@@ -682,24 +682,24 @@
     },
     "sports": {
       "combined": {
-        "n": 381,
-        "volume": 1173935.31,
-        "realizedPnl": -1254.61,
-        "roi": -0.0011,
-        "hitRate": 0.8237,
-        "avgImplied": 0.8279,
-        "edge": -0.0042,
-        "top1Share": 0.1074
+        "n": 385,
+        "volume": 1186889.61,
+        "realizedPnl": -1088.63,
+        "roi": -0.0009,
+        "hitRate": 0.8229,
+        "avgImplied": 0.8278,
+        "edge": -0.0049,
+        "top1Share": 0.1069
       },
       "settlement": {
-        "n": 318,
-        "volume": 969928.99,
-        "realizedPnl": 15042.71,
+        "n": 322,
+        "volume": 982883.29,
+        "realizedPnl": 15208.69,
         "roi": 0.0155,
-        "hitRate": 0.8774,
-        "avgImplied": 0.849,
-        "edge": 0.0284,
-        "top1Share": 0.0554
+        "hitRate": 0.8758,
+        "avgImplied": 0.8486,
+        "edge": 0.0271,
+        "top1Share": 0.0549
       },
       "exit": {
         "n": 63,
@@ -747,52 +747,52 @@
   },
   "openBook": {
     "n": 32,
-    "cost": 79062.39,
-    "mark": 79289.83,
-    "unrealized": 227.44
+    "cost": 82804.62,
+    "mark": 83431.16,
+    "unrealized": 626.54
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 1435.24,
-      "unrealized": -153.26
+      "mark": 1462.93,
+      "unrealized": -125.57
     },
     "geopolitics": {
       "n": 7,
       "cost": 8374.35,
-      "mark": 8061.03,
-      "unrealized": -313.32
+      "mark": 8624.9,
+      "unrealized": 250.55
     },
     "macro": {
-      "n": 2,
-      "cost": 4590.09,
-      "mark": 4588.87,
-      "unrealized": -1.22
+      "n": 1,
+      "cost": 175.02,
+      "mark": 180.29,
+      "unrealized": 5.27
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 354.6,
-      "unrealized": 16.2
+      "mark": 356.04,
+      "unrealized": 17.64
     },
     "politics": {
       "n": 14,
       "cost": 61407.52,
-      "mark": 61471.36,
-      "unrealized": 63.84
+      "mark": 61313.11,
+      "unrealized": -94.4
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1578.17,
-      "unrealized": 535.05
+      "mark": 1550.74,
+      "unrealized": 507.61
     },
     "tech": {
-      "n": 2,
-      "cost": 1720.42,
-      "mark": 1800.57,
-      "unrealized": 80.15
+      "n": 3,
+      "cost": 9877.72,
+      "mark": 9943.15,
+      "unrealized": 65.44
     }
   },
   "openCategories": {
@@ -811,6 +811,7 @@
     "0x53bbdde2bff0255be814d3779de1e2b3cb55383defda7af65a76a171cfd3e64b": "sports",
     "0x544545e36d64d4b261bc1e6021bd93363ca1ef5f0e9a30c739110da921115fea": "politics",
     "0x5db999fad322cea2914535aae5517060c3f80ad6d8c0231cde2124a434d16846": "geopolitics",
+    "0x6368d1c0daed920fb7cb4444636b605e8b02d700dfdf70bba2758a7c0c4054cb": "tech",
     "0x69f5fada6e9083e7e2e4065d16454019a018aa7db8f0461c5695b842d3d29ab5": "commodities",
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
     "0x741bb46008b72234857c5118c8365ab3c2f69dbf28b30b59de04f173b8a778de": "politics",
@@ -818,7 +819,6 @@
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
-    "0x8a4196617dcb703e49d9bb36d3847bf6a75fd364dbd19f8d408ac944bf1a03d8": "macro",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
     "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
@@ -840,7 +840,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 633,
+      "events": 637,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2131,7 +2131,11 @@
     ["sports","2026-11-13","e",3101.54,560.64,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"],
     ["sports","2026-11-13","s",913.64,200.37,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"],
     ["sports","2026-11-14","s",1093.66,3.22,1,0.9971,"Northwestern vs. Ohio State","Ohio State",null],
-    ["macro","2026-11-15","e",7760.32,34.68,1,0.8718,"Will the Fed increase interest rates by 25 bps after the December 2026 meeting?","Yes","Fed Decision in December?"],
-    ["sports","2026-11-15","s",126.72,5.28,1,0.96,"Spread: USC (-14.5)","Indiana","USC vs. Indiana"]
+    ["sports","2026-11-15","s",2734.23,44.67,1,0.9839,"Patriots vs. Lions","Lions",null],
+    ["sports","2026-11-15","s",126.72,5.28,1,0.96,"Spread: USC (-14.5)","Indiana","USC vs. Indiana"],
+    ["macro","2026-11-16","e",12199.11,76.35,1,0.8718,"Will the Fed increase interest rates by 25 bps after the December 2026 meeting?","Yes","Fed Decision in December?"],
+    ["sports","2026-11-16","s",6667.09,68.06,1,0.9899,"Steelers vs. Bengals","Bengals",null],
+    ["sports","2026-11-16","s",3461.98,144.25,1,0.96,"49ers vs. Cowboys","49ers",null],
+    ["sports","2026-11-16","s",91.0,-91.0,0,0.35,"Steelers vs. Bengals","Steelers",null]
   ]
 }
