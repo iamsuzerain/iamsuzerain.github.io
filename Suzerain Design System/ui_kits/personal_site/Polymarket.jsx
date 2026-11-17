@@ -49,7 +49,10 @@ const pmV1Rows = (body) => body.data.map((x) => Object.fromEntries(Object.entrie
 function pmUSD(n, compact = false) {
   if (n == null || isNaN(n)) return '—';
   if (compact && Math.abs(n) >= 1000) {
-    return '$' + (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
+    // Magnitude picks the precision and the sign goes ahead of the $, so a
+    // loss reads -$90k beside +$73k, not $-90.1k.
+    const a = Math.abs(n);
+    return (n < 0 ? '-' : '') + '$' + (a / 1000).toFixed(a >= 10000 ? 0 : 1) + 'k';
   }
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
