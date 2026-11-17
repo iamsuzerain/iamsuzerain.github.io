@@ -22,6 +22,7 @@ const CMB_DAY_MS = 86400000;
 const CMB_C_TOTAL = '#8b5cf6';  // saturated violet (violet-500) — the aggregate line
 const CMB_C_IBKR  = '#a78bfa';  // brand purple — brokerage
 const CMB_C_PM    = '#ff4fd8';  // brand pink — prediction markets
+const CMB_C_HELD  = '#c4b5d4';  // --fg-2 — money between the two accounts
 // Benchmark colors/labels/order come from the shared registry (SZ_BENCHES in
 // Chrome.jsx), the same one the ibkr tab and the picker read.
 const cmbBenchColor = (key) => (window.szBenchColor ? window.szBenchColor(key) : '#5eead4');
@@ -165,17 +166,32 @@ function cmbDownsample(arr, target = CMB_CHART_MAX_POINTS) {
 // window. Shared by the log markers and the transfer ticks below: both pin a
 // dated event onto an axis of point indices, and both DROP what the window does
 // not cover rather than clamping it to an edge — a mark pinned to the first
-// column is a claim that something happened there.
+// column is a claim that something happened there. The one exception is a
+// weekend past the last close: nothing traded between Friday and the date, so
+// Friday is the point it pins to anyway once Monday's row lands. Without this,
+// a post dated on a Saturday has no diamond until the next refresh.
 function cmbPinIndex(days, iso) {
   if (!days.length || !iso) return null;
   const d = cmbEpochDay(iso);
-  if (d < days[0] || d > days[days.length - 1]) return null;
+  const last = days[days.length - 1];
+  if (d > last && cmbWeekendOnly(last + 1, d)) return days.length - 1;
+  if (d < days[0] || d > last) return null;
   let best = 0, bestDiff = Infinity;
   for (let i = 0; i < days.length; i++) {
     const diff = Math.abs(days[i] - d);
     if (diff < bestDiff) { bestDiff = diff; best = i; }
   }
   return best;
+}
+
+// True when every epoch day from a through b is a Saturday or Sunday (day 0,
+// 1970-01-01, was a Thursday).
+function cmbWeekendOnly(a, b) {
+  for (let n = a; n <= b; n++) {
+    const wd = (n + 4) % 7;
+    if (wd !== 0 && wd !== 6) return false;
+  }
+  return true;
 }
 
 // Map each dated log entry onto the nearest chart point so it can be pinned to
@@ -234,14 +250,23 @@ function cmbTransferMarks(series, transfers, paired) {
 // which pmTransfers already marks. Those are paired off here. The legs don't
 // line up exactly: the wire leaves IBKR 0-8 days before the ledger date and the
 // amounts differ by fees and rounding, up to -$8.5k out of IBKR on 2026-03-05
-// against $10k landing on 03-13. So a withdrawal pairs with the nearest
-// unpaired deposit to polymarket 0-10 days after it, within 25% on amount.
+// against $10k landing on 03-13.
 //
-// The trip back pairs the same way, so a round trip through the bank is one
-// diamond like every move before it: an IBKR deposit pairs with a polymarket
-// withdrawal ledgered up to 10 days before it (or the day after, since the
-// ledger carries the raw scrape date and the money left the day before). The
-// polymarket diamond is the one kept, as it is for the outbound direction.
+// Nor is a move always one leg. The $200k that left polymarket on 2026-11-05/06
+// reached IBKR as $100k and then $10k a business day, the bank's transfer limit,
+// and one-to-one pairing read each $10k as fresh outside money: a diamond apiece,
+// and the same dollars counted again in the base while the withdrawal they came
+// from was still held as in flight. So a withdrawal from either account opens a
+// balance that every arrival on the other side drains, oldest withdrawal first,
+// for as long as one keeps coming: each arrival within 10 days of the withdrawal
+// or of the last arrival that drew on it. An arrival pairs only if the open
+// balance could plausibly cover it (within 25% over), so a $2.5k deposit a week
+// after a $480 fee residue is still outside money. Whatever an arrival brings
+// beyond the balance is fees and rounding, absorbed.
+//
+// The round trip through the bank pairs the same way, so a move is one diamond
+// however many legs it lands in: the polymarket ledger entry is the one kept, in
+// both directions, and its IBKR legs lose theirs.
 //
 // Pairing runs over the lifetime ledger and flows, not the plotted window, so a
 // move whose IBKR leg falls just off the left edge still reads as a move. A leg
@@ -250,37 +275,58 @@ function cmbTransferMarks(series, transfers, paired) {
 const CMB_FLOW_PAIR_DAYS = 10;
 const CMB_FLOW_PAIR_TOL = 0.25;
 
-// → { flows: IBKR flows with no polymarket leg, paired: Map of ledger entries
-// that have an IBKR one, to that leg's date, legs: the same keys, to the whole
-// IBKR row }.
+// → { flows: IBKR flows that drew on no move, paired: Map of ledger entries that
+// have an IBKR leg, to the first such leg's date, moves: every withdrawal from
+// either account as { to, day, amount, left, anchor, legs: [{ day, amount }] } }.
+// `day` is the epoch day the money leaves the sending account's level feed,
+// `left` what no arrival has drawn yet, `anchor` the day its pairing window
+// counts from.
 function cmbPairFlows(flows, transfers) {
-  const ledger = (transfers || [])
-    .filter(t => t && t.date && t.amount)
-    .map(t => ({ t, day: cmbEpochDay(t.date), amount: t.amount, used: false }))
-    .sort((a, b) => a.day - b.day);
-  const paired = (f) => {
-    if (!f.amount) return false;
-    const d = cmbEpochDay(f.d);
-    const hit = ledger.find(t => !t.used
-      // opposite signs: out of ibkr into polymarket, or out of polymarket into ibkr
-      && Math.sign(t.amount) === -Math.sign(f.amount)
-      && (f.amount < 0
-        ? t.day >= d && t.day - d <= CMB_FLOW_PAIR_DAYS
-        : d >= t.day - 1 && d - t.day <= CMB_FLOW_PAIR_DAYS)
-      && Math.abs(t.amount + f.amount) <= CMB_FLOW_PAIR_TOL * Math.abs(t.amount));
-    if (hit) { hit.used = true; hit.leg = f.d; hit.row = f; }
-    return !!hit;
-  };
-  const unpaired = (flows || [])
-    .filter(f => f && f.d)
-    .slice().sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0))
-    .filter(f => !paired(f));
-  const used = ledger.filter(l => l.used);
-  return {
-    flows: unpaired,
-    paired: new Map(used.map(l => [l.t, l.leg])),
-    legs: new Map(used.map(l => [l.t, l.row])),
-  };
+  const moves = [], arrivals = [];
+  for (const t of (transfers || [])) {
+    if (!t || !t.date || !t.amount) continue;
+    const day = cmbEpochDay(t.date);
+    // The ledger is raw-dated: a withdrawal leaves the restated level feed the
+    // day before (see pmCapitalAt), a deposit lands on the ledger date.
+    if (t.amount < 0) moves.push({ to: 'ibkr', day: day - 1, amount: -t.amount, t });
+    else arrivals.push({ to: 'pm', day, amount: t.amount, t });
+  }
+  for (const f of (flows || [])) {
+    if (!f || !f.d || !f.amount) continue;
+    const day = cmbEpochDay(f.d);
+    if (f.amount < 0) moves.push({ to: 'pm', day, amount: -f.amount, f });
+    else arrivals.push({ to: 'ibkr', day, amount: f.amount, f });
+  }
+  moves.sort((a, b) => a.day - b.day);
+  arrivals.sort((a, b) => a.day - b.day);
+  for (const m of moves) { m.left = m.amount; m.anchor = m.day; m.legs = []; }
+
+  for (const a of arrivals) {
+    const open = moves.filter(m => m.to === a.to && m.left > 0
+      && a.day >= m.day && a.day - m.anchor <= CMB_FLOW_PAIR_DAYS);
+    const pool = open.reduce((s, m) => s + m.left, 0);
+    if (!pool || a.amount > pool * (1 + CMB_FLOW_PAIR_TOL)) continue;
+    a.from = [];
+    let rest = a.amount;
+    for (const m of open) {
+      if (rest <= 0) break;
+      const take = Math.min(m.left, rest);
+      m.left -= take;
+      m.anchor = a.day;
+      m.legs.push({ day: a.day, amount: take, a });
+      a.from.push(m);
+      rest -= take;
+    }
+  }
+
+  const paired = new Map();
+  for (const m of moves) if (m.t && m.legs.length) paired.set(m.t, m.legs[0].a.f.d);
+  for (const a of arrivals) if (a.t && a.from) paired.set(a.t, a.from[0].f.d);
+  const unpaired = [
+    ...moves.filter(m => m.f && !m.legs.length).map(m => m.f),
+    ...arrivals.filter(a => a.f && !a.from).map(a => a.f),
+  ].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+  return { flows: unpaired, paired, moves };
 }
 
 // Money between the two accounts: off one level feed and not yet on the other.
@@ -297,40 +343,30 @@ function cmbPairFlows(flows, transfers) {
 //     flow is dated.
 //   ibkr → polymarket: leaves at the IBKR close, lands on the ledger date
 //     (pmCapitalAt backs the restated scrape out to it).
-// Valued at what left, not what arrived; the two differ by fees and rounding.
+// Each leg closes its own share of the gap on the day it lands, so a move that
+// arrives in installments steps down as it does (cmbPairFlows). Valued at what
+// arrived; a fee shortfall is a residue like any other below.
 //
-// A withdrawal with no leg yet on the other side is presumed in flight until
-// that side's feed has run CMB_FLOW_PAIR_DAYS past it, the window it could
-// still pair in, and reads as money that left the book after that. The day it
-// lapses, the base drops on every day it was carried, which is the right
+// What no leg has drawn yet is presumed in flight until the receiving feed has
+// run CMB_FLOW_PAIR_DAYS past the withdrawal or its last leg, the window a leg
+// could still pair in, and reads as money that left the book after that. The
+// day it lapses, the base drops on every day it was carried, which is the right
 // correction for money that went to a bank. Held to the pairing floor, since a
-// leg under it never reaches the flows file and could never close the gap.
+// leg under it never reaches the flows file and could never close the gap; that
+// is also what keeps a fee residue from showing as a sliver for ten days.
 // Deposits with no leg came from outside and opened no gap.
 //
 // → [{ from, to, amount }] in epoch days, inclusive; `to` is Infinity while
 // pending.
 function cmbTransitSpans(flows, transfers, lastIbkrDay, lastPmDay) {
-  const { flows: unpaired, legs } = cmbPairFlows(flows, transfers);
+  const { moves } = cmbPairFlows(flows, transfers);
   const spans = [];
-  for (const t of (transfers || [])) {
-    if (!t || !t.date || !t.amount) continue;
-    const day = cmbEpochDay(t.date);
-    const leg = legs.get(t);
-    if (leg) {
-      const legDay = cmbEpochDay(leg.d);
-      if (t.amount < 0) spans.push({ from: day - 1, to: legDay - 1, amount: -t.amount });
-      else spans.push({ from: legDay, to: day - 1, amount: -leg.amount });
-    } else if (t.amount <= -CMB_FLOW_MARK_MIN
-        && lastIbkrDay != null && lastIbkrDay < day + CMB_FLOW_PAIR_DAYS) {
-      spans.push({ from: day - 1, to: Infinity, amount: -t.amount });
-    }
-  }
-  for (const f of unpaired) {
-    const day = cmbEpochDay(f.d);
-    // The ledger is raw-dated, a day ahead of the restated level feed.
-    if (f.amount <= -CMB_FLOW_MARK_MIN
-        && lastPmDay != null && lastPmDay + 1 < day + CMB_FLOW_PAIR_DAYS) {
-      spans.push({ from: day, to: Infinity, amount: -f.amount });
+  for (const m of moves) {
+    for (const l of m.legs) spans.push({ from: m.day, to: l.day - 1, amount: l.amount });
+    // The ledger is raw-dated, a day ahead of the restated polymarket level feed.
+    const lastRecv = m.to === 'ibkr' ? lastIbkrDay : (lastPmDay != null ? lastPmDay + 1 : null);
+    if (m.left >= CMB_FLOW_MARK_MIN && lastRecv != null && lastRecv < m.anchor + CMB_FLOW_PAIR_DAYS) {
+      spans.push({ from: m.day, to: Infinity, amount: m.left });
     }
   }
   return spans.filter(s => s.to >= s.from && s.amount > 0);
@@ -1573,7 +1609,7 @@ function cmbWindow(series, notional, range, benchmarks, benchKeys) {
     // Levels ride through unrebased, like `base` and for the same reason: these
     // are quantities of capital, not P&L streams, and a capital base rebased to
     // zero at the window start would say the account was empty that morning.
-    for (const k of ['base', 'ibkrLevel', 'pmLevel']) if (p[k] != null) q[k] = p[k];
+    for (const k of ['base', 'ibkrLevel', 'pmLevel', 'transit']) if (p[k] != null) q[k] = p[k];
     return q;
   });
   const dates = out.map(p => p.d);
@@ -1709,7 +1745,14 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   const k0 = cmbCapitalSplitIndex(pts);
   const split = k0 < 0 ? pts.length : k0;
   const ibkrVals = pts.map(p => p.ibkrLevel);
-  const totals = pts.map(p => p.ibkrLevel + (p.pmLevel != null ? p.pmLevel : 0));
+  // Money withdrawn from one account and not yet booked by the other
+  // (cmbTransitSpans) is the middle band: between the two accounts on the page
+  // as it is in fact. Without it the total dipped by the whole wire while it was
+  // out, and a move the bank released in installments read as a run of fresh
+  // deposits into IBKR.
+  const heldVals = pts.map(p => p.ibkrLevel + (p.transit || 0));
+  const hasHeld = pts.some(p => p.transit > 0);
+  const totals = pts.map((p, i) => heldVals[i] + (p.pmLevel != null ? p.pmLevel : 0));
   const hi = Math.max(...totals);
   const yTop = (hi * 1.08) || 1;
   const { x, y } = szScales(F, pts.length, 0, yTop);
@@ -1736,7 +1779,8 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
   const totalLine = hasPmBand ? lineOf(totals, split) : '';
   const last = pts.length - 1;
   const ibkrArea = `${ibkrLine} L${x(last).toFixed(2)},${y(0).toFixed(2)} L${x(0).toFixed(2)},${y(0).toFixed(2)} Z`;
-  const pmArea = hasPmBand ? `${totalLine}${backOf(ibkrVals, split)} Z` : '';
+  const heldArea = hasHeld ? `${lineOf(heldVals)}${backOf(ibkrVals)} Z` : '';
+  const pmArea = hasPmBand ? `${totalLine}${backOf(heldVals, split)} Z` : '';
 
   // A mark on the first plotted column has no before-state to point at: whatever
   // step it caused is off the left edge, so it reads as an event that did
@@ -1768,12 +1812,14 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
         label="capital by venue · ibkr and polymarket, stacked"
         summary={szChartSummary(
           'Capital in each account, stacked: ibkr on the bottom, polymarket on top, '
+            + (hasHeld ? 'money withdrawn from one and not yet in the other between them, ' : '')
             + 'so the top edge is the total. Transfers between the two show as steps'
             + (split > 0 ? `. The polymarket level is unavailable before ${cmbFullDate(hasPmBand ? pts[split].d : pts[last].d)}`
               + (hasPmBand ? ', so only the ibkr band is drawn there' : '') : ''),
           pts[0].d, pts[last].d, pts.length)}
         readout={hp
           ? `${cmbFullDate(hp.d)}, ibkr ${cmbUSD(hp.ibkrLevel)}, `
+            + (hp.transit > 0 ? `in transit ${cmbUSD(hp.transit)}, ` : '')
             + `polymarket ${hpKnown ? cmbUSD(hp.pmLevel) : 'unavailable'}, total ${cmbUSD(hpTotal)}`
             + hpXfers.map(m => `, ${cmbFlowLabel(m)}`).join('')
           : ''}>
@@ -1784,6 +1830,11 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
             it was also worth more per pixel at the top. */}
         <SzGrid frame={F} y={y} ticks={grid}/>
         <path d={ibkrArea} fill={CMB_C_IBKR} opacity="0.26"/>
+        {/* Neutral, not a venue color: the money is in neither account. No edge
+            stroke of its own — the ibkr line under it and the polymarket band
+            over it already bound it, and a third line would draw a contour along
+            every day it is zero. */}
+        {hasHeld && <path d={heldArea} fill={CMB_C_HELD} opacity="0.3"/>}
         {hasPmBand && <path d={pmArea} fill={CMB_C_PM} opacity="0.26"/>}
 
         <path d={ibkrLine} fill="none" stroke={CMB_C_IBKR} strokeWidth="1.25"/>
@@ -1826,6 +1877,9 @@ function CmbCapitalChart({ series, transfers, ibkrFlows }) {
         <SzTooltip frame={F} x={x(hv.i)} y={y(hpTotal)} className="cmb-tooltip">
           <div className="pm-tt-date">{cmbFullDate(hp.d)}</div>
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_IBKR }}/>ibkr<span className="cmb-tt-num">{cmbUSD(hp.ibkrLevel)}</span></div>
+          {hp.transit > 0 && (
+            <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_HELD }}/>in transit<span className="cmb-tt-num">{cmbUSD(hp.transit)}</span></div>
+          )}
           <div className="cmb-tt-row"><span className="cmb-tt-dot" style={{ background: CMB_C_PM }}/>polymarket<span className="cmb-tt-num">{hpKnown ? cmbUSD(hp.pmLevel) : CMB_CAP_UNKNOWN}</span></div>
           <div className="cmb-tt-row cmb-tt-sum">total<span className="cmb-tt-num">{cmbUSD(hpTotal)}</span></div>
           {hpXfers.map((m, k) => (
@@ -2365,17 +2419,18 @@ function Combined({ setView }) {
   const twrBench = (wBenchD == null || !pLast) ? null : pLast.v - (pLast[primary] || 0);
   const vBench = pct ? twrBench : wBenchD;
   const UnitBar = window.UnitBar;
-  // Lifetime, not windowed: it labels the ledger the ticks come from, and a sum
-  // that shrank when the reader picked 1M would look like money coming back.
-  const xferTotal = (data.transfers || []).reduce((sum, t) => sum + ((t && t.amount) || 0), 0);
   const periodic = cmbPeriodic(shown, primary);
-  // The capital chart spans the whole range, but its polymarket band only starts
-  // where that level is measured — on any window reaching back past 2026-01-09,
-  // partway along the axis. Said in the meta rather than left for the reader to
-  // work out from a band that begins mid-chart.
   const capPts = cmbCapitalPoints(win.series);
-  const capK0 = cmbCapitalSplitIndex(capPts);
-  const capFrom = capK0 > 0 ? capPts[capK0].d : null;
+  // Net polymarket ledger flow over the plotted range, beside a title that
+  // already names the range. Strictly after the first column: a transfer dated
+  // on it is already in that column's level, so it moved nothing the chart
+  // shows. This was the lifetime sum, which read as the range's on every range
+  // but MAX.
+  const capFirst = capPts.length ? capPts[0].d : null;
+  const capLast = capPts.length ? capPts[capPts.length - 1].d : null;
+  const capXfers = (data.transfers || [])
+    .filter(t => t && t.date && t.amount && t.date > capFirst && t.date <= capLast);
+  const xferNet = capXfers.reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <section className="pf-wrap cmb-view">
@@ -2529,11 +2584,11 @@ function Combined({ setView }) {
         <div className="pf-panel">
           <div className="pf-panel-head">
             <span className="pf-panel-title">capital deployed · {cmbRangeLabel(range)}</span>
-            <span className="pf-panel-meta">
-              {capK0 < 0 ? 'ibkr nav · polymarket nav unavailable in this range'
-                : `ibkr nav + polymarket nav${capFrom ? ` from ${cmbFullDate(capFrom)}` : ''}`} · ◆ deposits, withdrawals and transfers
-              {xferTotal > 0 ? ` · ${cmbUSDk(xferTotal)} net into polymarket overall` : ''}
-            </span>
+            {capXfers.length > 0 && (
+              <span className="pf-panel-meta">
+                {cmbUSDk(Math.abs(xferNet))} net {xferNet >= 0 ? 'into' : 'out of'} polymarket
+              </span>
+            )}
           </div>
           <CmbCapitalChart series={win.series} transfers={data.transfers} ibkrFlows={data.ibkrFlows}/>
         </div>
