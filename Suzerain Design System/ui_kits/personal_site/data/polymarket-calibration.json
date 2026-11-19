@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-18T15:49:30Z",
+  "generatedAt": "2026-11-19T15:54:22Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -58,13 +58,13 @@
       "calibrationError": 0.0317
     },
     "exit": {
-      "n": 356,
-      "wins": 232,
+      "n": 357,
+      "wins": 233,
       "pushes": 10,
-      "hitRate": 0.6705,
-      "volume": 1904871.2,
-      "realizedPnl": -28097.34,
-      "roi": -0.0148
+      "hitRate": 0.6715,
+      "volume": 1908010.89,
+      "realizedPnl": -27917.52,
+      "roi": -0.0146
     }
   },
   "buckets": {
@@ -389,17 +389,17 @@
       {
         "lo": 0.9,
         "hi": 0.95,
-        "n": 74,
-        "wins": 52,
+        "n": 75,
+        "wins": 53,
         "pushes": 1,
-        "winRate": 0.7123,
-        "avgImplied": 0.9278,
-        "volume": 487494.07,
-        "realizedPnl": 9962.49,
-        "grossPnl": 31689.69,
-        "winRateByVolume": 0.9309,
-        "wilsonLo": 0.5999,
-        "wilsonHi": 0.8035
+        "winRate": 0.7162,
+        "avgImplied": 0.928,
+        "volume": 490633.76,
+        "realizedPnl": 10142.31,
+        "grossPnl": 31869.51,
+        "winRateByVolume": 0.9313,
+        "wilsonLo": 0.6048,
+        "wilsonHi": 0.8063
       },
       {
         "lo": 0.95,
@@ -650,13 +650,13 @@
     },
     "politics": {
       "combined": {
-        "n": 330,
-        "volume": 1922276.89,
-        "realizedPnl": 54217.39,
-        "roi": 0.0282,
-        "hitRate": 0.8338,
-        "avgImplied": 0.8366,
-        "edge": -0.0028,
+        "n": 331,
+        "volume": 1925416.58,
+        "realizedPnl": 54397.21,
+        "roi": 0.0283,
+        "hitRate": 0.8344,
+        "avgImplied": 0.837,
+        "edge": -0.0026,
         "top1Share": 0.0478
       },
       "settlement": {
@@ -670,14 +670,14 @@
         "top1Share": 0.0651
       },
       "exit": {
-        "n": 94,
-        "volume": 361806.48,
-        "realizedPnl": -7540.9,
-        "roi": -0.0208,
-        "hitRate": 0.6292,
-        "avgImplied": 0.725,
-        "edge": -0.0958,
-        "top1Share": 0.1352
+        "n": 95,
+        "volume": 364946.17,
+        "realizedPnl": -7361.08,
+        "roi": -0.0202,
+        "hitRate": 0.6333,
+        "avgImplied": 0.7273,
+        "edge": -0.094,
+        "top1Share": 0.1345
       }
     },
     "sports": {
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 32,
-    "cost": 49818.92,
-    "mark": 49848.41,
-    "unrealized": 29.49
+    "n": 31,
+    "cost": 46679.24,
+    "mark": 45992.95,
+    "unrealized": -686.29
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 1439.36,
-      "unrealized": -149.13
+      "mark": 1240.1,
+      "unrealized": -348.4
     },
     "geopolitics": {
       "n": 8,
       "cost": 23461.01,
-      "mark": 23868.63,
-      "unrealized": 407.62
+      "mark": 23401.46,
+      "unrealized": -59.55
     },
     "macro": {
       "n": 1,
       "cost": 175.02,
-      "mark": 184.24,
-      "unrealized": 9.22
+      "mark": 186.12,
+      "unrealized": 11.1
     },
     "other": {
       "n": 1,
       "cost": 338.4,
-      "mark": 358.38,
-      "unrealized": 19.98
+      "mark": 359.46,
+      "unrealized": 21.06
     },
     "politics": {
-      "n": 13,
-      "cost": 13565.62,
-      "mark": 12584.62,
-      "unrealized": -981.0
+      "n": 12,
+      "cost": 10425.93,
+      "mark": 9340.51,
+      "unrealized": -1085.42
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1517.96,
-      "unrealized": 474.83
+      "mark": 1529.71,
+      "unrealized": 486.59
     },
     "tech": {
       "n": 3,
       "cost": 9647.25,
-      "mark": 9895.22,
-      "unrealized": 247.97
+      "mark": 9935.59,
+      "unrealized": 288.34
     }
   },
   "openCategories": {
@@ -802,7 +802,6 @@
     "0x1c4c6a698f0591ddf0c96e1beb56f8c75112ef849331bf3b0388f14830a7421d": "geopolitics",
     "0x22a05e0e5db73ae5a554eccc37a35e81e258edf487dec05e60bd0aba7e8cadac": "politics",
     "0x3e81fd787c83e13826013af0570a318e6b9d0efba02dea1794060877c6ddd644": "politics",
-    "0x489e65bd324cb81905753618193a9a94de063b2c3f41b8851dd9150735db9e91": "politics",
     "0x48d47eede033257e77d676631e6f805d5e1848c0567589030a3a76a862fa1e47": "sports",
     "0x4915ebe25b6b09c4a5ac8776e9f0c54bbeb4ea33ccadf89b7fd10c9d18d17511": "politics",
     "0x4dc5c13eb9646b10da7d5f079f77ef2480ec5466861ce1cfbc910fabed3d7d0d": "politics",
@@ -840,7 +839,7 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 639,
+      "events": 640,
       "offBy": 2,
       "netGap": -453.21
     },
@@ -2141,6 +2140,7 @@
     ["politics","2026-11-18","s",32769.27,858.27,1,0.9745,"Will Mary Peltola win the Alaska Senate race in 2026?","Yes","Alaska Senate Election Winner"],
     ["politics","2026-11-18","s",15430.43,286.92,1,0.9817,"Will Dan Sullivan win the Alaska Senate race in 2026?","No","Alaska Senate Election Winner"],
     ["tech","2026-11-18","e",4195.33,-21.54,0,0.974,"Will Anthropic's market cap be between $2.0T and $2.25T at market close on IPO day?","No","Anthropic IPO Closing Market Cap"],
-    ["tech","2026-11-18","e",493.58,-6.71,0,0.9803,"Will Anthropic or OpenAI IPO first?","Anthropic",null]
+    ["tech","2026-11-18","e",493.58,-6.71,0,0.9803,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
+    ["politics","2026-11-19","e",3139.69,179.82,1,0.942,"Will Hakeem Jeffries be the first Speaker of the House after the 2026 midterms?","Yes","Speaker of the House after the midterms?"]
   ]
 }
