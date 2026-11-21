@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T15:35:54Z",
+  "generatedAt": "2026-11-21T14:47:14Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -59,11 +59,11 @@
     },
     "exit": {
       "n": 357,
-      "wins": 233,
+      "wins": 232,
       "pushes": 10,
-      "hitRate": 0.6715,
-      "volume": 1907999.98,
-      "realizedPnl": -27906.6,
+      "hitRate": 0.6686,
+      "volume": 1911637.01,
+      "realizedPnl": -27937.18,
       "roi": -0.0146
     }
   },
@@ -318,11 +318,11 @@
         "wins": 8,
         "pushes": 0,
         "winRate": 0.8,
-        "avgImplied": 0.4353,
-        "volume": 13116.8,
-        "realizedPnl": 6706.43,
-        "grossPnl": 7006.73,
-        "winRateByVolume": 0.9211,
+        "avgImplied": 0.436,
+        "volume": 13162.72,
+        "realizedPnl": 6660.51,
+        "grossPnl": 6960.81,
+        "winRateByVolume": 0.9213,
         "wilsonLo": 0.4902,
         "wilsonHi": 0.9433
       },
@@ -375,16 +375,16 @@
         "lo": 0.8,
         "hi": 0.9,
         "n": 76,
-        "wins": 43,
+        "wins": 42,
         "pushes": 3,
-        "winRate": 0.589,
+        "winRate": 0.5753,
         "avgImplied": 0.8517,
-        "volume": 268756.24,
-        "realizedPnl": -17913.37,
-        "grossPnl": 38522.25,
-        "winRateByVolume": 0.5764,
-        "wilsonLo": 0.4745,
-        "wilsonHi": 0.6947
+        "volume": 272347.35,
+        "realizedPnl": -17898.03,
+        "grossPnl": 38538.05,
+        "winRateByVolume": 0.569,
+        "wilsonLo": 0.461,
+        "wilsonHi": 0.6822
       },
       {
         "lo": 0.9,
@@ -565,12 +565,12 @@
     "geopolitics": {
       "combined": {
         "n": 271,
-        "volume": 2055461.1,
-        "realizedPnl": 61308.46,
+        "volume": 2059098.13,
+        "realizedPnl": 61277.88,
         "roi": 0.0298,
-        "hitRate": 0.8165,
+        "hitRate": 0.8127,
         "avgImplied": 0.8245,
-        "edge": -0.008,
+        "edge": -0.0118,
         "top1Share": 0.2108
       },
       "settlement": {
@@ -585,13 +585,13 @@
       },
       "exit": {
         "n": 103,
-        "volume": 744510.13,
-        "realizedPnl": 5019.79,
+        "volume": 748147.16,
+        "realizedPnl": 4989.21,
         "roi": 0.0067,
-        "hitRate": 0.7273,
-        "avgImplied": 0.7858,
-        "edge": -0.0585,
-        "top1Share": 0.2228
+        "hitRate": 0.7172,
+        "avgImplied": 0.7859,
+        "edge": -0.0687,
+        "top1Share": 0.2229
       }
     },
     "macro": {
@@ -746,78 +746,120 @@
     }
   },
   "openBook": {
-    "n": 29,
-    "cost": 53693.28,
-    "mark": 52597.22,
-    "unrealized": -1096.06
+    "n": 71,
+    "cost": 50982.01,
+    "mark": 50663.58,
+    "unrealized": -318.43
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 919.39,
-      "unrealized": -669.11
+      "mark": 817.56,
+      "unrealized": -770.94
     },
     "geopolitics": {
-      "n": 8,
-      "cost": 35966.82,
-      "mark": 35878.96,
-      "unrealized": -87.87
+      "n": 50,
+      "cost": 33255.54,
+      "mark": 33959.78,
+      "unrealized": 704.23
     },
     "macro": {
       "n": 1,
       "cost": 175.02,
-      "mark": 186.68,
-      "unrealized": 11.67
+      "mark": 186.03,
+      "unrealized": 11.01
     },
     "politics": {
       "n": 12,
       "cost": 10425.93,
-      "mark": 9417.65,
-      "unrealized": -1008.28
+      "mark": 9400.08,
+      "unrealized": -1025.85
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1511.52,
-      "unrealized": 468.4
+      "mark": 1609.41,
+      "unrealized": 566.28
     },
     "tech": {
       "n": 2,
       "cost": 4493.89,
-      "mark": 4683.01,
-      "unrealized": 189.12
+      "mark": 4690.72,
+      "unrealized": 196.83
     }
   },
   "openCategories": {
+    "0x06a27c2810eaca94b53e7a17f15ad47761399ba445a6b02039b2679da203262d": "geopolitics",
+    "0x06ea9c02b4c6a2f7f07f78e21411bd367636564edb27c72cd038b556aada1a64": "geopolitics",
+    "0x0b298ab2b2cad3308d486c804985c1ede7ea949bde363f44784a3b2a460be788": "geopolitics",
+    "0x0b4fdc620f5aeafbfa8603a7fe9f3dd2dbae70e73aa157c8c94275676043ce06": "geopolitics",
     "0x0f49db97f71c68b1e42a6d16e3de93d85dbf7d4148e3f018eb79e88554be9f75": "politics",
+    "0x1166388a24a3f2a9bb0a45956bdb205c70f0ecafb8539e277a57adf022e306be": "geopolitics",
     "0x12ab600156edbfd74f7c342f24a7171af2e09d10ba04669f5a98a75b84e1145f": "politics",
+    "0x12c5b5e4701f172a6045b97eda70f0897aaf6adf566e6f0dc722996ac80b8b81": "geopolitics",
     "0x174ea87d011bfd0b230efc45e0b4d0756d38af91f0ffbab70013a582603c2be8": "geopolitics",
+    "0x1779552bade1ad85d35b2e5128136ea04602f26e2b67b7e1b6f9ec46ea8811d3": "geopolitics",
     "0x1c4c6a698f0591ddf0c96e1beb56f8c75112ef849331bf3b0388f14830a7421d": "geopolitics",
+    "0x20fd4cf096367edbd429168764db975b582249a7a3818684d051f445a3efaed1": "geopolitics",
     "0x22a05e0e5db73ae5a554eccc37a35e81e258edf487dec05e60bd0aba7e8cadac": "politics",
+    "0x2859bb44f6c8feac18494db286c2a8b55d9e7394a8366bc8c58cfde353e41c90": "geopolitics",
+    "0x290b3a5826b17e48ae7166b188767d95df5a9ed0b69fda116d98d0d27d753281": "geopolitics",
+    "0x2bf80d93be42dac6c1b03298b5ec329a4b9f87b689c7892d544d1029f3a0caf0": "geopolitics",
+    "0x34ed4ad7a7825f168e1084f53e8f60a161579d783b2740e50aa52f710925a136": "geopolitics",
+    "0x3a8209fbd45fef3be23fb3480eb1c961c85f7bdd07d4a3391f5949252156c594": "geopolitics",
     "0x3e81fd787c83e13826013af0570a318e6b9d0efba02dea1794060877c6ddd644": "politics",
+    "0x467ec6d5202bc4823b4bf3231ba337c5da1ae2d698c2134808c036da6155e7dd": "geopolitics",
+    "0x46f2f457e14ee9021ebd0ef4c27eacd98fdceaf7f2938b484e2551e9e3275ae8": "geopolitics",
     "0x48d47eede033257e77d676631e6f805d5e1848c0567589030a3a76a862fa1e47": "sports",
     "0x4915ebe25b6b09c4a5ac8776e9f0c54bbeb4ea33ccadf89b7fd10c9d18d17511": "politics",
+    "0x4c799a8378d60f34f055cf5c61fc3f6f1a6e7abe5d5384ef37961c506eab867c": "geopolitics",
+    "0x4d5a2c980a8d116c14db4307646bdf17067b422a7d8e5ed88ec20213b463efe0": "geopolitics",
     "0x4dc5c13eb9646b10da7d5f079f77ef2480ec5466861ce1cfbc910fabed3d7d0d": "politics",
     "0x50f76a489c33450195fa48d159b75e7cf2bcf215b38183477c6824e5f15f7e11": "politics",
     "0x51c5049c65cf29cc4d8c72e0a4c16c604cfef7a86687dcd45f2987ace0b6fea6": "politics",
     "0x53bbdde2bff0255be814d3779de1e2b3cb55383defda7af65a76a171cfd3e64b": "sports",
+    "0x53e78cfec087a9bc8d1336c16a2da9db577cacedb5569c36e776711b264351a6": "geopolitics",
     "0x544545e36d64d4b261bc1e6021bd93363ca1ef5f0e9a30c739110da921115fea": "politics",
     "0x5db999fad322cea2914535aae5517060c3f80ad6d8c0231cde2124a434d16846": "geopolitics",
+    "0x5fa99b99649ea2468300c6ba3a57f5889afb65ec17b753cfefef2a653c0c2907": "geopolitics",
+    "0x6189539ff1b08bc4052607d89921663ca0de0f0cd70b79c9993d7f9f3211ec3e": "geopolitics",
     "0x6368d1c0daed920fb7cb4444636b605e8b02d700dfdf70bba2758a7c0c4054cb": "tech",
+    "0x637a2423461f5b531fef314e1e14982b80819de217e32f4f96653caa8af2c47a": "geopolitics",
     "0x69f5fada6e9083e7e2e4065d16454019a018aa7db8f0461c5695b842d3d29ab5": "commodities",
+    "0x6ad63235931f80951a48f2338956dea7bb70c97f99a7bd03f5f501d6e4673842": "geopolitics",
+    "0x6ccebbc57547f8b777aa4ef70a452bb5034055d183131a9b6db47fd8d0777921": "geopolitics",
     "0x6ea9c59bb08605e9cccc61e81179ebf9c143cd53118be37255f902ebcf0fde79": "sports",
     "0x7427cc12f765665d28bac3746856d19cfd3af21136a47055b7e32563bded8577": "tech",
+    "0x754ab4247c590606f2b2655da7f3e327ea3cf723089844687709d094a61fe920": "geopolitics",
     "0x75546dcfa25f2cdd0edb5730ed2dc6f4b03940c2b1cb27eaefba47bfe434345d": "commodities",
     "0x7ad403c3508f8e3912940fd1a913f227591145ca0614074208e0b962d5fcc422": "politics",
     "0x8126317d621047fb13d508a2651eecc8d38305904671822a62309c5aabd353aa": "geopolitics",
     "0x8a42bb4cb9b9f157b539611f6a8c122388f652570cfc3c07d538e7df2bb78894": "geopolitics",
+    "0x8c1faa77d8ded9f94ffef7fe6326421a9890efd769ddcfd17808985c4a4ba93a": "geopolitics",
     "0x909659c9436228e2be56d5582ba6188166f2f8bf3c596335512c8f2e380d01ec": "politics",
+    "0x934225abdf22ea08692f5411dd43ea16d859e7b30b880dbe521d8fc2cc3f013f": "geopolitics",
     "0x97c0b1316b8d9ba677414e8a682948e7560c1af60fc239b085a68cc467c21f23": "politics",
     "0x99dcf0abf02cdbd62e6a17a95c68f7864be5f5779d25d44cf7ea134f5d7979a9": "politics",
+    "0xa203cc908da0d417590e01f89fb651a335650d6b797da76ac28726d5f8c7610b": "geopolitics",
+    "0xa6c3848b7861841cc9d93a5c2c1d26b3f44e0298a49889968a627214a2b177ae": "geopolitics",
+    "0xaba4bb720c6c1b2e48087f5af4a57fd1e9f05814a936e9f6b1c37f10436a34fc": "geopolitics",
+    "0xac9719f855755f578e4979f8edb4e17e259e8e1cc79e46bdbde49e23dbd8b98f": "geopolitics",
+    "0xae0bce0eab50dc2961c6426b8b4096ff238cbb59408235b629bfbfef3a2c1a12": "geopolitics",
     "0xb02c1ad730cc59e19e2bf0b908b851c79e0a83f41f04f2538ed7705bc0e3eeb3": "macro",
+    "0xbac8d3ca6cc7297022850562d9d66669d5e0a112767337f8a5955417f1984b54": "geopolitics",
+    "0xc32a544f65e3a8ffec6499e40290f10fa68a3f4a4819dfd366b6cb1fd7c4be1d": "geopolitics",
+    "0xc9763b782d68da2d9adfccfe232a90599edea130dd45f00f67b615a164393293": "geopolitics",
+    "0xca3f48e98cf593bd114bdfa95cc5209a7c67387e46c024a5b525cb9568bcd855": "geopolitics",
+    "0xcb6397a53e4145bc422a9b8592573494e8ec431fc1aef16c025f4f5f0a487b5c": "geopolitics",
     "0xcc54954303106a78a8c6abdea3f16bae3a271a4b2f7ac8fae2cc3337b3fbe203": "commodities",
-    "0xce610556ec78cfd7894f4169d91fe70e31c2fb49f927fffd7fe7d06530f88d56": "geopolitics"
+    "0xcd050c1af02067e33e03861ff6f67c1c85def8bf4bd196256e6d2b178509533b": "geopolitics",
+    "0xcfc6e088b78e695e831e094f7aa1197c16b2436e5984b12fb9286361804b8e1b": "geopolitics",
+    "0xf273da5c76e0116c0ec63787453b54d74f0c182256dff4ed2f27f08b14048f7c": "geopolitics",
+    "0xf39142681d979d4987625065e294cac48bc92ad92356b18f28d57a3fd3f0a316": "geopolitics",
+    "0xf887472a2ac013ef61840034321aa5b46de87ac093ee77ecafca477fdbaadd45": "geopolitics",
+    "0xf9f40504425133cce159883ca3eaf376a815ab1ae763086ae8e4a3f5eacea479": "geopolitics",
+    "0xfd431e070263b5f24e43a8fc44532bf41aa008d99cab2330d979913b1c580bd2": "geopolitics"
   },
   "excluded": {
     "hedged": {
@@ -826,8 +868,8 @@
       "realizedPnl": 5684.3
     },
     "conversions": {
-      "rows": 57,
-      "usd": 96922.54,
+      "rows": 58,
+      "usd": 99058.43,
       "unattributed": 0
     },
     "cashCheck": {
@@ -837,7 +879,7 @@
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 13160.83
+      "usd": 49095.51
     },
     "minLotUsd": 1.0
   },
@@ -1933,7 +1975,6 @@
     ["politics","2026-10-14","e",85.86,12.86,1,0.8654,"Will Republicans win the Michigan, Minnesota, and New Hampshire Senate seats?","No","Senate Combo: Michigan, Minnesota, New Hampshire"],
     ["politics","2026-10-14","e",553.16,32.74,1,0.9347,"Republican House odds hit 20% by October 31?","No","Republican House odds hit __ by October 31?"],
     ["geopolitics","2026-10-15","e",12731.18,2059.57,1,0.5689,"Will Fl\u00e1vio Bolsonaro win the 2026 Brazilian presidential election?","Yes","Brazil Presidential Election"],
-    ["geopolitics","2026-10-15","e",2718.06,281.64,1,0.4077,"Will Marine Le Pen win the 2027 French presidential election?","Yes","Next French Presidential Election"],
     ["sports","2026-10-15","s",300.94,52.27,1,0.852,"Shohei Ohtani: Home Runs O/U 0.5","Under","Milwaukee Brewers vs. Los Angeles Dodgers - Player Props"],
     ["geopolitics","2026-10-16","e",48444.64,811.51,1,0.7855,"Will the U.S. invade Iran before 2027?","No",null],
     ["geopolitics","2026-10-16","s",4.97,0.03,1,0.9933,"Lula flips Bolsonaro for Brazil president by October 15?","No","Lula flips Bolsonaro for Brazil president by...?"],
@@ -2113,7 +2154,6 @@
     ["politics","2026-11-12","s",30746.01,785.21,1,0.9751,"Will the Democrats win the Mississippi Senate race in 2026?","Yes","Mississippi Senate Election Winner"],
     ["tech","2026-11-12","s",93521.18,296.61,1,0.9968,"Jensen Huang announced resignation or removal by November 11, 2026?","No","Jensen Huang announced resignation or removal by...?"],
     ["tech","2026-11-12","e",2833.03,-1195.15,0,0.85,"Jensen Huang announced resignation or removal by December 31, 2026?","No","Jensen Huang announced resignation or removal by...?"],
-    ["geopolitics","2026-11-13","e",1770.64,2.14,1,0.829,"Will David Lisnard win the 2027 French presidential election?","No","Next French Presidential Election"],
     ["sports","2026-11-13","e",4825.49,5696.82,1,0.4033,"Will Shohei Ohtani win the 2026 National League MVP Award?","No","MLB: 2026 NL MVP"],
     ["sports","2026-11-13","s",1395.41,2064.92,1,0.4033,"Will Shohei Ohtani win the 2026 National League MVP Award?","No","MLB: 2026 NL MVP"],
     ["sports","2026-11-13","e",3101.54,560.64,1,0.8201,"Will Pete Crow-Armstrong win the 2026 National League MVP Award?","Yes","MLB: 2026 NL MVP"],
@@ -2135,6 +2175,8 @@
     ["other","2026-11-19","s",338.4,21.6,1,0.94,"Will Anthropic IPO by December 31, 2026?","Yes","Anthropic IPO by __?"],
     ["politics","2026-11-19","e",3139.69,179.82,1,0.942,"Will Hakeem Jeffries be the first Speaker of the House after the 2026 midterms?","Yes","Speaker of the House after the midterms?"],
     ["tech","2026-11-19","s",5142.61,103.22,1,0.9803,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
-    ["geopolitics","2026-11-20","e",6838.09,221.72,1,0.8524,"Will Jean-Luc M\u00e9lenchon win the 2027 French presidential election?","No","Next French Presidential Election"]
+    ["geopolitics","2026-11-20","e",2763.98,235.72,1,0.4146,"Will Marine Le Pen win the 2027 French presidential election?","Yes","Next French Presidential Election"],
+    ["geopolitics","2026-11-20","e",8658.54,239.43,1,0.8524,"Will Jean-Luc M\u00e9lenchon win the 2027 French presidential election?","No","Next French Presidential Election"],
+    ["geopolitics","2026-11-20","e",3541.3,-0.23,0,0.829,"Will David Lisnard win the 2027 French presidential election?","No","Next French Presidential Election"]
   ]
 }
