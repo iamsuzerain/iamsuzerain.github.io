@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T14:47:14Z",
+  "generatedAt": "2026-11-22T14:44:11Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -45,25 +45,25 @@
   },
   "headline": {
     "settlement": {
-      "n": 920,
-      "wins": 822,
+      "n": 921,
+      "wins": 823,
       "pushes": 0,
-      "hitRate": 0.8935,
-      "volume": 5399522.68,
-      "realizedPnl": 135191.37,
-      "roi": 0.025,
-      "brier": 0.0419,
-      "avgImplied": 0.8704,
-      "edge": 0.023,
-      "calibrationError": 0.0318
+      "hitRate": 0.8936,
+      "volume": 5400473.29,
+      "realizedPnl": 135307.47,
+      "roi": 0.0251,
+      "brier": 0.0418,
+      "avgImplied": 0.8705,
+      "edge": 0.0231,
+      "calibrationError": 0.0319
     },
     "exit": {
-      "n": 357,
+      "n": 358,
       "wins": 232,
       "pushes": 10,
-      "hitRate": 0.6686,
-      "volume": 1911637.01,
-      "realizedPnl": -27937.18,
+      "hitRate": 0.6667,
+      "volume": 1912564.43,
+      "realizedPnl": -27942.12,
       "roi": -0.0146
     }
   },
@@ -192,17 +192,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 79,
-        "wins": 69,
+        "n": 80,
+        "wins": 70,
         "pushes": 0,
-        "winRate": 0.8734,
-        "avgImplied": 0.8566,
-        "volume": 277130.27,
-        "realizedPnl": -57459.0,
-        "grossPnl": 115091.56,
-        "winRateByVolume": 0.6887,
-        "wilsonLo": 0.7824,
-        "wilsonHi": 0.9298
+        "winRate": 0.875,
+        "avgImplied": 0.8571,
+        "volume": 278080.88,
+        "realizedPnl": -57342.9,
+        "grossPnl": 115207.66,
+        "winRateByVolume": 0.6897,
+        "wilsonLo": 0.785,
+        "wilsonHi": 0.9307
       },
       {
         "lo": 0.9,
@@ -374,17 +374,17 @@
       {
         "lo": 0.8,
         "hi": 0.9,
-        "n": 76,
+        "n": 77,
         "wins": 42,
         "pushes": 3,
-        "winRate": 0.5753,
-        "avgImplied": 0.8517,
-        "volume": 272347.35,
-        "realizedPnl": -17898.03,
-        "grossPnl": 38538.05,
-        "winRateByVolume": 0.569,
-        "wilsonLo": 0.461,
-        "wilsonHi": 0.6822
+        "winRate": 0.5676,
+        "avgImplied": 0.8522,
+        "volume": 273274.77,
+        "realizedPnl": -17902.97,
+        "grossPnl": 38542.99,
+        "winRateByVolume": 0.567,
+        "wilsonLo": 0.4541,
+        "wilsonHi": 0.6743
       },
       {
         "lo": 0.9,
@@ -682,33 +682,33 @@
     },
     "sports": {
       "combined": {
-        "n": 386,
-        "volume": 1190254.95,
-        "realizedPnl": -1013.37,
-        "roi": -0.0009,
-        "hitRate": 0.8234,
-        "avgImplied": 0.8282,
-        "edge": -0.0048,
-        "top1Share": 0.1068
+        "n": 388,
+        "volume": 1192132.98,
+        "realizedPnl": -902.21,
+        "roi": -0.0008,
+        "hitRate": 0.8217,
+        "avgImplied": 0.8285,
+        "edge": -0.0068,
+        "top1Share": 0.1067
       },
       "settlement": {
-        "n": 323,
-        "volume": 986248.63,
-        "realizedPnl": 15283.95,
-        "roi": 0.0155,
-        "hitRate": 0.8762,
-        "avgImplied": 0.849,
-        "edge": 0.0271,
-        "top1Share": 0.0548
+        "n": 324,
+        "volume": 987199.24,
+        "realizedPnl": 15400.05,
+        "roi": 0.0156,
+        "hitRate": 0.8765,
+        "avgImplied": 0.8492,
+        "edge": 0.0274,
+        "top1Share": 0.0547
       },
       "exit": {
-        "n": 63,
-        "volume": 204006.32,
-        "realizedPnl": -16297.32,
-        "roi": -0.0799,
-        "hitRate": 0.5484,
-        "avgImplied": 0.7212,
-        "edge": -0.1728,
+        "n": 64,
+        "volume": 204933.74,
+        "realizedPnl": -16302.26,
+        "roi": -0.0795,
+        "hitRate": 0.5397,
+        "avgImplied": 0.7238,
+        "edge": -0.1841,
         "top1Share": 0.2165
       }
     },
@@ -748,45 +748,45 @@
   "openBook": {
     "n": 71,
     "cost": 50982.01,
-    "mark": 50663.58,
-    "unrealized": -318.43
+    "mark": 51149.46,
+    "unrealized": 167.45
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 817.56,
-      "unrealized": -770.94
+      "mark": 962.15,
+      "unrealized": -626.35
     },
     "geopolitics": {
       "n": 50,
       "cost": 33255.54,
-      "mark": 33959.78,
-      "unrealized": 704.23
+      "mark": 34091.46,
+      "unrealized": 835.91
     },
     "macro": {
       "n": 1,
       "cost": 175.02,
-      "mark": 186.03,
-      "unrealized": 11.01
+      "mark": 186.5,
+      "unrealized": 11.48
     },
     "politics": {
       "n": 12,
       "cost": 10425.93,
-      "mark": 9400.08,
-      "unrealized": -1025.85
+      "mark": 9634.75,
+      "unrealized": -791.18
     },
     "sports": {
       "n": 3,
       "cost": 1043.12,
-      "mark": 1609.41,
-      "unrealized": 566.28
+      "mark": 1593.21,
+      "unrealized": 550.08
     },
     "tech": {
       "n": 2,
       "cost": 4493.89,
-      "mark": 4690.72,
-      "unrealized": 196.83
+      "mark": 4681.39,
+      "unrealized": 187.5
     }
   },
   "openCategories": {
@@ -873,13 +873,13 @@
       "unattributed": 0
     },
     "cashCheck": {
-      "events": 642,
+      "events": 643,
       "offBy": 2,
       "netGap": -453.21
     },
     "splitOnly": {
       "legs": 4,
-      "usd": 49095.51
+      "usd": 49431.79
     },
     "minLotUsd": 1.0
   },
@@ -2177,6 +2177,8 @@
     ["tech","2026-11-19","s",5142.61,103.22,1,0.9803,"Will Anthropic or OpenAI IPO first?","Anthropic",null],
     ["geopolitics","2026-11-20","e",2763.98,235.72,1,0.4146,"Will Marine Le Pen win the 2027 French presidential election?","Yes","Next French Presidential Election"],
     ["geopolitics","2026-11-20","e",8658.54,239.43,1,0.8524,"Will Jean-Luc M\u00e9lenchon win the 2027 French presidential election?","No","Next French Presidential Election"],
-    ["geopolitics","2026-11-20","e",3541.3,-0.23,0,0.829,"Will David Lisnard win the 2027 French presidential election?","No","Next French Presidential Election"]
+    ["geopolitics","2026-11-20","e",3541.3,-0.23,0,0.829,"Will David Lisnard win the 2027 French presidential election?","No","Next French Presidential Election"],
+    ["sports","2026-11-22","e",927.42,-4.94,0,0.8912,"Maryland vs. USC","USC",null],
+    ["sports","2026-11-22","s",950.61,116.1,1,0.8912,"Maryland vs. USC","USC",null]
   ]
 }
