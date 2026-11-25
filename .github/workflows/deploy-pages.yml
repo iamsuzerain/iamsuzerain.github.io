@@ -31,11 +31,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -157,6 +154,19 @@ jobs:
         with:
           path: "Suzerain Design System/ui_kits/personal_site"
 
+  # A job of its own, not a step after the upload. deploy-pages looks the
+  # artifact up by listing this run's artifacts, and that listing lags the
+  # upload: run back to back in one job, the lookup came ~0.2s after the upload
+  # finished and saw "Found 0 artifact(s)" — 9 failed deploys over 2026-11-24/25
+  # with the artifact plainly attached to each run. The handoff to a fresh
+  # runner is the gap GitHub's own Pages template relies on.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: deploy to pages
         id: deployment
         uses: actions/deploy-pages@v5
