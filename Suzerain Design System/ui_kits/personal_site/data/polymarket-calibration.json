@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-26T17:03:15Z",
+  "generatedAt": "2026-11-27T16:48:59Z",
   "wallets": [
     "0xcbab47f889ffffbb603f600a5feeb0eca0cc9a8a",
     "0xfaf680c17a9cca24ff0773ae2d9f7db49c02cc47"
@@ -62,9 +62,9 @@
       "wins": 231,
       "pushes": 10,
       "hitRate": 0.6638,
-      "volume": 1921524.81,
-      "realizedPnl": -28307.92,
-      "roi": -0.0147
+      "volume": 1922742.2,
+      "realizedPnl": -29525.31,
+      "roi": -0.0154
     }
   },
   "buckets": {
@@ -378,11 +378,11 @@
         "wins": 43,
         "pushes": 3,
         "winRate": 0.5658,
-        "avgImplied": 0.851,
-        "volume": 341379.36,
-        "realizedPnl": -17280.64,
-        "grossPnl": 39664.74,
-        "winRateByVolume": 0.5084,
+        "avgImplied": 0.8512,
+        "volume": 342596.75,
+        "realizedPnl": -18498.03,
+        "grossPnl": 40882.13,
+        "winRateByVolume": 0.5066,
         "wilsonLo": 0.4539,
         "wilsonHi": 0.6714
       },
@@ -565,13 +565,13 @@
     "geopolitics": {
       "combined": {
         "n": 271,
-        "volume": 2060158.39,
-        "realizedPnl": 60217.63,
-        "roi": 0.0292,
+        "volume": 2061375.78,
+        "realizedPnl": 59000.24,
+        "roi": 0.0286,
         "hitRate": 0.809,
         "avgImplied": 0.8246,
-        "edge": -0.0156,
-        "top1Share": 0.2117
+        "edge": -0.0157,
+        "top1Share": 0.2098
       },
       "settlement": {
         "n": 168,
@@ -585,13 +585,13 @@
       },
       "exit": {
         "n": 103,
-        "volume": 749207.42,
-        "realizedPnl": 3928.96,
-        "roi": 0.0052,
+        "volume": 750424.81,
+        "realizedPnl": 2711.57,
+        "roi": 0.0036,
         "hitRate": 0.7071,
-        "avgImplied": 0.786,
-        "edge": -0.0789,
-        "top1Share": 0.2254
+        "avgImplied": 0.7862,
+        "edge": -0.0791,
+        "top1Share": 0.2201
       }
     },
     "macro": {
@@ -746,53 +746,53 @@
     }
   },
   "openBook": {
-    "n": 68,
-    "cost": 51519.93,
-    "mark": 50279.28,
-    "unrealized": -1240.65
+    "n": 69,
+    "cost": 66697.84,
+    "mark": 65300.3,
+    "unrealized": -1397.55
   },
   "openByCategory": {
     "commodities": {
       "n": 3,
       "cost": 1588.5,
-      "mark": 1019.22,
-      "unrealized": -569.28
+      "mark": 1119.21,
+      "unrealized": -469.29
     },
     "culture": {
       "n": 1,
       "cost": 2300.0,
-      "mark": 2380.0,
-      "unrealized": 80.0
+      "mark": 2387.5,
+      "unrealized": 87.5
     },
     "geopolitics": {
       "n": 50,
-      "cost": 42288.11,
-      "mark": 42166.11,
-      "unrealized": -122.0
+      "cost": 53724.16,
+      "mark": 53701.63,
+      "unrealized": -22.53
     },
     "macro": {
       "n": 1,
       "cost": 175.02,
-      "mark": 187.53,
-      "unrealized": 12.51
+      "mark": 187.72,
+      "unrealized": 12.7
     },
     "politics": {
       "n": 9,
       "cost": 3709.93,
-      "mark": 2646.64,
-      "unrealized": -1063.29
+      "mark": 2566.25,
+      "unrealized": -1143.68
     },
     "sports": {
-      "n": 3,
-      "cost": 1043.12,
-      "mark": 1414.27,
-      "unrealized": 371.15
+      "n": 4,
+      "cost": 4784.99,
+      "mark": 4871.55,
+      "unrealized": 86.56
     },
     "tech": {
       "n": 1,
       "cost": 415.24,
-      "mark": 465.49,
-      "unrealized": 50.25
+      "mark": 466.44,
+      "unrealized": 51.2
     }
   },
   "openCategories": {
@@ -858,6 +858,7 @@
     "0xcc54954303106a78a8c6abdea3f16bae3a271a4b2f7ac8fae2cc3337b3fbe203": "commodities",
     "0xcd050c1af02067e33e03861ff6f67c1c85def8bf4bd196256e6d2b178509533b": "geopolitics",
     "0xcfc6e088b78e695e831e094f7aa1197c16b2436e5984b12fb9286361804b8e1b": "geopolitics",
+    "0xed4d9132cbccc21e09a4ffa6bee71bd3e2298eb3c52f8f62b44ffad6ef2cd563": "sports",
     "0xf273da5c76e0116c0ec63787453b54d74f0c182256dff4ed2f27f08b14048f7c": "geopolitics",
     "0xf39142681d979d4987625065e294cac48bc92ad92356b18f28d57a3fd3f0a316": "geopolitics",
     "0xf887472a2ac013ef61840034321aa5b46de87ac093ee77ecafca477fdbaadd45": "geopolitics",
@@ -2186,6 +2187,6 @@
     ["politics","2026-11-24","s",49.71,6.29,1,0.8877,"Will Peggy Flanagan run ahead of Amy Klobuchar?","No","Peggy Flanagan runs behind Amy Klobuchar by...?"],
     ["politics","2026-11-24","e",18599.69,871.07,1,0.8072,"Will Alberto N\u00fa\u00f1ez Feij\u00f3o be the next Prime Minister of Spain?","Yes","Next Prime Minister of Spain?"],
     ["sports","2026-11-24","s",68.85,186.15,1,0.27,"Bengals vs. Commanders","Commanders",null],
-    ["geopolitics","2026-11-26","e",49505.87,-249.71,0,0.8027,"Will the U.S. invade Iran before 2027?","No",null]
+    ["geopolitics","2026-11-27","e",50723.26,-1467.1,0,0.8225,"Will the U.S. invade Iran before 2027?","No",null]
   ]
 }
